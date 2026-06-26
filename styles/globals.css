@@ -1,0 +1,220 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  /* ── Core UI tokens (dark-first, matching actual site palette) ── */
+  --background: #020617;
+  --foreground: #f1f5f9;
+  --card: #0b1628;
+  --card-foreground: #f1f5f9;
+  --popover: #0b1628;
+  --popover-foreground: #f1f5f9;
+  --primary: #38bdf8;
+  --primary-foreground: #020617;
+  --secondary: #1e3a5f;
+  --secondary-foreground: #f1f5f9;
+  --muted: #0f2236;
+  --muted-foreground: #94a3b8;
+  --accent: #06b6d4;
+  --accent-foreground: #020617;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --border: rgba(255, 255, 255, 0.08);
+  --input: rgba(255, 255, 255, 0.06);
+  --ring: #38bdf8;
+
+  /* ── N2P Brand palette ── */
+  --navy: #0B1F33;
+  --signature-blue: #1E63B5;
+  --tech-green: #7AC943;
+  --cyan-support: #22A7F0;
+  --frost: #F5F8FA;
+  --slate-brand: #E3E8EE;
+  --graphite: #1A1A1A;
+  --muted-gray: #6B7280;
+
+  /* ── Hero / section dark bg ── */
+  --hero-bg: #020617;
+  --section-bg: #050e1b;
+
+  /* ── Charts ── */
+  --chart-1: #38bdf8;
+  --chart-2: #7AC943;
+  --chart-3: #22A7F0;
+  --chart-4: #1E63B5;
+  --chart-5: #94a3b8;
+
+  /* ── Radius scale ── */
+  --radius: 0.625rem;
+
+  /* ── Sidebar ── */
+  --sidebar: #0b1628;
+  --sidebar-foreground: #f1f5f9;
+  --sidebar-primary: #38bdf8;
+  --sidebar-primary-foreground: #020617;
+  --sidebar-accent: #0f2236;
+  --sidebar-accent-foreground: #f1f5f9;
+  --sidebar-border: rgba(255, 255, 255, 0.07);
+  --sidebar-ring: #38bdf8;
+}
+
+@theme inline {
+  --font-sans: 'Inter', 'Inter Fallback', ui-sans-serif, system-ui, sans-serif;
+  --font-serif: 'Source Sans 3', 'Source Sans 3 Fallback', sans-serif;
+  --font-mono: 'Geist Mono', 'Geist Mono Fallback', ui-monospace, monospace;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Brand tokens exposed to Tailwind */
+  --color-navy: var(--navy);
+  --color-signature-blue: var(--signature-blue);
+  --color-tech-green: var(--tech-green);
+  --color-cyan-support: var(--cyan-support);
+  --color-frost: var(--frost);
+  --color-slate-brand: var(--slate-brand);
+  --color-graphite: var(--graphite);
+  --color-muted-gray: var(--muted-gray);
+  --color-hero-bg: var(--hero-bg);
+  --color-section-bg: var(--section-bg);
+}
+
+/* ── Base reset ── */
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  html {
+    /* Let JS smooth-scroll handle anchors; CSS smooth-scroll + JS = double-damped */
+    scroll-behavior: auto;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    /* Dark bg prevents any white flash before hydration */
+    background-color: var(--hero-bg);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    font-feature-settings: 'cv11', 'ss01';
+    font-variation-settings: 'opsz' 32;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* ── Textures ── */
+.texture-dots {
+  background-image: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.04) 1px,
+    transparent 1px
+  );
+  background-size: 24px 24px;
+}
+
+.texture-grain {
+  position: relative;
+}
+.texture-grain::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0.025;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 1;
+}
+
+.texture-lines {
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 10px,
+    rgba(255, 255, 255, 0.015) 10px,
+    rgba(255, 255, 255, 0.015) 11px
+  );
+}
+
+/* ── Card lift ── */
+.card-lift {
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+.card-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px -8px rgba(6, 182, 212, 0.15);
+}
+
+/* ── Section divider ── */
+.section-divider {
+  position: relative;
+}
+.section-divider::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80px;
+  height: 3px;
+  background: linear-gradient(90deg, var(--signature-blue), var(--accent));
+  border-radius: 9999px;
+}
+
+/* ── Earth drift animation ── */
+@keyframes earthDrift {
+  0%   { transform: scale(1) translate(0px, 0px); }
+  100% { transform: scale(1.05) translate(-15px, -10px); }
+}
+.animate-earth-drift {
+  animation: earthDrift 50s ease-in-out infinite alternate;
+}
+
+/* ── Reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+  .animate-earth-drift {
+    animation: none !important;
+  }
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
