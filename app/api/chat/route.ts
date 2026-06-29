@@ -37,7 +37,7 @@ N2P Systems is actively growing and always looking for talented individuals. Whe
 Current openings are also listed at /jobs.
 
 WEBSITE PAGES:
-- Home page: / (includes Services, About, Testimonials, Contact sections)
+- Home page: / (includes Services, About, Contact sections)
 - Browse Opportunities: /jobs
 - Submit Resume: /resume
 - Partner With Us / Request a Quote: /clients
