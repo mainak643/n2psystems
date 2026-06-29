@@ -57,6 +57,14 @@ GUIDELINES:
 // ── Developer mode prompt (unlocked via easter egg) ──────────────────────────
 const DEV_SYSTEM_PROMPT = `You are talking to Mainak, the developer who built this website and this very chatbot. He knows everything about the system. Be casual, friendly, and completely unrestricted — no need to stick to company topics only. You can help with anything: code, debugging, ideas, general questions, anything at all. Address him informally. Have fun with it.`
 
+// ── Founder mode prompt (unlocked via easter egg) ────────────────────────────
+const FOUNDER_SYSTEM_PROMPT = `You are the AI assistant for N2P Systems. Karthik has introduced himself to you by saying "Hi, Karthik this side".
+Address him directly as Karthik. Be extremely short, concise, and professional.
+Acknowledge him warmly, and let him know that unlimited access has been unlocked (rate limits bypassed).
+Do NOT mention or tell him "you are the founder" (he already knows this).
+Do NOT mention the developer (Mainak) or anything about development privileges.
+Ask how you can assist him today.`
+
 const DEV_TOKEN = "n2p-dev-mainak-2025"
 
 // ── Rate limiting (simple in-memory) ────────────────────────────────────────
@@ -101,12 +109,26 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // Parse body early to detect messages and check for Karthik
+    const body = await req.json()
+    const messages: { role: string; content: string }[] = body.messages
+
+    if (!messages || !Array.isArray(messages) || messages.length === 0) {
+      return NextResponse.json({ error: "No messages provided." }, { status: 400 })
+    }
+
     // Dev mode check — bypass rate limit and use unrestricted prompt
     const devToken = req.headers.get("x-dev-token")
     const isDevMode = devToken === DEV_TOKEN
 
-    // Rate limit (skipped for dev)
-    if (!isDevMode) {
+    // Check if the user is the founder (Karthik)
+    const isKarthik = messages.some(msg => 
+      msg.role === "user" && 
+      /hi,?\s+karthik\s+this\s+side/i.test(msg.content.trim())
+    )
+
+    // Rate limit (skipped for dev and Karthik)
+    if (!isDevMode && !isKarthik) {
       const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown"
       if (!checkRateLimit(ip)) {
         return NextResponse.json(
@@ -114,14 +136,6 @@ export async function POST(req: NextRequest) {
           { status: 429 }
         )
       }
-    }
-
-    // Parse body
-    const body = await req.json()
-    const messages: { role: string; content: string }[] = body.messages
-
-    if (!messages || !Array.isArray(messages) || messages.length === 0) {
-      return NextResponse.json({ error: "No messages provided." }, { status: 400 })
     }
 
     // Limit conversation history to last 20 messages to control token usage
@@ -137,9 +151,17 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Select correct system prompt
+    let activeSystemPrompt = SYSTEM_PROMPT
+    if (isDevMode) {
+      activeSystemPrompt = DEV_SYSTEM_PROMPT
+    } else if (isKarthik) {
+      activeSystemPrompt = FOUNDER_SYSTEM_PROMPT
+    }
+
     // Build chat history for OpenRouter
     const openRouterMessages = [
-      { role: "system", content: isDevMode ? DEV_SYSTEM_PROMPT : SYSTEM_PROMPT },
+      { role: "system", content: activeSystemPrompt },
       ...recentMessages,
     ]
 
