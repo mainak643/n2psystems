@@ -39,7 +39,7 @@ export default async function JobDetailPage({
   return (
     <main>
       {/* Header */}
-      <section className="bg-navy pt-28 pb-12 sm:pt-32 sm:pb-16">
+      <section className="bg-navy pt-24 pb-10 sm:pt-32 sm:pb-16">
           <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
             <Link
               href="/jobs"
@@ -62,12 +62,12 @@ export default async function JobDetailPage({
                     {job.type}
                   </Badge>
                 </div>
-                <h1 className="font-sans font-bold text-2xl tracking-tight text-frost sm:text-4xl">
+                <h1 className="font-sans font-bold text-[1.5rem] tracking-tight text-frost sm:text-4xl leading-[1.15]">
                   {job.title}
                 </h1>
-                <p className="mt-2 text-lg text-frost/80">{job.company}</p>
+                <p className="mt-2 text-base sm:text-lg text-frost/80">{job.company}</p>
 
-                <div className="mt-4 flex flex-wrap gap-5 text-sm text-frost/80">
+                <div className="mt-3 sm:mt-4 flex flex-wrap gap-3 sm:gap-5 text-sm text-frost/80">
                   <span className="flex items-center gap-1.5">
                     <MapPin className="size-4" />
                     {job.location}
@@ -87,10 +87,10 @@ export default async function JobDetailPage({
                 </div>
               </div>
 
-              <Link href="/submit-resume">
+              <Link href="/resume" className="w-full sm:w-auto">
                 <Button
                   size="lg"
-                  className="bg-signature-blue text-primary-foreground hover:bg-cyan-support transition-colors rounded-lg px-8 py-6 text-base font-sans font-semibold shrink-0"
+                  className="w-full sm:w-auto bg-signature-blue text-primary-foreground hover:bg-cyan-support transition-colors rounded-lg px-8 py-6 text-base font-sans font-semibold shrink-0 active:scale-[0.98] min-h-[44px]"
                 >
                   Apply Now
                   <ArrowRight className="size-4 ml-1" />
@@ -101,11 +101,11 @@ export default async function JobDetailPage({
         </section>
 
         {/* Job Content */}
-        <section className="py-12 lg:py-16 bg-frost">
+        <section className="py-8 sm:py-12 lg:py-16 bg-frost">
           <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
-            <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-5 sm:gap-8 lg:grid-cols-3">
               {/* Main Content */}
-              <div className="lg:col-span-2 flex flex-col gap-8">
+              <div className="lg:col-span-2 flex flex-col gap-5 sm:gap-8">
                 {/* Description */}
                 <div className="rounded-xl border border-border bg-card p-5 sm:p-8">
                   <h2 className="font-sans font-bold text-xl text-foreground mb-4">
@@ -154,9 +154,9 @@ export default async function JobDetailPage({
               </div>
 
               {/* Sidebar */}
-              <div className="flex flex-col gap-6">
+              <div className="flex flex-col gap-4 sm:gap-6">
                 {/* Tech Stack */}
-                <div className="rounded-xl border border-border bg-card p-6">
+                <div className="rounded-xl border border-border bg-card p-5 sm:p-6">
                   <h3 className="font-sans font-semibold text-sm uppercase tracking-wide text-muted-foreground mb-4">
                     Tech Stack
                   </h3>
@@ -174,7 +174,7 @@ export default async function JobDetailPage({
                 </div>
 
                 {/* Quick Facts */}
-                <div className="rounded-xl border border-border bg-card p-6">
+                <div className="rounded-xl border border-border bg-card p-5 sm:p-6">
                   <h3 className="font-sans font-semibold text-sm uppercase tracking-wide text-muted-foreground mb-4">
                     Quick Facts
                   </h3>
@@ -197,7 +197,7 @@ export default async function JobDetailPage({
                 </div>
 
                 {/* Apply CTA */}
-                <div className="rounded-xl border border-signature-blue/20 bg-signature-blue/5 p-6">
+                <div className="rounded-xl border border-signature-blue/20 bg-signature-blue/5 p-5 sm:p-6">
                   <h3 className="font-sans font-semibold text-foreground mb-2">
                     Interested in this role?
                   </h3>
@@ -205,8 +205,8 @@ export default async function JobDetailPage({
                     Submit your profile through the relevant application form
                     and our team will review it for matching opportunities.
                   </p>
-                  <Link href="/submit-resume" className="w-full">
-                    <Button className="w-full bg-signature-blue text-primary-foreground hover:bg-cyan-support transition-colors font-sans font-semibold">
+                  <Link href="/resume" className="w-full">
+                    <Button className="w-full bg-signature-blue text-primary-foreground hover:bg-cyan-support transition-colors font-sans font-semibold min-h-[44px] active:scale-[0.98]">
                       Apply Now
                     </Button>
                   </Link>

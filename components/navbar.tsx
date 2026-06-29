@@ -61,7 +61,7 @@ const navigation: NavItem[] = [
       },
       {
         name: "Submit Profile",
-        href: "/submit-resume",
+        href: "/resume",
         description: "Choose the right application path",
       },
     ],
@@ -77,7 +77,7 @@ const navigation: NavItem[] = [
       },
       {
         name: "Partner With Us",
-        href: "/request-consultation",
+        href: "/clients",
         description: "Explore collaboration",
       },
     ],
@@ -670,30 +670,25 @@ export function Navbar() {
     [pathname],
   )
 
-  useIsomorphicLayoutEffect(() => {
-    let secondFrame = 0
-    const syncScrollState = () => setScrolled(window.scrollY > 20)
-    const enableTransitions = () => setNavReady(true)
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 20)
+    }
 
-    window.addEventListener("scroll", syncScrollState, { passive: true })
-    window.addEventListener("pageshow", syncScrollState)
+    handleScroll() // Initialize state immediately
 
-    syncScrollState()
-    const firstFrame = requestAnimationFrame(() => {
-      syncScrollState()
-      secondFrame = requestAnimationFrame(() => {
-        syncScrollState()
-        enableTransitions()
-      })
-    })
-    const restoredScrollTimer = window.setTimeout(syncScrollState, 120)
+    window.addEventListener("scroll", handleScroll, { passive: true })
+    window.addEventListener("pageshow", handleScroll)
+
+    // Delay enabling transitions to avoid hydration/initial paint flickering
+    const transitionTimer = setTimeout(() => {
+      setNavReady(true)
+    }, 150)
 
     return () => {
-      window.removeEventListener("scroll", syncScrollState)
-      window.removeEventListener("pageshow", syncScrollState)
-      cancelAnimationFrame(firstFrame)
-      cancelAnimationFrame(secondFrame)
-      window.clearTimeout(restoredScrollTimer)
+      window.removeEventListener("scroll", handleScroll)
+      window.removeEventListener("pageshow", handleScroll)
+      clearTimeout(transitionTimer)
     }
   }, [])
 
@@ -837,7 +832,7 @@ export function Navbar() {
             />
 
             <Link
-              href="/request-consultation"
+              href="/clients"
               className="hidden items-center gap-2 rounded-[9px] border border-white/[0.14] bg-white/[0.06] px-[16px] py-[9px] text-[13px] font-semibold text-white/80 backdrop-blur-sm transition-all duration-200 hover:border-white/[0.22] hover:bg-white/[0.10] hover:text-white active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-white/30 lg:flex"
             >
               Partner With Us

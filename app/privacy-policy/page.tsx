@@ -6,6 +6,9 @@ export const metadata: Metadata = {
   title: "Privacy Policy | N2P Systems",
   description:
     "Learn about how N2P Systems collects, uses, and safeguards personal information for candidates, clients, and website visitors.",
+  alternates: {
+    canonical: "/privacy-policy",
+  },
 }
 
 export default function PrivacyPolicyPage() {
@@ -78,7 +81,7 @@ export default function PrivacyPolicyPage() {
   return (
     <main className="bg-frost min-h-screen">
       {/* Header Banner */}
-      <section className="bg-navy pt-28 pb-12 sm:pt-32 sm:pb-16 relative overflow-hidden texture-dots">
+      <section className="bg-navy pt-24 pb-10 sm:pt-32 sm:pb-16 relative overflow-hidden texture-dots">
         <div className="absolute -right-20 top-1/4 w-96 h-96 rounded-full bg-signature-blue/5 blur-3xl" />
         <div className="absolute -left-20 bottom-1/4 w-64 h-64 rounded-full bg-tech-green/5 blur-3xl" />
         <div className="relative mx-auto max-w-7xl px-5 sm:px-6 lg:px-8 text-center">
@@ -88,7 +91,7 @@ export default function PrivacyPolicyPage() {
           >
             <ArrowLeft className="size-3.5" /> Back to Home
           </Link>
-          <h1 className="text-2xl font-sans font-bold tracking-tight text-frost sm:text-4xl lg:text-5xl leading-[1.15] sm:leading-[1.1]">
+          <h1 className="text-[1.65rem] font-sans font-bold tracking-tight text-frost sm:text-4xl lg:text-5xl leading-[1.15] sm:leading-[1.1]">
             Privacy Policy
           </h1>
           <p className="mt-4 text-base text-frost/80 font-serif">
@@ -98,7 +101,7 @@ export default function PrivacyPolicyPage() {
       </section>
 
       {/* Main Content */}
-      <section className="py-16 md:py-24 bg-card">
+      <section className="py-10 sm:py-16 md:py-24 bg-card">
         <div className="mx-auto max-w-4xl px-5 sm:px-6 lg:px-8">
           <div className="prose max-w-none font-serif text-[15px] leading-relaxed text-muted-foreground space-y-12">
             <div>

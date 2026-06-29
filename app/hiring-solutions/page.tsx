@@ -16,7 +16,10 @@ import {
 export const metadata: Metadata = {
   title: "Hiring Solutions | N2P Systems",
   description:
-    "Explore N2P Systems hiring solutions: contract staffing, permanent placement, executive search, managed teams, and global recruitment across Canada, USA, and India.",
+    "Discover how N2P Systems helps organizations build high-performing technology teams through Contract staffing, Contract-to-Hire, and Permanent Placement solutions.",
+  alternates: {
+    canonical: "/hiring-solutions",
+  },
 }
 
 const services = [
@@ -108,7 +111,7 @@ export default function HiringSolutionsPage() {
                 size="lg"
                 className="bg-signature-blue text-primary-foreground hover:bg-cyan-support transition-all rounded-lg px-8 shadow-lg shadow-signature-blue/25"
               >
-                <Link href="/request-consultation">
+                <Link href="/clients">
                   Request a Consultation
                   <ArrowRight className="ml-2 size-4" />
                 </Link>
@@ -194,7 +197,7 @@ export default function HiringSolutionsPage() {
             size="lg"
             className="mt-8 bg-card text-signature-blue hover:bg-frost transition-all rounded-lg px-8 shadow-lg"
           >
-            <Link href="/request-consultation">
+            <Link href="/clients">
               Get Started Today
               <ArrowRight className="ml-2 size-4" />
             </Link>

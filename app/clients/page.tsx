@@ -16,6 +16,9 @@ export const metadata: Metadata = {
   title: "Partner With Us — Request a Quote | N2P Systems",
   description:
     "Request a custom quote from N2P Systems for consulting, AI integration, digital transformation, cloud infrastructure, or strategic advisory services.",
+  alternates: {
+    canonical: '/clients',
+  },
 }
 
 const contactInfo = [
@@ -73,19 +76,19 @@ export default function RequestConsultationPage() {
   return (
     <main className="bg-frost">
       {/* ── Hero Banner ── */}
-      <section className="bg-navy pt-28 pb-12 sm:pt-32 sm:pb-16 md:pb-20 relative overflow-hidden texture-dots">
+      <section className="bg-navy pt-24 pb-10 sm:pt-32 sm:pb-16 md:pb-20 relative overflow-hidden texture-dots">
         <div className="absolute -right-20 top-1/4 w-96 h-96 rounded-full bg-signature-blue/5 blur-3xl" />
         <div className="absolute -left-20 bottom-1/4 w-64 h-64 rounded-full bg-tech-green/5 blur-3xl" />
 
         <div className="relative mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-3xl text-center">
-            <div className="mb-6 inline-flex items-center gap-2.5 rounded-full border border-frost/10 bg-frost/[0.04] px-5 py-2">
+            <div className="mb-4 sm:mb-6 inline-flex items-center gap-2 sm:gap-2.5 rounded-full border border-frost/10 bg-frost/[0.04] px-3.5 sm:px-5 py-1.5 sm:py-2">
               <span className="text-xs font-sans font-medium tracking-widest text-frost/70 uppercase">
                 Partner With Us
               </span>
             </div>
 
-            <h1 className="text-2xl font-sans font-bold tracking-tight text-frost sm:text-4xl lg:text-5xl text-balance leading-[1.15] sm:leading-[1.1]">
+            <h1 className="text-[1.65rem] font-sans font-bold tracking-tight text-frost sm:text-4xl lg:text-5xl text-balance leading-[1.15] sm:leading-[1.1]">
               Request a Quote
             </h1>
             <p className="mt-5 text-base text-frost/80 font-serif leading-relaxed sm:text-lg max-w-2xl mx-auto">
@@ -98,7 +101,7 @@ export default function RequestConsultationPage() {
       </section>
 
       {/* ── Trust Indicators ── */}
-      <section className="border-b border-border bg-card py-10">
+      <section className="border-b border-border bg-card py-7 sm:py-10">
         <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 gap-5 sm:gap-6 sm:grid-cols-3">
             {trustPoints.map((point) => (
@@ -121,14 +124,14 @@ export default function RequestConsultationPage() {
       </section>
 
       {/* ── Main Content ── */}
-      <section className="py-16 md:py-24 bg-frost">
+      <section className="py-10 sm:py-16 md:py-24 bg-frost">
         <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 gap-10 sm:gap-16 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-6 sm:gap-16 lg:grid-cols-3">
 
             {/* ── Sidebar ── */}
             <div className="lg:col-span-1 space-y-10">
               {/* Contact Info Card */}
-              <div className="rounded-2xl border border-border bg-card p-7 shadow-sm">
+              <div className="rounded-2xl border border-border bg-card p-5 sm:p-7 shadow-sm">
                 <h2 className="text-lg font-sans font-semibold text-foreground">
                   Prefer to talk first?
                 </h2>
@@ -160,7 +163,7 @@ export default function RequestConsultationPage() {
               </div>
 
               {/* Services Quick Links */}
-              <div className="rounded-2xl border border-border bg-card p-7 shadow-sm">
+              <div className="rounded-2xl border border-border bg-card p-5 sm:p-7 shadow-sm">
                 <h3 className="text-sm font-sans font-semibold text-foreground uppercase tracking-wider">
                   What We Offer
                 </h3>

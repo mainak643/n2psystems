@@ -9,6 +9,7 @@ import {
   ServerCog,
   BookOpenCheck,
   Handshake,
+  ArrowRight,
 } from "lucide-react"
 
 const AUTOPLAY_MS = 4000
@@ -177,6 +178,10 @@ export function SpecializationSection() {
             MOBILE — auto-scroll carousel
         ════════════════════════════════ */}
         <div className="sm:hidden">
+          <div className="mb-3 flex items-center justify-end gap-1.5 text-muted-foreground/70 pr-2">
+            <span className="text-[10px] font-semibold tracking-wider uppercase">Swipe to explore</span>
+            <ArrowRight className="size-3 animate-pulse" />
+          </div>
           <div
             ref={scrollRef}
             onScroll={handleScroll}

@@ -3,7 +3,7 @@ import { Inter, Source_Sans_3 } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { Navbar } from '@/components/navbar'
 import { Footer } from '@/components/footer'
-import { AIChatWidget } from '@/components/chat/ai-chat-widget'
+import { ClientChatWidget } from '@/components/chat/client-chat-widget'
 import './globals.css'
 
 const inter = Inter({
@@ -19,6 +19,7 @@ const sourceSans = Source_Sans_3({
 })
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://n2psystems.com'),
   title: 'N2P Systems | Global Technology Recruitment',
   description:
     'Connecting elite technology professionals with leading companies across Canada, USA, and India. Precision-driven hiring for Software Engineering, Data Science, DevOps, AI/ML, Cybersecurity, and Product Leadership.',
@@ -34,12 +35,22 @@ export const metadata: Metadata = {
     'USA tech recruitment',
     'India technology talent',
   ],
+  alternates: {
+    canonical: '/',
+  },
   openGraph: {
     title: 'N2P Systems | Global Technology Recruitment',
     description:
       'Connecting elite technology professionals with leading companies across Canada, USA, and India.',
     type: 'website',
   },
+}
+
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  viewportFit: 'cover' as const,
 }
 
 export default function RootLayout({
@@ -53,7 +64,7 @@ export default function RootLayout({
         <Navbar />
         {children}
         <Footer />
-        <AIChatWidget />
+        <ClientChatWidget />
         <Analytics />
       </body>
     </html>

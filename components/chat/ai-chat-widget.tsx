@@ -61,11 +61,11 @@ function ActionLinks({ content }: { content: string }) {
   const links: ActionLink[] = []
   const lower = content.toLowerCase()
 
-  if (lower.includes("/request-consultation")) {
-    links.push({ label: "Request a Quote", href: "/request-consultation", icon: ArrowUpRight, variant: "blue" })
+  if (lower.includes("/clients")) {
+    links.push({ label: "Request a Quote", href: "/clients", icon: ArrowUpRight, variant: "blue" })
   }
-  if (lower.includes("/submit-resume")) {
-    links.push({ label: "Submit Resume", href: "/submit-resume", icon: FileText, variant: "blue" })
+  if (lower.includes("/resume")) {
+    links.push({ label: "Submit Resume", href: "/resume", icon: FileText, variant: "blue" })
   }
   if (lower.includes("/jobs")) {
     links.push({ label: "Browse Openings", href: "/jobs", icon: ArrowUpRight, variant: "blue" })
@@ -610,10 +610,10 @@ export function AIChatWidget() {
             </div>
             <button
               onClick={() => setIsOpen(false)}
-              className="flex size-7 items-center justify-center rounded-md transition-colors text-white/50 hover:bg-white/10 hover:text-white"
+              className="flex size-9 sm:size-7 items-center justify-center rounded-md transition-colors text-white/80 hover:bg-white/15 hover:text-white"
               aria-label="Close chat"
             >
-              <X style={{ width: 14, height: 14 }} />
+              <X className="size-5 sm:size-3.5" strokeWidth={2.5} />
             </button>
           </div>
 
@@ -749,7 +749,7 @@ export function AIChatWidget() {
           <div
             className="shrink-0"
             style={{
-              padding: "10px 16px 14px",
+              padding: "10px 16px calc(14px + env(safe-area-inset-bottom, 0px))",
               background: "#ffffff",
               borderTop: "1px solid #E5E7EB",
             }}
@@ -844,15 +844,15 @@ export function AIChatWidget() {
         aria-label={isOpen ? "Close chat" : "Chat with N2P Systems"}
         className="fixed z-[60] flex items-center justify-center rounded-full outline-none transition-all duration-300 hover:opacity-90 active:scale-[0.96]"
         style={{
-          bottom: 28,
+          bottom: "max(28px, env(safe-area-inset-bottom, 28px))",
           right: 24,
           width: 52,
           height: 52,
           background: isOpen ? "#374151" : "#1E63B5",
           boxShadow: "0 2px 12px rgba(30,99,181,0.25)",
-          opacity: isHidden ? 0 : 1,
-          transform: isHidden ? "scale(0.8) translateY(12px)" : "scale(1) translateY(0)",
-          pointerEvents: isHidden ? "none" : "auto",
+          opacity: isHidden || (isOpen && isMobile) ? 0 : 1,
+          transform: isHidden || (isOpen && isMobile) ? "scale(0.8) translateY(12px)" : "scale(1) translateY(0)",
+          pointerEvents: isHidden || (isOpen && isMobile) ? "none" : "auto",
         }}
       >
         <div

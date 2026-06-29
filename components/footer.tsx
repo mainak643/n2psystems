@@ -1,17 +1,20 @@
+"use client"
+
+import { useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { Linkedin, MessageCircle, Mail, Phone, ArrowUpRight } from "lucide-react"
+import { Linkedin, MessageCircle, Mail, Phone, ArrowUpRight, ChevronDown } from "lucide-react"
 
 const companyLinks = [
   { name: "Our Services", href: "/#services" },
   { name: "About Us", href: "/#about" },
   { name: "Contact Us", href: "/#contact" },
-  { name: "Partner With Us", href: "/request-consultation" },
+  { name: "Partner With Us", href: "/clients" },
 ]
 
 const careerLinks = [
   { name: "Browse Opportunities", href: "/jobs" },
-  { name: "Submit Profile", href: "/submit-resume" },
+  { name: "Submit Profile", href: "/resume" },
 ]
 
 const regions = [
@@ -35,7 +38,65 @@ const socialLinks = [
   },
 ]
 
+// Reusable mobile accordion section wrapper
+function AccordionSection({
+  id,
+  label,
+  openSection,
+  onToggle,
+  children,
+}: {
+  id: string
+  label: string
+  openSection: string | null
+  onToggle: (id: string) => void
+  children: React.ReactNode
+}) {
+  const isOpen = openSection === id
+
+  return (
+    <div className="border-t border-white/[0.06] md:border-0">
+      {/* ── Mobile trigger (hidden on md+) ── */}
+      <button
+        onClick={() => onToggle(id)}
+        aria-expanded={isOpen}
+        className="flex w-full items-center justify-between py-4 outline-none focus-visible:ring-inset focus-visible:ring-2 focus-visible:ring-blue-500/40 md:hidden"
+      >
+        <span className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white/45">
+          {label}
+        </span>
+        <ChevronDown
+          className="h-3.5 w-3.5 shrink-0 text-white/30 transition-transform duration-300"
+          style={{ transform: isOpen ? "rotate(180deg)" : "rotate(0deg)" }}
+          aria-hidden
+        />
+      </button>
+
+      {/* ── Desktop label (hidden on mobile) ── */}
+      <p className="mb-5 hidden text-[10px] font-semibold uppercase tracking-[0.22em] text-white/45 md:block">
+        {label}
+      </p>
+
+      {/* ── Animated container — grid trick for smooth open/close ── */}
+      {/* On desktop: always open. On mobile: toggled. */}
+      <div
+        className="grid transition-[grid-template-rows] duration-300 ease-in-out md:grid-rows-[1fr]"
+        style={{ gridTemplateRows: isOpen ? "1fr" : "0fr" }}
+      >
+        <div className="overflow-hidden md:overflow-visible">
+          <div className="pb-5 md:pb-0">{children}</div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function Footer() {
+  const [openSection, setOpenSection] = useState<string | null>(null)
+
+  const toggleSection = (id: string) =>
+    setOpenSection((prev) => (prev === id ? null : id))
+
   return (
     <footer
       className="relative overflow-hidden border-t border-white/[0.08]"
@@ -59,10 +120,15 @@ export function Footer() {
       {/* ── Content ── */}
       <div className="relative mx-auto max-w-[1280px] px-5 sm:px-6 lg:px-10">
 
-        <div className="grid gap-6 sm:gap-8 pt-10 pb-8 sm:pt-12 md:pt-16 md:pb-10 md:grid-cols-2 lg:grid-cols-4 lg:gap-8">
+        {/*
+          Desktop: 4-col grid with gap, top/bottom padding
+          Mobile: no gap (borders serve as dividers), accordion sections handle own spacing
+        */}
+        <div className="grid gap-0 pt-10 pb-0 sm:gap-8 sm:pt-12 md:gap-8 md:grid-cols-2 md:pt-16 md:pb-10 lg:grid-cols-4">
 
           {/* ── Brand column ── */}
-          <div className="md:col-span-2 lg:col-span-1 lg:pr-6">
+          {/* Mobile: bottom border + extra bottom padding acts as visual separator */}
+          <div className="border-b border-white/[0.06] pb-8 md:col-span-2 md:border-0 md:pb-0 lg:col-span-1 lg:pr-6">
             <Link
               href="/"
               className="group inline-flex items-center gap-3 rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
@@ -101,7 +167,8 @@ export function Footer() {
                   target="_blank"
                   rel="noreferrer"
                   aria-label={label}
-                  className="group/s flex h-9 w-9 items-center justify-center rounded-lg border border-white/[0.14] bg-white/[0.04] text-white/55 outline-none transition-all duration-200 hover:border-blue-400/35 hover:bg-blue-500/[0.08] hover:text-white/90 focus-visible:ring-2 focus-visible:ring-blue-500/40"
+                  /* Slightly larger tap target on mobile */
+                  className="group/s flex h-10 w-10 items-center justify-center rounded-lg border border-white/[0.14] bg-white/[0.04] text-white/55 outline-none transition-all duration-200 hover:border-blue-400/35 hover:bg-blue-500/[0.08] hover:text-white/90 focus-visible:ring-2 focus-visible:ring-blue-500/40 md:h-9 md:w-9"
                 >
                   <Icon className="h-[15px] w-[15px]" />
                 </a>
@@ -109,17 +176,15 @@ export function Footer() {
             </div>
           </div>
 
-          {/* ── Company ── */}
-          <div>
-            <p className="mb-5 text-[10px] font-semibold uppercase tracking-[0.22em] text-white/45">
-              Company
-            </p>
-            <ul className="space-y-3">
+          {/* ── Company — accordion on mobile ── */}
+          <AccordionSection id="company" label="Company" openSection={openSection} onToggle={toggleSection}>
+            <ul className="space-y-0.5">
               {companyLinks.map((link) => (
                 <li key={link.name}>
                   <Link
                     href={link.href}
-                    className="group flex items-center gap-2 text-[13.5px] text-white/70 outline-none transition-all duration-150 hover:text-white focus-visible:text-white"
+                    /* Taller touch target on mobile, tighter on desktop */
+                    className="group flex items-center gap-2 py-2.5 text-[13.5px] text-white/70 outline-none transition-all duration-150 hover:text-white focus-visible:text-white md:py-0 md:mb-3"
                   >
                     <span
                       className="inline-block h-px w-0 shrink-0 transition-all duration-200 group-hover:w-3"
@@ -130,19 +195,16 @@ export function Footer() {
                 </li>
               ))}
             </ul>
-          </div>
+          </AccordionSection>
 
-          {/* ── Careers ── */}
-          <div>
-            <p className="mb-5 text-[10px] font-semibold uppercase tracking-[0.22em] text-white/45">
-              Careers
-            </p>
-            <ul className="space-y-3">
+          {/* ── Careers — accordion on mobile ── */}
+          <AccordionSection id="careers" label="Careers" openSection={openSection} onToggle={toggleSection}>
+            <ul className="space-y-0.5">
               {careerLinks.map((link) => (
                 <li key={link.name}>
                   <Link
                     href={link.href}
-                    className="group flex items-center gap-2 text-[13.5px] text-white/70 outline-none transition-all duration-150 hover:text-white focus-visible:text-white"
+                    className="group flex items-center gap-2 py-2.5 text-[13.5px] text-white/70 outline-none transition-all duration-150 hover:text-white focus-visible:text-white md:py-0 md:mb-3"
                   >
                     <span
                       className="inline-block h-px w-0 shrink-0 transition-all duration-200 group-hover:w-3"
@@ -154,11 +216,11 @@ export function Footer() {
               ))}
             </ul>
 
-            {/* Quick CTA */}
-            <div className="mt-8">
+            {/* Quick CTA — full-width on mobile, auto on desktop */}
+            <div className="mt-5 md:mt-8">
               <Link
-                href="/submit-resume"
-                className="group inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-[12px] font-semibold text-white/80 outline-none transition-all duration-200 hover:text-white focus-visible:ring-2 focus-visible:ring-blue-400/40"
+                href="/resume"
+                className="group inline-flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3 text-[12px] font-semibold text-white/80 outline-none transition-all duration-200 hover:text-white focus-visible:ring-2 focus-visible:ring-blue-400/40 md:w-auto md:justify-start md:py-2.5"
                 style={{
                   border: "1px solid rgba(255,255,255,0.12)",
                   background: "rgba(255,255,255,0.04)",
@@ -168,13 +230,10 @@ export function Footer() {
                 <ArrowUpRight className="h-3 w-3 text-white/45 transition-all duration-200 group-hover:text-white/75 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
               </Link>
             </div>
-          </div>
+          </AccordionSection>
 
-          {/* ── Contact ── */}
-          <div>
-            <p className="mb-5 text-[10px] font-semibold uppercase tracking-[0.22em] text-white/45">
-              Contact
-            </p>
+          {/* ── Contact — accordion on mobile ── */}
+          <AccordionSection id="contact" label="Contact" openSection={openSection} onToggle={toggleSection}>
             <ul className="space-y-3.5">
               <li>
                 <a
@@ -253,13 +312,13 @@ export function Footer() {
                 ))}
               </div>
             </div>
-          </div>
+          </AccordionSection>
         </div>
 
         {/* ── Divider ── */}
         <div
           aria-hidden
-          className="h-px"
+          className="mt-8 h-px md:mt-0"
           style={{
             background:
               "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.08) 15%, rgba(255,255,255,0.08) 85%, transparent 100%)",
@@ -267,7 +326,7 @@ export function Footer() {
         />
 
         {/* ── Bottom bar ── */}
-        <div className="flex flex-col gap-3 py-6 md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-col gap-3 py-6 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] md:pb-6 md:flex-row md:items-center md:justify-between">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
             <span className="text-[11px] text-white/45">
               © 2026 N2P Systems. All rights reserved.

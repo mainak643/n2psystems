@@ -39,9 +39,11 @@ export function ConsultationFormClient() {
         e.preventDefault()
         setSubmitted(true)
       }}
-      className="space-y-6"
+      // ↓ Mobile: tighter vertical rhythm. sm+ unchanged.
+      className="space-y-4 sm:space-y-6"
     >
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+      {/* ↓ Mobile: 2-col with tighter gap (short labels fit fine side-by-side). sm+ unchanged. */}
+      <div className="grid grid-cols-2 gap-3 sm:gap-6">
         <div className="space-y-2">
           <label htmlFor="firstName" className="text-sm font-medium text-foreground">
             First Name *
@@ -56,7 +58,8 @@ export function ConsultationFormClient() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+      {/* ↓ Mobile: keep 1-col (long labels), just tighten the gap. sm+ unchanged. */}
+      <div className="grid grid-cols-1 gap-4 sm:gap-6 sm:grid-cols-2">
         <div className="space-y-2">
           <label htmlFor="companyName" className="text-sm font-medium text-foreground">
             Company / Organization *
@@ -71,7 +74,8 @@ export function ConsultationFormClient() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+      {/* ↓ Mobile: 2-col with tighter gap (short labels fit fine side-by-side). sm+ unchanged. */}
+      <div className="grid grid-cols-2 gap-3 sm:gap-6">
         <div className="space-y-2">
           <label htmlFor="email" className="text-sm font-medium text-foreground">
             Work Email *
@@ -107,7 +111,8 @@ export function ConsultationFormClient() {
         </Select>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+      {/* ↓ Mobile: 2-col with tighter gap (short labels fit fine side-by-side). sm+ unchanged. */}
+      <div className="grid grid-cols-2 gap-3 sm:gap-6">
         <div className="space-y-2">
           <label htmlFor="budget" className="text-sm font-medium text-foreground">
             Estimated Budget
@@ -149,9 +154,10 @@ export function ConsultationFormClient() {
         <label htmlFor="details" className="text-sm font-medium text-foreground">
           Project Details
         </label>
+        {/* ↓ Mobile: 1 fewer row saves ~20px of height */}
         <Textarea
           id="details"
-          rows={5}
+          rows={4}
           placeholder="Describe your goals, challenges, or the scope of work you need help with. The more detail you provide, the more accurate our quote will be."
         />
       </div>

@@ -188,17 +188,25 @@ html {
     box-shadow: none;
   }
 
-  /* Chat widget: full-screen takeover on mobile */
+  /* Ensure safe area padding for notched devices */
+  body {
+    padding-left: env(safe-area-inset-left, 0);
+    padding-right: env(safe-area-inset-right, 0);
+  }
+}
+
+/* Chat widget: full-screen takeover on small mobile */
+@media (max-width: 639px) {
   .chat-mobile-full {
-    bottom: 0 !important;
-    right: 0 !important;
-    left: 0 !important;
-    top: 0 !important;
-    width: 100% !important;
-    border-radius: 0 !important;
+    bottom: 0;
+    right: 0;
+    left: 0;
+    top: 0;
+    width: 100%;
+    border-radius: 0;
   }
   .chat-mobile-full > div:first-child {
-    height: 100% !important;
-    border-radius: 0 !important;
+    height: 100%;
+    border-radius: 0;
   }
 }

@@ -67,12 +67,7 @@ function ArrowIcon() {
 }
 
 export function HeroSection() {
-  const [isMounted, setIsMounted] = useState(false)
 
-  useEffect(() => {
-    const timer = setTimeout(() => setIsMounted(true), 40)
-    return () => clearTimeout(timer)
-  }, [])
 
   const handleScrollDown = useCallback(() => {
     const target =
@@ -136,10 +131,7 @@ export function HeroSection() {
         </svg>
       </div>
 
-      <div
-        className={`relative z-10 mx-auto w-full max-w-7xl px-5 pt-[82px] pb-10 sm:px-10 sm:py-28 lg:px-16 transition-all duration-1000 ease-[cubic-bezier(0.16,1,0.3,1)] ${isMounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
-          }`}
-      >
+      <div className="relative z-10 mx-auto w-full max-w-7xl px-5 pt-[82px] pb-10 sm:px-10 sm:py-28 lg:px-16 animate-fade-in-up">
         <div className="max-w-[44rem]">
           <div className="mb-4 sm:mb-6 inline-flex items-center gap-2 sm:gap-2.5 rounded-full border border-slate-700/50 bg-slate-800/55 sm:bg-slate-800/40 ring-1 ring-white/[0.08] sm:ring-0 px-3 sm:px-4 py-1.5 text-[10px] sm:text-xs font-semibold text-slate-300 backdrop-blur-md">
             <span className="size-1.5 rounded-full bg-blue-400" />

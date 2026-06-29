@@ -80,7 +80,7 @@ function ContactForm() {
 
       <button
         type="submit"
-        className="w-full rounded-lg bg-signature-blue px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-signature-blue/90 focus:outline-none focus:ring-2 focus:ring-signature-blue/40"
+        className="w-full rounded-lg bg-signature-blue px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-signature-blue/90 focus:outline-none focus:ring-2 focus:ring-signature-blue/40 active:scale-[0.98] min-h-[44px]"
       >
         Send Message
       </button>
@@ -88,14 +88,61 @@ function ContactForm() {
   )
 }
 
+// ─── Contact Details Card (shared between mobile tab + desktop grid) ──────────
+function ContactInfoPanel() {
+  return (
+    <div className="rounded-2xl sm:rounded-3xl border border-border bg-card p-5 sm:p-7 shadow-sm">
+      <h3 className="text-lg font-semibold text-foreground">Need assistance?</h3>
+      <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+        Reach out directly to the N2P team.
+      </p>
+      <div className="mt-5 space-y-3">
+        {contactDetails.map((item) => (
+          <div
+            key={item.label}
+            className="flex items-center gap-3.5 rounded-2xl border border-border bg-background px-4 py-3"
+          >
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-signature-blue/10 text-signature-blue">
+              <item.icon className="h-4 w-4" />
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-foreground">{item.label}</p>
+              <p className="text-sm text-muted-foreground">{item.value}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ─── Form Card (shared between mobile tab + desktop grid) ─────────────────────
+function ContactFormPanel() {
+  return (
+    <div className="rounded-2xl sm:rounded-3xl border border-border bg-card p-5 sm:p-7 shadow-sm">
+      <h3 className="text-lg font-semibold text-foreground">Send a message</h3>
+      <p className="mt-1 text-sm text-muted-foreground">
+        We'll get back to you within one business day.
+      </p>
+      <div className="mt-5">
+        <ContactForm />
+      </div>
+    </div>
+  )
+}
+
+// ─── Main Section ─────────────────────────────────────────────────────────────
 export function ContactSection() {
+  const [activeTab, setActiveTab] = useState<"info" | "message">("info")
+
   return (
     <section
       id="contact"
       className="relative overflow-hidden bg-background border-t border-border pt-10 pb-16 sm:pt-12 sm:pb-20 lg:pt-16 lg:pb-24"
     >
       <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
-        {/* Header */}
+
+        {/* Header — unchanged */}
         <div className="mx-auto max-w-3xl text-center">
           <p className="mb-4 text-sm font-semibold uppercase tracking-[0.24em] text-signature-blue">
             Contact
@@ -109,46 +156,62 @@ export function ContactSection() {
           </p>
         </div>
 
-        {/* Grid — items-start so cards don't stretch to each other's height */}
-        <div className="mt-8 sm:mt-12 grid gap-5 sm:gap-6 lg:gap-8 lg:grid-cols-2 lg:items-start">
-
-          {/* Left — Contact Details */}
-          <div className="rounded-2xl sm:rounded-3xl border border-border bg-card p-5 sm:p-7 shadow-sm">
-            <h3 className="text-lg font-semibold text-foreground">Need assistance?</h3>
-            <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-              Reach out directly to the N2P team.
-            </p>
-
-            <div className="mt-5 space-y-3">
-              {contactDetails.map((item) => (
-                <div
-                  key={item.label}
-                  className="flex items-center gap-3.5 rounded-2xl border border-border bg-background px-4 py-3"
-                >
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-signature-blue/10 text-signature-blue">
-                    <item.icon className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold text-foreground">{item.label}</p>
-                    <p className="text-sm text-muted-foreground">{item.value}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
+        {/*
+          ── MOBILE TAB SWITCHER (<lg) ────────────────────────────────────────
+          Pill-style toggle between "Contact Info" and "Send Message".
+          Hidden on lg+ where both panels are always visible side-by-side.
+        */}
+        <div className="mt-8 sm:mt-10 lg:hidden">
+          <div className="flex rounded-xl border border-border bg-card p-1 gap-1">
+            <button
+              onClick={() => setActiveTab("info")}
+              className={`
+                flex-1 rounded-lg py-2.5 text-sm font-semibold
+                transition-all duration-200
+                ${activeTab === "info"
+                  ? "bg-signature-blue text-white shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+                }
+              `}
+            >
+              Contact Info
+            </button>
+            <button
+              onClick={() => setActiveTab("message")}
+              className={`
+                flex-1 rounded-lg py-2.5 text-sm font-semibold
+                transition-all duration-200
+                ${activeTab === "message"
+                  ? "bg-signature-blue text-white shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+                }
+              `}
+            >
+              Send Message
+            </button>
           </div>
-
-          {/* Right — Form */}
-          <div className="rounded-2xl sm:rounded-3xl border border-border bg-card p-5 sm:p-7 shadow-sm">
-            <h3 className="text-lg font-semibold text-foreground">Send a message</h3>
-            <p className="mt-1 text-sm text-muted-foreground">
-              We'll get back to you within one business day.
-            </p>
-            <div className="mt-5">
-              <ContactForm />
-            </div>
-          </div>
-
         </div>
+
+        {/*
+          ── MOBILE: single active panel (<lg) ───────────────────────────────
+          Only the active tab's panel is rendered; avoids long scroll.
+          Hidden entirely on lg+ (desktop uses the grid below instead).
+        */}
+        <div className="mt-3 lg:hidden">
+          {activeTab === "info" && <ContactInfoPanel />}
+          {activeTab === "message" && <ContactFormPanel />}
+        </div>
+
+        {/*
+          ── DESKTOP: original two-column grid (lg+) ─────────────────────────
+          Hidden on mobile — panels are handled by the tab switcher above.
+          Pixel-identical to the original layout.
+        */}
+        <div className="hidden lg:grid mt-12 gap-8 lg:grid-cols-2 lg:items-start">
+          <ContactInfoPanel />
+          <ContactFormPanel />
+        </div>
+
       </div>
     </section>
   )

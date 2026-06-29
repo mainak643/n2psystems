@@ -1,4 +1,7 @@
-import { Star } from "lucide-react"
+"use client"
+
+import { Star, ChevronRight } from "lucide-react"
+import { useRef, useState, useEffect } from "react"
 
 const testimonials = [
   {
@@ -34,8 +37,32 @@ const testimonials = [
 ]
 
 export function TestimonialsSection() {
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const [activeIndex, setActiveIndex] = useState(0)
+
+  // Track which card is snapped into view
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+
+    const onScroll = () => {
+      const cardWidth = el.scrollWidth / testimonials.length
+      const index = Math.round(el.scrollLeft / cardWidth)
+      setActiveIndex(Math.min(Math.max(index, 0), testimonials.length - 1))
+    }
+
+    el.addEventListener("scroll", onScroll, { passive: true })
+    return () => el.removeEventListener("scroll", onScroll)
+  }, [])
+
+  const scrollTo = (index: number) => {
+    const el = scrollRef.current
+    if (!el) return
+    const cardWidth = el.scrollWidth / testimonials.length
+    el.scrollTo({ left: cardWidth * index, behavior: "smooth" })
+  }
+
   return (
-    // FIX: top padding trimmed (was pt-24 lg:pt-32) — too much dead space under the section above
     <section className="relative overflow-hidden bg-frost pt-12 pb-10 sm:pt-14 sm:pb-12 lg:pt-20 lg:pb-16">
       {/* Ambient Background Glow */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -43,39 +70,62 @@ export function TestimonialsSection() {
       </div>
 
       <div className="relative mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
-        {/* Section Header */}
+        {/* Section Header — unchanged */}
         <div className="mx-auto mb-8 sm:mb-12 max-w-3xl text-center">
           <p className="mb-4 text-sm font-semibold uppercase tracking-[0.2em] text-signature-blue">
             Client Testimonials
           </p>
-
           <h2 className="mb-4 sm:mb-5 font-sans text-2xl font-bold tracking-tight text-foreground sm:text-4xl lg:text-5xl text-balance">
             What Our Clients Say
           </h2>
-
           <p className="mx-auto max-w-2xl text-[15px] sm:text-lg leading-relaxed text-muted-foreground">
             We take pride in building long-term relationships and delivering
             meaningful business outcomes for our clients.
           </p>
         </div>
 
-        {/* Testimonials Grid */}
-        <div className="grid grid-cols-1 gap-4 sm:gap-6 md:gap-8 md:grid-cols-2 xl:grid-cols-3">
+        {/*
+          ─────────────────────────────────────────────────
+          MOBILE  (<md): horizontal scroll-snap carousel
+            • negative margin bleeds to screen edges
+            • cards are 82vw so next card peeks ~10vw
+            • scrollbar hidden
+            • dot indicators below
+
+          DESKTOP (md+): original 2-col / 3-col grid
+            • overflow visible again, snap disabled
+            • padding/margin reset to match original
+          ─────────────────────────────────────────────────
+        */}
+        <div
+          ref={scrollRef}
+          className="
+            -mx-5 px-5
+            flex gap-4 overflow-x-auto snap-x snap-mandatory
+            pb-4
+            [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]
+
+            md:mx-0 md:px-0
+            md:grid md:grid-cols-2
+            md:overflow-visible md:snap-none
+            md:gap-8 md:pb-0
+            xl:grid-cols-3
+          "
+        >
           {testimonials.map((testimonial) => (
             <div
               key={testimonial.author}
               className="
-                group
-                flex
-                h-full
-                flex-col
-                rounded-2xl
-                border
-                border-border
-                bg-card
+                /* ── mobile card ── */
+                w-[82vw] shrink-0 snap-center
+
+                /* ── desktop card (resets mobile sizing) ── */
+                md:w-auto md:shrink md:h-full
+
+                group flex flex-col
+                rounded-2xl border border-border bg-card
                 p-6 sm:p-8
-                transition-all
-                duration-300
+                transition-all duration-300
                 hover:-translate-y-1
                 hover:border-signature-blue/25
                 hover:shadow-xl
@@ -91,7 +141,6 @@ export function TestimonialsSection() {
                     />
                   ))}
                 </div>
-
                 <span
                   aria-hidden="true"
                   className="text-5xl leading-none text-signature-blue/15 select-none"
@@ -123,7 +172,6 @@ export function TestimonialsSection() {
                       .join("")}
                   </span>
                 </div>
-
                 <div className="min-w-0">
                   <div className="font-semibold text-foreground">
                     {testimonial.author}
@@ -139,6 +187,35 @@ export function TestimonialsSection() {
             </div>
           ))}
         </div>
+
+        {/*
+          Mobile-only: dot indicators + card counter
+          Hidden on md+ since desktop uses the plain grid
+        */}
+        <div className="mt-5 flex items-center justify-center gap-3 md:hidden">
+          {testimonials.map((_, i) => (
+            <button
+              key={i}
+              onClick={() => scrollTo(i)}
+              aria-label={`Go to testimonial ${i + 1}`}
+              className={`
+                rounded-full transition-all duration-300
+                ${i === activeIndex
+                  ? "w-6 h-2 bg-signature-blue"
+                  : "w-2 h-2 bg-signature-blue/25 hover:bg-signature-blue/50"
+                }
+              `}
+            />
+          ))}
+        </div>
+
+        {/* Mobile-only: subtle swipe hint on first render */}
+        {activeIndex === 0 && (
+          <p className="mt-3 flex items-center justify-center gap-1 text-xs text-muted-foreground/60 md:hidden select-none">
+            Swipe to see more
+            <ChevronRight className="h-3 w-3" />
+          </p>
+        )}
       </div>
     </section>
   )

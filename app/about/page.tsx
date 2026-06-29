@@ -15,6 +15,9 @@ export const metadata: Metadata = {
   title: "About Us | N2P Systems",
   description:
     "Learn about N2P Systems, a global technology recruitment consultancy with operations in Canada, USA, and India. Discover our mission, values, and leadership.",
+  alternates: {
+    canonical: '/about',
+  },
 }
 
 const stats = [
@@ -76,21 +79,21 @@ export default function AboutPage() {
   return (
     <main>
       {/* Hero */}
-      <section className="bg-navy pt-28 pb-12 sm:pt-32 sm:pb-16 md:pb-24 relative overflow-hidden texture-dots">
+      <section className="bg-navy pt-24 pb-10 sm:pt-32 sm:pb-16 md:pb-24 relative overflow-hidden texture-dots">
         <div className="absolute -right-20 top-1/4 w-96 h-96 rounded-full bg-signature-blue/5 blur-3xl" />
         <div className="absolute -left-20 bottom-1/4 w-64 h-64 rounded-full bg-tech-green/5 blur-3xl" />
         <div className="relative mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 items-center gap-8 sm:gap-12 lg:grid-cols-2">
+          <div className="grid grid-cols-1 items-center gap-6 sm:gap-12 lg:grid-cols-2">
             <div>
-              <div className="mb-6 inline-flex items-center gap-2.5 rounded-full border border-frost/10 bg-frost/[0.04] px-5 py-2">
+              <div className="mb-4 sm:mb-6 inline-flex items-center gap-2 sm:gap-2.5 rounded-full border border-frost/10 bg-frost/[0.04] px-3.5 sm:px-5 py-1.5 sm:py-2">
                 <span className="text-xs font-sans font-medium tracking-widest text-frost/70 uppercase">
                   About N2P Systems
                 </span>
               </div>
-              <h1 className="text-2xl font-sans font-bold tracking-tight text-frost sm:text-4xl lg:text-5xl text-balance leading-[1.15] sm:leading-[1.1]">
+              <h1 className="text-[1.65rem] font-sans font-bold tracking-tight text-frost sm:text-4xl lg:text-5xl text-balance leading-[1.15] sm:leading-[1.1]">
                 Connecting Talent with Opportunity Since 2013
               </h1>
-              <p className="mt-4 sm:mt-6 text-[15px] sm:text-lg text-frost/80 leading-relaxed font-serif">
+              <p className="mt-3 sm:mt-6 text-[14.5px] sm:text-lg text-frost/80 leading-relaxed font-serif">
                 N2P Systems is a global technology recruitment consultancy that
                 helps organizations build high-performing teams and empowers
                 professionals to advance their careers. With deep domain
@@ -98,7 +101,7 @@ export default function AboutPage() {
                 exceptional talent and the companies that need them.
               </p>
             </div>
-            <div className="relative overflow-hidden rounded-2xl aspect-[4/3] ring-1 ring-frost/10">
+            <div className="relative overflow-hidden rounded-2xl aspect-[16/10] sm:aspect-[4/3] ring-1 ring-frost/10">
               <Image
                 src="/images/team-meeting.jpg"
                 alt="N2P Systems team collaborating in a modern office"
@@ -112,12 +115,12 @@ export default function AboutPage() {
       </section>
 
       {/* Stats */}
-      <section className="border-b border-border bg-card py-14">
+      <section className="border-b border-border bg-card py-10 sm:py-14">
         <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 gap-8 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-4 sm:gap-8 lg:grid-cols-4">
             {stats.map((stat) => (
               <div key={stat.label} className="text-center">
-                <p className="text-2xl font-sans font-bold text-signature-blue sm:text-4xl tracking-tight">
+                <p className="text-xl font-sans font-bold text-signature-blue sm:text-4xl tracking-tight">
                   {stat.value}
                 </p>
                 <p className="mt-1 text-sm text-muted-foreground font-serif">
@@ -130,7 +133,7 @@ export default function AboutPage() {
       </section>
 
       {/* Mission */}
-      <section className="bg-card py-16 sm:py-24">
+      <section className="bg-card py-12 sm:py-24">
         <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-3xl text-center section-divider pb-6">
             <h2 className="text-2xl font-sans font-bold text-foreground sm:text-3xl text-balance">
@@ -148,7 +151,7 @@ export default function AboutPage() {
       </section>
 
       {/* Values */}
-      <section className="bg-frost py-16 sm:py-24 relative overflow-hidden">
+      <section className="bg-frost py-12 sm:py-24 relative overflow-hidden">
         <div className="absolute top-0 left-1/2 w-[500px] h-[300px] -translate-x-1/2 rounded-full bg-signature-blue/[0.02] blur-3xl" />
         <div className="relative mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-2xl text-center mb-10 sm:mb-16">
@@ -156,7 +159,7 @@ export default function AboutPage() {
               What Sets Us Apart
             </h2>
           </div>
-          <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 sm:gap-5 md:grid-cols-2">
             {values.map((value) => (
               <div
                 key={value.title}
@@ -180,7 +183,7 @@ export default function AboutPage() {
       </section>
 
       {/* Global Offices */}
-      <section className="bg-card py-16 sm:py-24">
+      <section className="bg-card py-12 sm:py-24">
         <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-2xl text-center mb-10 sm:mb-16 section-divider pb-6">
             <h2 className="text-2xl font-sans font-bold text-foreground sm:text-3xl text-balance">
@@ -190,7 +193,7 @@ export default function AboutPage() {
               Three offices, one unified approach to recruitment excellence.
             </p>
           </div>
-          <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:gap-5 md:grid-cols-3">
             {offices.map((office) => (
               <div
                 key={office.city}
@@ -215,7 +218,7 @@ export default function AboutPage() {
       </section>
 
       {/* CTA */}
-      <section className="bg-signature-blue py-14 sm:py-20 relative overflow-hidden texture-grain">
+      <section className="bg-signature-blue py-10 sm:py-20 relative overflow-hidden texture-grain">
         <div className="absolute top-0 left-1/4 w-80 h-80 rounded-full bg-cyan-support/10 blur-3xl" />
         <div className="relative z-10 mx-auto max-w-7xl px-5 sm:px-6 lg:px-8 text-center">
           <h2 className="text-2xl font-sans font-bold text-primary-foreground sm:text-3xl text-balance">
@@ -225,7 +228,7 @@ export default function AboutPage() {
             Whether you are exploring career opportunities or looking to hire
             world-class talent, we would love to hear from you.
           </p>
-          <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
+          <div className="mt-6 sm:mt-8 flex flex-col items-center gap-3 sm:gap-4 sm:flex-row sm:justify-center w-full sm:w-auto">
             <Button
               asChild
               size="lg"
