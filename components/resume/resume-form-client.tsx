@@ -144,8 +144,8 @@ export function ResumeFormClient() {
           </h2>
         </div>
 
-        {/* ↓ Mobile: 2-col grid with fixed row height so all rows are equal. sm+ unchanged. */}
-        <div className="grid grid-cols-2 auto-rows-[8.5rem] gap-2.5 sm:auto-rows-auto sm:gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {/* ↓ Mobile: 2-col grid with auto-adjusting row heights (stretching items in each row). */}
+        <div className="grid grid-cols-2 gap-2.5 sm:gap-4 lg:grid-cols-4">
           {CATEGORIES.map(({ key, name, description, icon: Icon, accent }) => {
             const selected = selectedKey === key
 
@@ -156,8 +156,8 @@ export function ResumeFormClient() {
                 aria-pressed={selected}
                 onClick={() => handleSelect(key)}
                 className={cn(
-                  // ↓ Mobile: row height from auto-rows; just needs padding + full height fill
-                  "group relative h-full sm:min-h-28 overflow-hidden rounded-xl border bg-white p-3 sm:p-4 text-left shadow-sm outline-none",
+                  // ↓ Mobile: dynamic heights with a solid min-height to ensure visual consistency
+                  "group relative min-h-[140px] sm:min-h-28 h-full overflow-hidden rounded-xl border bg-white p-3 sm:p-4 text-left shadow-sm outline-none",
                   "transition-all duration-300 ease-out hover:-translate-y-1 hover:border-signature-blue/30 hover:shadow-[0_18px_42px_rgba(15,23,42,0.10)]",
                   "focus-visible:ring-2 focus-visible:ring-signature-blue/25",
                   selected
