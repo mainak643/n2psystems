@@ -166,21 +166,11 @@ export async function POST(req: NextRequest) {
     ]
 
     const fallbackModels = [
-      "openrouter/free",
-      "meta-llama/llama-3.3-70b-instruct:free",
-      "google/gemma-2-9b-it:free",
-      "qwen/qwen-2.5-72b-instruct:free",
-      "meta-llama/llama-3-8b-instruct:free",
-      "qwen/qwen-2.5-coder-32b-instruct:free",
-      "nousresearch/hermes-3-llama-3.1-405b:free",
-      "mistralai/mistral-7b-instruct:free",
-      "microsoft/phi-3-medium-128k-instruct:free",
-      "microsoft/phi-3-mini-128k-instruct:free",
-      "openchat/openchat-7b:free",
-      "gryphe/mythomax-l2-13b:free",
-      "liquid/lfm-40b:free",
-      "huggingfaceh4/zephyr-7b-beta:free",
-      "qwen/qwen3-next-80b-a3b-instruct:free"
+      "google/gemini-2.5-flash",
+      "meta-llama/llama-3.3-70b-instruct",
+      "qwen/qwen-2.5-72b-instruct",
+      "meta-llama/llama-3.1-8b-instruct",
+      "openrouter/free"
     ]
 
     let reply = null;
