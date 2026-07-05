@@ -37,7 +37,7 @@ const contactInfo = [
   {
     icon: Mail,
     label: "Email",
-    value: "info@n2psystems.com",
+    value: "info@n2psystems.ca",
     detail: "We respond within 24 hours",
   },
   {

@@ -6,7 +6,7 @@ import { Clock, Globe, Mail, Phone, CheckCircle2 } from "lucide-react"
 const contactDetails = [
   { icon: Phone, label: "Canada & USA", value: "+1 (437) 335-9390" },
   { icon: Phone, label: "India", value: "+91 97760 47567" },
-  { icon: Mail, label: "Email", value: "info@n2psystems.com" },
+  { icon: Mail, label: "Email", value: "info@n2psystems.ca" },
   { icon: Globe, label: "Operates In", value: "India, Canada, USA" },
   { icon: Clock, label: "Hours", value: "Mon - Fri, 9:00 AM – 6:00 PM EST" },
 ]

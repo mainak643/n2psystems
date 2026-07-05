@@ -139,7 +139,7 @@ export default function TermsOfServicePage() {
                 </p>
                 <div className="rounded-xl border border-border bg-frost p-6 max-w-md mt-4">
                   <p className="font-sans font-semibold text-foreground">N2P Systems Legal Department</p>
-                  <p className="text-sm mt-1">Email: <a href="mailto:info@n2psystems.com" className="text-signature-blue hover:underline">info@n2psystems.com</a></p>
+                  <p className="text-sm mt-1">Email: <a href="mailto:info@n2psystems.ca" className="text-signature-blue hover:underline">info@n2psystems.ca</a></p>
                   <p className="text-sm">Address: 200 Bay Street, Suite 1800, Toronto, ON M5J 2J2, Canada</p>
                 </div>
               </div>

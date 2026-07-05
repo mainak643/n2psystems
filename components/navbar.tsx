@@ -177,11 +177,10 @@ function DesktopDropdown({
         aria-expanded={isOpen}
         onKeyDown={handleTriggerKeyDown}
         className={cn(
-          "group flex items-center gap-1.5 rounded-md py-2 font-medium transition-colors duration-200 outline-none",
+          "group flex items-center gap-1.5 rounded-md py-2 text-[14px] xl:text-[15.5px] font-medium transition-colors duration-200 outline-none",
           "focus-visible:text-white focus-visible:ring-2 focus-visible:ring-cyan-400/50",
           isHighlighted ? "text-white" : "text-white/80 hover:text-white",
         )}
-        style={{ fontSize: 15.5 }}
       >
         <span className="relative">
           {item.name}
@@ -735,7 +734,7 @@ export function Navbar() {
 
         <nav
           aria-label="Main navigation"
-          className="relative mx-auto flex h-[62px] sm:h-[72px] w-full items-center justify-between px-4 sm:px-6 lg:px-10"
+          className="relative mx-auto flex h-[62px] sm:h-[72px] w-full items-center justify-between px-4 sm:px-6 lg:px-6 xl:px-10"
           style={{ maxWidth: "1280px" }}
         >
           {/* ── Logo ── */}
@@ -766,7 +765,7 @@ export function Navbar() {
 
           {/* ── Desktop nav ── */}
           <div className="hidden flex-1 justify-center lg:flex">
-            <div className="flex items-center gap-8">
+            <div className="flex items-center gap-4 xl:gap-8">
               {navigation.map((item) => {
                 if ("children" in item) {
                   return (
@@ -785,8 +784,7 @@ export function Navbar() {
                     <button
                       key={item.name}
                       onClick={() => scrollTo(item.anchor)}
-                      className="group relative rounded-md py-2 font-medium text-white/80 transition-colors duration-200 outline-none hover:text-white focus-visible:text-white focus-visible:ring-2 focus-visible:ring-cyan-400/50"
-                      style={{ fontSize: 15.5 }}
+                    className="group relative rounded-md py-2 text-[14px] xl:text-[15.5px] font-medium text-white/80 transition-colors duration-200 outline-none hover:text-white focus-visible:text-white focus-visible:ring-2 focus-visible:ring-cyan-400/50"
                     >
                       {item.name}
                       <span className="absolute -bottom-0.5 left-0 h-px w-0 bg-cyan-400 transition-all duration-300 group-hover:w-full" />
@@ -801,10 +799,9 @@ export function Navbar() {
                     href={item.href}
                     aria-current={isActive ? "page" : undefined}
                     className={cn(
-                      "group relative rounded-md py-2 font-medium transition-colors duration-200 outline-none focus-visible:text-white focus-visible:ring-2 focus-visible:ring-cyan-400/50",
+                      "group relative rounded-md py-2 text-[14px] xl:text-[15.5px] font-medium transition-colors duration-200 outline-none focus-visible:text-white focus-visible:ring-2 focus-visible:ring-cyan-400/50",
                       isActive ? "text-white" : "text-white/80 hover:text-white",
                     )}
-                    style={{ fontSize: 15.5 }}
                   >
                     {item.name}
                     <span
@@ -833,10 +830,10 @@ export function Navbar() {
 
             <Link
               href="/clients"
-              className="hidden items-center gap-2 rounded-[9px] border border-white/[0.14] bg-white/[0.06] px-[16px] py-[9px] text-[13px] font-semibold text-white/80 backdrop-blur-sm transition-all duration-200 hover:border-white/[0.22] hover:bg-white/[0.10] hover:text-white active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-white/30 lg:flex"
+              className="hidden items-center gap-1.5 rounded-[9px] border border-white/[0.14] bg-white/[0.06] px-[12px] py-[7.5px] xl:px-[16px] xl:py-[9px] text-[12px] xl:text-[13px] font-semibold text-white/80 backdrop-blur-sm transition-all duration-200 hover:border-white/[0.22] hover:bg-white/[0.10] hover:text-white active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-white/30 lg:flex"
             >
               Partner With Us
-              <ArrowUpRight style={{ width: 13, height: 13, color: "rgba(255,255,255,0.45)" }} />
+              <ArrowUpRight style={{ width: 12, height: 12, color: "rgba(255,255,255,0.45)" }} className="xl:size-[13px]" />
             </Link>
 
             {/* ── Hamburger (FIX: symmetric bar widths for clean X) ── */}

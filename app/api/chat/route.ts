@@ -24,7 +24,7 @@ SERVICES OFFERED:
 CONTACT INFORMATION:
 - Canada & USA Phone: +1 (437) 335-9390
 - India Phone: +91 97760 47567
-- Email: info@n2psystems.com
+- Email: info@n2psystems.ca
 - Headquarters: 200 Bay Street, Suite 1800, Toronto, ON M5J 2J2, Canada
 - Business Hours: Monday – Friday, 9:00 AM – 6:00 PM EST
 
@@ -132,7 +132,7 @@ export async function POST(req: NextRequest) {
       const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown"
       if (!checkRateLimit(ip)) {
         return NextResponse.json(
-          { error: "It looks like you've reached the message limit. Please connect with our team at info@n2psystems.com or call +1 (437) 335-9390 (USA/Canada) or +91 97760 47567 (India) to continue the conversation." },
+          { error: "It looks like you've reached the message limit. Please connect with our team at info@n2psystems.ca or call +1 (437) 335-9390 (USA/Canada) or +91 97760 47567 (India) to continue the conversation." },
           { status: 429 }
         )
       }
@@ -230,7 +230,7 @@ export async function POST(req: NextRequest) {
   } catch (error: unknown) {
     console.error("Chat API error:", error)
     return NextResponse.json(
-      { error: "We are currently offline. Please contact our team at info@n2psystems.com or call +1 (437) 335-9390 (USA/Canada) or +91 97760 47567 (India)." },
+      { error: "We are currently offline. Please contact our team at info@n2psystems.ca or call +1 (437) 335-9390 (USA/Canada) or +91 97760 47567 (India)." },
       { status: 500 }
     )
   }

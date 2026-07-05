@@ -237,7 +237,7 @@ export function Footer() {
             <ul className="space-y-3.5">
               <li>
                 <a
-                  href="mailto:info@n2psystems.com"
+                  href="mailto:info@n2psystems.ca"
                   className="group flex items-center gap-2.5 text-[13.5px] text-white/70 outline-none transition-colors duration-150 hover:text-white focus-visible:text-white"
                 >
                   <span
@@ -249,7 +249,7 @@ export function Footer() {
                   >
                     <Mail className="h-[13px] w-[13px] text-blue-300/80" aria-hidden />
                   </span>
-                  info@n2psystems.com
+                  info@n2psystems.ca
                 </a>
               </li>
               <li>

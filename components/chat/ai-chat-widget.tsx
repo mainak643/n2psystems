@@ -522,7 +522,7 @@ export function AIChatWidget() {
             id: `e-${Date.now()}`,
             role: "assistant",
             content:
-              "We are currently offline. Please contact our team at info@n2psystems.com or call +1 (437) 335-9390 (USA/Canada) or +91 97760 47567 (India).",
+              "We are currently offline. Please contact our team at info@n2psystems.ca or call +1 (437) 335-9390 (USA/Canada) or +91 97760 47567 (India).",
             timestamp: new Date(),
           },
         ])

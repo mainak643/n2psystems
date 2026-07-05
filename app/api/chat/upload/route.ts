@@ -107,7 +107,7 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error("Upload error:", error)
     return NextResponse.json(
-      { error: "Upload failed. Please try again or email your resume to info@n2psystems.com." },
+      { error: "Upload failed. Please try again or email your resume to info@n2psystems.ca." },
       { status: 500 }
     )
   }
