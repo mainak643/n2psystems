@@ -195,9 +195,12 @@ html {
   }
 }
 
-/* Reapdat widget: extra footer room on small mobile */
+/* Reapdat widget: extra footer room on small mobile and hide widget on mobile */
 @media (max-width: 639px) {
   footer {
     padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+  #ai-agent-widget {
+    display: none !important;
   }
 }
