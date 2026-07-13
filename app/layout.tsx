@@ -3,7 +3,7 @@ import { Inter, Source_Sans_3 } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { Navbar } from '@/components/navbar'
 import { Footer } from '@/components/footer'
-import { ClientChatWidget } from '@/components/chat/client-chat-widget'
+import Script from 'next/script'
 import './globals.css'
 
 const inter = Inter({
@@ -64,7 +64,14 @@ export default function RootLayout({
         <Navbar />
         {children}
         <Footer />
-        <ClientChatWidget />
+        <Script
+          src="https://api.reapdat.com/static/widget.js"
+          data-tenant-id="01d65500-be64-4909-b7d5-598d460c97e4"
+          data-key="pk_live_97kJ26nJjkBq3kj1zlKb1TiLDtKNnY8I"
+          data-theme="dark"
+          data-accent-color="#1E63B5"
+          strategy="lazyOnload"
+        />
         <Analytics />
       </body>
     </html>

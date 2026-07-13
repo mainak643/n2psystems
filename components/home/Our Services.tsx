@@ -187,7 +187,7 @@ export function SpecializationSection() {
             onScroll={handleScroll}
             onTouchStart={handleInteraction}
             onPointerDown={handleInteraction}
-            className="flex snap-x snap-mandatory overflow-x-auto scroll-smooth gap-3 -mx-5 px-5 pb-1"
+            className="flex snap-x snap-mandatory overflow-x-auto scroll-smooth gap-3 -mx-5 pl-5 pr-20 pb-1"
             style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
           >
             {allCards.map((card, i) => {

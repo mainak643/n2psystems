@@ -195,18 +195,9 @@ html {
   }
 }
 
-/* Chat widget: full-screen takeover on small mobile */
+/* Reapdat widget: extra footer room on small mobile */
 @media (max-width: 639px) {
-  .chat-mobile-full {
-    bottom: 0;
-    right: 0;
-    left: 0;
-    top: 0;
-    width: 100%;
-    border-radius: 0;
-  }
-  .chat-mobile-full > div:first-child {
-    height: 100%;
-    border-radius: 0;
+  footer {
+    padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px)) !important;
   }
 }

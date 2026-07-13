@@ -30,7 +30,7 @@ export function AboutSection() {
   return (
     <section
       id="about"
-      className="relative scroll-mt-24 overflow-hidden bg-card pb-8 pt-10 sm:pt-24 lg:pb-12 lg:pt-32"
+      className="relative scroll-mt-24 overflow-hidden bg-card pb-12 pt-10 sm:pt-24 lg:pb-12 lg:pt-32"
     >
       <div className="absolute inset-0 opacity-60">
         <div className="absolute left-0 top-0 h-72 w-72 rounded-full bg-signature-blue/5 blur-3xl" />
