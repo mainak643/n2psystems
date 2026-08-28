@@ -1,6 +1,7 @@
 "use client"
 
-import { useEffect, useRef, useState, type ComponentType } from "react"
+import { useEffect, useRef, useState, Suspense, type ComponentType } from "react"
+import { useSearchParams } from "next/navigation"
 import {
   BarChart3,
   Bot,
@@ -64,7 +65,7 @@ const CATEGORIES: {
       name: "Testing & Quality Assurance",
       description: "Manual Testing, Automation Testing, SDET",
       icon: TestTubeDiagonal,
-      accent: "text-cyan-600 bg-cyan-50",
+      accent: "text-sky-600 bg-sky-50",
     },
     {
       key: "technicalLeadership",
@@ -113,13 +114,60 @@ const CATEGORIES: {
       name: "Database Technologies",
       description: "DBA, SQL Server, Oracle, PostgreSQL, MongoDB",
       icon: Database,
-      accent: "text-teal-600 bg-teal-50",
+      accent: "text-blue-600 bg-blue-50",
     },
   ]
 
-export function ResumeFormClient() {
+function ResumeFormInner() {
   const [selectedKey, setSelectedKey] = useState<CategoryFormKey | null>(null)
   const formSectionRef = useRef<HTMLDivElement | null>(null)
+  const searchParams = useSearchParams()
+  const roleParam = searchParams.get("role")
+  const reqParam = searchParams.get("req")
+  const categoryParam = searchParams.get("category")
+
+  useEffect(() => {
+    // The `category` param carries the requisition's free-text department,
+    // which recruiters fill in themselves — live values include "Computer
+    // Science" and "IT & Infrastructure", neither of which matches a category
+    // name here. This used to be an `else if`, so an unmatched department meant
+    // the candidate arrived from "Apply for this Role" with nothing selected
+    // and no fallback. Both signals are tried now, category first.
+    const dept = categoryParam?.toLowerCase().trim()
+    const matched = dept
+      ? CATEGORIES.find(
+          (c) =>
+            c.key.toLowerCase().includes(dept) ||
+            c.name.toLowerCase().includes(dept) ||
+            dept.includes(c.name.toLowerCase())
+        )
+      : undefined
+
+    if (matched) {
+      setSelectedKey(matched.key)
+      return
+    }
+
+    if (!roleParam) return
+    const lower = roleParam.toLowerCase()
+    if (lower.includes("architect")) {
+      setSelectedKey("architectureRoles")
+    } else if (lower.includes("cloud") || lower.includes("devops") || lower.includes("aws") || lower.includes("azure")) {
+      setSelectedKey("cloudDevOps")
+    } else if (lower.includes("ai") || lower.includes("ml") || lower.includes("machine learning") || lower.includes("genai")) {
+      setSelectedKey("emergingAIAutomation")
+    } else if (lower.includes("data") || lower.includes("analytics") || lower.includes("bi")) {
+      setSelectedKey("dataEngineeringAnalytics")
+    } else if (lower.includes("security") || lower.includes("cyber")) {
+      setSelectedKey("cyberSecurity")
+    } else if (lower.includes("qa") || lower.includes("test") || lower.includes("sdet")) {
+      setSelectedKey("testingQA")
+    } else if (lower.includes("director") || lower.includes("lead") || lower.includes("manager") || lower.includes("product")) {
+      setSelectedKey("technicalLeadership")
+    } else {
+      setSelectedKey("softwareDevelopment")
+    }
+  }, [categoryParam, roleParam])
 
   const selectedCategory = CATEGORIES.find((category) => category.key === selectedKey)
   const formUrl = selectedKey ? CATEGORY_FORM_MAP[selectedKey] : ""
@@ -137,14 +185,42 @@ export function ResumeFormClient() {
 
   return (
     <div className="space-y-10">
+      {/* Role Banner if linked from specific requisition */}
+      {roleParam && (
+        <div className="rounded-2xl border border-signature-blue/20 bg-white p-5 shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <div className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-signature-blue mb-1">
+                <Sparkles className="size-3.5" />
+                Target Role Application
+              </div>
+              <h3 className="text-lg font-bold text-slate-900">
+                {roleParam}
+              </h3>
+              {reqParam && (
+                <p className="text-xs text-slate-500 font-mono mt-0.5">
+                  Requisition Ref: {reqParam}
+                </p>
+              )}
+            </div>
+            <span className="rounded-full bg-tech-green/10 text-tech-green border border-tech-green/20 px-3 py-1 text-xs font-semibold self-start sm:self-auto">
+              Direct Referral
+            </span>
+          </div>
+        </div>
+      )}
+
       <section>
         <div className="mb-7">
           <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-950">
             1. Choose Your Role Category
           </h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Select the specialization that aligns with your technical capabilities.
+          </p>
         </div>
 
-        {/* ↓ Mobile: 2-col grid with auto-adjusting row heights (stretching items in each row). */}
+        {/* 2-col grid on mobile, 4-col on lg */}
         <div className="grid grid-cols-2 gap-2.5 sm:gap-4 lg:grid-cols-4">
           {CATEGORIES.map(({ key, name, description, icon: Icon, accent }) => {
             const selected = selectedKey === key
@@ -156,7 +232,6 @@ export function ResumeFormClient() {
                 aria-pressed={selected}
                 onClick={() => handleSelect(key)}
                 className={cn(
-                  // ↓ Mobile: dynamic heights with a solid min-height to ensure visual consistency
                   "group relative min-h-[140px] sm:min-h-28 h-full overflow-hidden rounded-xl border bg-white p-3 sm:p-4 text-left shadow-sm outline-none",
                   "transition-all duration-300 ease-out hover:-translate-y-1 hover:border-signature-blue/30 hover:shadow-[0_18px_42px_rgba(15,23,42,0.10)]",
                   "focus-visible:ring-2 focus-visible:ring-signature-blue/25",
@@ -165,31 +240,26 @@ export function ResumeFormClient() {
                     : "border-slate-200/90"
                 )}
               >
-                <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-signature-blue via-cyan-support to-tech-green opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-signature-blue via-sky-400 to-tech-green opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
                 {selected && (
                   <div className="absolute right-2 top-2 sm:right-3 sm:top-3 flex size-6 sm:size-7 items-center justify-center rounded-full bg-tech-green text-white shadow-[0_8px_18px_rgba(122,201,67,0.28)]">
                     <Check className="size-3.5 sm:size-4 stroke-[3]" />
                   </div>
                 )}
 
-                {/* ↓ Mobile: stacked (icon above text). sm+: side-by-side. */}
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
                   <div
                     className={cn(
-                      // ↓ Mobile: slightly smaller icon circle
                       "flex size-9 sm:size-11 shrink-0 items-center justify-center rounded-full transition-transform duration-300 group-hover:scale-105",
                       accent
                     )}
                   >
-                    {/* ↓ Mobile: slightly smaller icon */}
                     <Icon className="size-4 sm:size-5" />
                   </div>
                   <div className="min-w-0 pr-5">
-                    {/* ↓ Mobile: slightly smaller title */}
                     <h3 className="text-[13px] sm:text-[15px] font-bold leading-snug text-slate-950">
                       {name}
                     </h3>
-                    {/* ↓ Mobile: tighter top margin + slightly smaller description */}
                     <p className="mt-0.5 sm:mt-1 text-[11px] sm:text-[12px] leading-4 text-slate-500">
                       {description}
                     </p>
@@ -247,6 +317,11 @@ export function ResumeFormClient() {
                       <h3 className="mt-2 text-lg sm:text-2xl font-bold tracking-tight">
                         {selectedCategory.name}
                       </h3>
+                      {roleParam && (
+                        <p className="text-xs text-slate-300 mt-1">
+                          Applying for: {roleParam}
+                        </p>
+                      )}
                     </div>
                   </div>
 
@@ -271,5 +346,13 @@ export function ResumeFormClient() {
         </section>
       )}
     </div>
+  )
+}
+
+export function ResumeFormClient() {
+  return (
+    <Suspense fallback={<div className="py-12 text-center text-slate-400">Loading form options...</div>}>
+      <ResumeFormInner />
+    </Suspense>
   )
 }

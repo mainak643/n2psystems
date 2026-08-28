@@ -86,7 +86,7 @@ export function AudienceSection() {
               {/* CTA */}
               <Link
                 href={audience.href}
-                className="mt-8 inline-flex items-center gap-2 text-sm font-sans font-semibold text-signature-blue transition-colors hover:text-cyan-support group/link"
+                className="mt-8 inline-flex items-center gap-2 text-sm font-sans font-semibold text-signature-blue transition-colors hover:text-sky-600 group/link"
               >
                 {audience.cta}
                 <ArrowRight className="size-4 transition-transform group-hover/link:translate-x-1" />

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -11,12 +11,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { CheckCircle2 } from "lucide-react"
+import { CheckCircle2, Loader2, AlertCircle } from "lucide-react"
 
 export function ContactFormClient() {
-  const [submitted, setSubmitted] = useState(false)
+  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle")
+  const [inquiryType, setInquiryType] = useState("")
+  const formRef = useRef<HTMLFormElement>(null)
 
-  if (submitted) {
+  if (status === "success") {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
         <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#7AC943]/10 mb-6">
@@ -31,26 +33,64 @@ export function ContactFormClient() {
     )
   }
 
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    if (!formRef.current) return
+
+    const data = new FormData(formRef.current)
+    data.set("inquiryType", inquiryType)
+
+    setStatus("loading")
+
+    try {
+      const res = await fetch("https://formspree.io/f/xqazpory", {
+        method: "POST",
+        body: data,
+        headers: { Accept: "application/json" },
+      })
+
+      if (res.ok) {
+        setStatus("success")
+        formRef.current.reset()
+        setInquiryType("")
+      } else {
+        setStatus("error")
+      }
+    } catch {
+      setStatus("error")
+    }
+  }
+
   return (
     <form
-      onSubmit={(e) => {
-        e.preventDefault()
-        setSubmitted(true)
-      }}
+      ref={formRef}
+      onSubmit={handleSubmit}
       className="space-y-6"
     >
+      {status === "error" && (
+        <div className="flex items-center gap-2.5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          <span>
+            Something went wrong. Please email us directly at{" "}
+            <a href="mailto:info@n2psystems.ca" className="font-semibold underline">
+              info@n2psystems.ca
+            </a>
+          </span>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
         <div className="space-y-2">
           <label htmlFor="name" className="text-sm font-semibold text-foreground">
             Full Name *
           </label>
-          <Input id="name" required placeholder="Jane Smith" />
+          <Input id="name" name="name" required placeholder="Jane Smith" />
         </div>
         <div className="space-y-2">
           <label htmlFor="email" className="text-sm font-semibold text-foreground">
             Email *
           </label>
-          <Input id="email" type="email" required placeholder="jane@company.com" />
+          <Input id="email" name="email" type="email" required placeholder="jane@company.com" />
         </div>
       </div>
 
@@ -58,7 +98,7 @@ export function ContactFormClient() {
         <label htmlFor="inquiryType" className="text-sm font-semibold text-foreground">
           Inquiry Type *
         </label>
-        <Select required>
+        <Select required value={inquiryType} onValueChange={setInquiryType}>
           <SelectTrigger id="inquiryType">
             <SelectValue placeholder="What is this regarding?" />
           </SelectTrigger>
@@ -76,7 +116,7 @@ export function ContactFormClient() {
         <label htmlFor="subject" className="text-sm font-semibold text-foreground">
           Subject *
         </label>
-        <Input id="subject" required placeholder="How can we help?" />
+        <Input id="subject" name="subject" required placeholder="How can we help?" />
       </div>
 
       <div className="space-y-2">
@@ -85,6 +125,7 @@ export function ContactFormClient() {
         </label>
         <Textarea
           id="message"
+          name="message"
           required
           rows={5}
           placeholder="Tell us more about your inquiry..."
@@ -94,9 +135,17 @@ export function ContactFormClient() {
       <Button
         type="submit"
         size="lg"
-        className="w-full bg-[#1E63B5] text-white hover:bg-[#174f94]"
+        disabled={status === "loading" || !inquiryType}
+        className="w-full bg-[#1E63B5] text-white hover:bg-[#174f94] disabled:opacity-70"
       >
-        Send Message
+        {status === "loading" ? (
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Sending…
+          </>
+        ) : (
+          "Send Message"
+        )}
       </Button>
     </form>
   )

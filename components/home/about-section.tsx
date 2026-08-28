@@ -30,40 +30,43 @@ export function AboutSection() {
   return (
     <section
       id="about"
-      className="relative scroll-mt-24 overflow-hidden bg-card pb-12 pt-10 sm:pt-24 lg:pb-12 lg:pt-32"
+      aria-labelledby="about-heading"
+      className="section-y relative overflow-hidden bg-card"
     >
-      <div className="absolute inset-0 opacity-60">
-        <div className="absolute left-0 top-0 h-72 w-72 rounded-full bg-signature-blue/5 blur-3xl" />
-        <div className="absolute bottom-0 right-0 h-80 w-80 rounded-full bg-tech-green/5 blur-3xl" />
-      </div>
-
       <div className="relative mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 gap-6 sm:gap-14 lg:grid-cols-2 lg:items-start">
+        <div className="grid grid-cols-1 gap-10 sm:gap-14 lg:grid-cols-2 lg:items-start">
 
           {/* ── Left / text side ── */}
           <div className="max-w-2xl">
-            <p className="mb-2 sm:mb-3 text-sm font-bold uppercase tracking-[0.24em] text-signature-blue">
-              About N2P Systems
-            </p>
+            <p className="eyebrow mb-4">About N2P Systems</p>
 
-            <h2 className="text-balance font-sans text-2xl font-bold tracking-tight text-foreground sm:text-4xl lg:text-5xl">
+            <h2
+              id="about-heading"
+              className="text-heading text-balance text-foreground"
+            >
               A Trusted Technology Partner for Modern Businesses
             </h2>
 
-            {/* MOBILE: subtle meta line + short paragraph only */}
-            <div className="mt-3.5 sm:hidden">
-              <p className="mb-2.5 text-[11px] font-medium tracking-wider text-muted-foreground/60 uppercase">
-                10+ Years &nbsp;·&nbsp; Canada &nbsp;·&nbsp; USA &nbsp;·&nbsp; India
-              </p>
-              <p className="text-[14px] leading-relaxed text-muted-foreground">
-                N2P Systems partners with organizations across North America to
-                modernize operations, integrate AI, and accelerate growth through
-                consulting, cloud, and managed services.
-              </p>
+            {/* Credibility strip — shared by both breakpoints. */}
+            <div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-2 text-overline uppercase text-muted-foreground/70">
+              <span>10+ Years</span>
+              <span className="text-border" aria-hidden="true">/</span>
+              <span>Canada</span>
+              <span className="text-border" aria-hidden="true">/</span>
+              <span>USA</span>
+              <span className="text-border" aria-hidden="true">/</span>
+              <span>India</span>
             </div>
 
-            {/* DESKTOP: original three paragraphs — untouched */}
-            <div className="hidden sm:block mt-5 sm:mt-6 space-y-3 sm:space-y-4 text-pretty text-[15px] sm:text-base leading-relaxed text-muted-foreground sm:text-lg">
+            {/* MOBILE: condensed single paragraph */}
+            <p className="measure mt-5 text-body text-muted-foreground sm:hidden">
+              N2P Systems partners with organizations across North America to
+              modernize operations, integrate AI, and accelerate growth through
+              consulting, cloud, and managed services.
+            </p>
+
+            {/* DESKTOP: full narrative */}
+            <div className="measure mt-6 hidden space-y-4 text-pretty text-lead text-muted-foreground sm:block">
               <p>
                 With over a decade of delivering technology solutions across
                 North America, N2P Systems has become a trusted partner for
@@ -88,77 +91,70 @@ export function AboutSection() {
           <div className="grid gap-4 sm:gap-5">
 
             {/* Highlight cards — desktop only */}
-            <div className="hidden sm:grid grid-cols-1 gap-5 sm:grid-cols-2">
+            <div className="hidden gap-5 sm:grid sm:grid-cols-2">
               {highlights.map((item) => (
                 <article
                   key={item.title}
-                  className="group rounded-2xl border border-border bg-background p-5 sm:p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:border-signature-blue/15"
+                  className="surface surface-interactive group p-6"
+                  style={{ background: "var(--background)" }}
                 >
-                  <div className="mb-4 flex size-12 items-center justify-center rounded-xl bg-navy/[0.04] ring-1 ring-navy/[0.06] transition-all duration-300 group-hover:bg-signature-blue/10 group-hover:ring-signature-blue/15">
-                    <item.icon className="size-5 text-navy/70 transition-colors duration-300 group-hover:text-signature-blue" />
+                  <div className="mb-5 flex size-12 items-center justify-center rounded-xl bg-navy/[0.04] ring-1 ring-navy/[0.06] transition-all duration-300 group-hover:bg-signature-blue/10 group-hover:ring-signature-blue/20">
+                    <item.icon
+                      className="size-5 text-navy/70 transition-colors duration-300 group-hover:text-signature-blue"
+                      aria-hidden="true"
+                    />
                   </div>
-                  <h3 className="font-sans text-base font-semibold text-foreground">
-                    {item.title}
-                  </h3>
-                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                  <h3 className="text-subtitle text-foreground">{item.title}</h3>
+                  <p className="mt-2.5 text-body text-muted-foreground">
                     {item.description}
                   </p>
                 </article>
               ))}
             </div>
 
-            {/* ── MOBILE: Premium Feature Block ── */}
-            <div className="sm:hidden group relative overflow-hidden rounded-2xl border border-white/[0.08] bg-gradient-to-br from-navy to-[#0a1222] p-6 shadow-[0_8px_30px_rgb(0,0,0,0.12)] transition-all duration-300 hover:border-signature-blue/30">
-              <div className="absolute -right-10 -top-10 h-48 w-48 rounded-full bg-signature-blue/20 blur-[60px] transition-all duration-500 group-hover:bg-signature-blue/30" />
-              <div className="absolute -bottom-10 -left-10 h-40 w-40 rounded-full bg-tech-green/20 blur-[50px] transition-all duration-500 group-hover:bg-tech-green/30" />
+            {/*
+              ── Trust & Focus panel ──
+              One panel for every breakpoint. Mobile and desktop
+              previously had separate implementations of this block with
+              different content — mobile silently dropped the Focus Areas
+              — so the two drifted apart every time either was touched.
+            */}
+            <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-navy p-6 shadow-e4 sm:p-8">
+              {/* Single directional wash instead of scattered blur circles. */}
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(30,99,181,0.22),transparent_62%)]"
+              />
+              {/* Top edge highlight — the detail that reads as depth. */}
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"
+              />
 
-              <div className="relative flex flex-col items-start gap-4">
-                <div className="flex size-12 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-tech-green/20 to-tech-green/5 ring-1 ring-tech-green/25 shadow-[0_0_15px_rgba(16,185,129,0.15)] transition-transform duration-300 group-hover:scale-105">
-                  <Handshake className="size-6 text-tech-green drop-shadow-md" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-[17px] font-bold tracking-tight text-white">
-                    Long-term partnership, not one-off projects
-                  </p>
-                  <p className="mt-2 text-[14.5px] leading-relaxed text-frost/75">
-                    We stay involved after delivery, with clear communication
-                    and consistent follow-through on every engagement.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* ── DESKTOP: Original Trust & Focus panel ── */}
-            <div className="hidden sm:block relative overflow-hidden rounded-3xl border border-border bg-navy p-8 shadow-xl">
-              <div className="absolute right-0 top-0 h-40 w-40 rounded-full bg-signature-blue/10 blur-3xl" />
-              <div className="absolute bottom-0 left-0 h-32 w-32 rounded-full bg-tech-green/10 blur-3xl" />
-
-              <div className="relative flex items-start gap-3">
-                <div className="flex size-10 flex-shrink-0 items-center justify-center rounded-xl bg-tech-green/15">
-                  <Handshake className="size-5 text-tech-green" />
+              <div className="relative flex items-start gap-4">
+                <div className="flex size-11 flex-shrink-0 items-center justify-center rounded-xl bg-tech-green/[0.12] ring-1 ring-tech-green/20">
+                  <Handshake className="size-5 text-tech-green" aria-hidden="true" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-frost">
+                  <p className="text-subtitle text-frost">
                     Long-term partnership, not one-off projects
                   </p>
-                  <p className="mt-1 text-sm leading-relaxed text-frost/65">
+                  <p className="mt-2 text-body text-frost/65">
                     We stay involved after delivery, with clear communication
                     and consistent follow-through on every engagement.
                   </p>
                 </div>
               </div>
 
-              <div className="relative my-6 h-px w-full bg-frost/10" />
+              <div className="relative my-7 h-px w-full bg-frost/10" />
 
               <div className="relative">
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-frost/80">
-                  Focus Areas
-                </p>
-                <div className="mt-2.5 flex flex-wrap gap-2">
+                <p className="text-overline uppercase text-frost/50">Focus Areas</p>
+                <div className="mt-3.5 flex flex-wrap gap-2">
                   {focusAreas.map((area) => (
                     <span
                       key={area}
-                      className="rounded-full border border-frost/15 bg-frost/[0.06] px-3.5 py-1.5 text-sm text-frost/80 transition-colors hover:bg-frost/10 hover:text-white"
+                      className="rounded-full border border-frost/[0.12] bg-frost/[0.05] px-3.5 py-1.5 text-caption text-frost/80 transition-colors hover:bg-frost/10 hover:text-white"
                     >
                       {area}
                     </span>

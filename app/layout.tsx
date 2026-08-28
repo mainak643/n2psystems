@@ -61,8 +61,13 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} ${sourceSans.variable}`}>
       <body className="font-sans antialiased overflow-x-hidden min-h-screen bg-background">
+        <a href="#main-content" className="skip-link">
+          Skip to main content
+        </a>
         <Navbar />
-        {children}
+        <div id="main-content" tabIndex={-1}>
+          {children}
+        </div>
         <Footer />
         <Script
           src="https://api.reapdat.com/static/widget.js"

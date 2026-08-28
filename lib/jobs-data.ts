@@ -13,6 +13,23 @@ export interface Job {
   description: string
   responsibilities: string[]
   requirements: string[]
+  /**
+   * Machine-readable counterparts to the display strings above, carried through
+   * from Supabase so the JobPosting JSON-LD can emit real values instead of
+   * re-parsing "$150K - $190K CAD" and "2 days ago". Absent on the seed rows
+   * below, which is why every consumer treats them as optional.
+   */
+  datePostedISO?: string
+  validThroughISO?: string
+  salaryMin?: number
+  salaryMax?: number
+  salaryCurrency?: string
+  /**
+   * `requirements.id`. `id` above is the human-facing reference_code, but the
+   * job_applications FK needs the UUID. Absent on the seed rows, which is how
+   * the apply form knows a listing is not a real, applicable requisition.
+   */
+  requirementUuid?: string
 }
 
 export const jobs: Job[] = [

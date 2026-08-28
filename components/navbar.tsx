@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import {
   ArrowRight,
   ArrowUpRight,
@@ -88,17 +88,18 @@ const navigation: NavItem[] = [
 
 function useAnchorNav() {
   const pathname = usePathname()
+  const router = useRouter()
   return useCallback(
     (anchor: string, onDone?: () => void) => {
       if (pathname === "/") {
         const el = document.getElementById(anchor)
         if (el) el.scrollIntoView({ behavior: "smooth", block: "start" })
       } else {
-        window.location.href = `/#${anchor}`
+        router.push(`/#${anchor}`)
       }
       onDone?.()
     },
-    [pathname],
+    [pathname, router],
   )
 }
 
@@ -178,7 +179,7 @@ function DesktopDropdown({
         onKeyDown={handleTriggerKeyDown}
         className={cn(
           "group flex items-center gap-1.5 rounded-md py-2 text-[14px] xl:text-[15.5px] font-medium transition-colors duration-200 outline-none",
-          "focus-visible:text-white focus-visible:ring-2 focus-visible:ring-cyan-400/50",
+          "focus-visible:text-white focus-visible:ring-2 focus-visible:ring-sky-400/50",
           isHighlighted ? "text-white" : "text-white/80 hover:text-white",
         )}
       >
@@ -186,18 +187,18 @@ function DesktopDropdown({
           {item.name}
           {/* Active / open underline */}
           <span
-            className="absolute -bottom-0.5 left-0 h-px bg-cyan-400 transition-all duration-300"
+            className="absolute -bottom-0.5 left-0 h-px bg-sky-400 transition-all duration-300"
             style={{ width: isHighlighted ? "100%" : "0%" }}
           />
           {/* Hover underline — only when not already active */}
           {!isHighlighted && (
-            <span className="absolute -bottom-0.5 left-0 h-px w-0 bg-cyan-400 transition-all duration-300 group-hover:w-full" />
+            <span className="absolute -bottom-0.5 left-0 h-px w-0 bg-sky-400 transition-all duration-300 group-hover:w-full" />
           )}
         </span>
         <ChevronDown
           className={cn(
             "size-3.5 transition-transform duration-200",
-            isOpen ? "rotate-180 text-cyan-400" : "opacity-50",
+            isOpen ? "rotate-180 text-sky-400" : "opacity-50",
           )}
         />
       </button>
@@ -219,7 +220,7 @@ function DesktopDropdown({
         <div className="absolute -top-3 left-0 right-0 h-3" aria-hidden="true" />
 
         <div className="overflow-hidden rounded-2xl border border-white/[0.08] bg-slate-950/95 shadow-[0_16px_50px_rgba(0,0,0,0.4)] backdrop-blur-xl">
-          <div className="h-px bg-gradient-to-r from-blue-500/50 via-cyan-400/40 to-transparent" />
+          <div className="h-px bg-gradient-to-r from-blue-500/50 via-sky-400/40 to-transparent" />
           <div className="p-2">
             {item.children.map((child) => {
               const isActive = pathname === child.href
@@ -235,14 +236,14 @@ function DesktopDropdown({
                     isActive
                       ? "bg-white/[0.07] text-white"
                       : "text-white/70 hover:bg-white/[0.05] hover:text-white",
-                    "focus-visible:bg-white/[0.05] focus-visible:text-white focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cyan-400/40",
+                    "focus-visible:bg-white/[0.05] focus-visible:text-white focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sky-400/40",
                   )}
                 >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 text-sm font-medium leading-none">
                       {child.name}
                       {isActive && (
-                        <span className="inline-block h-1 w-1 rounded-full bg-cyan-400" />
+                        <span className="inline-block h-1 w-1 rounded-full bg-sky-400" />
                       )}
                     </div>
                     {child.description && (
@@ -410,7 +411,7 @@ function MobileMenu({
           aria-hidden="true"
           style={{
             background:
-              "linear-gradient(90deg, transparent, rgba(6,182,212,0.5) 50%, rgba(29,111,219,0.3) 100%)",
+              "linear-gradient(90deg, transparent, rgba(56,189,248,0.5) 50%, rgba(29,111,219,0.3) 100%)",
           }}
         />
 
@@ -438,7 +439,7 @@ function MobileMenu({
           <button
             onClick={onClose}
             aria-label="Close menu"
-            className="flex items-center justify-center rounded-lg border border-white/[0.08] bg-white/5 outline-none transition-colors duration-200 hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-cyan-400/50"
+            className="flex items-center justify-center rounded-lg border border-white/[0.08] bg-white/5 outline-none transition-colors duration-200 hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-sky-400/50"
             style={{ width: 32, height: 32 }}
           >
             <X style={{ width: 14, height: 14, color: "rgba(255,255,255,0.55)" }} />
@@ -452,12 +453,12 @@ function MobileMenu({
           aria-label="Mobile navigation"
         >
           {navigation.map((item, i) => {
-            const hasChildren = "children" in item
+            const hasChildren = "children" in item && Boolean(item.children)
             const isExpanded = hasChildren && expandedSection === item.name
-            const isChildActive = hasChildren && item.children.some((c) => pathname === c.href)
-            const isAnchor = "anchor" in item && !hasChildren
-            const isLink = "href" in item && !hasChildren
-            const isActive = isLink && pathname === item.href
+            const isChildActive = hasChildren && Boolean(item.children?.some((c) => pathname === c.href))
+            const isAnchor = "anchor" in item && !hasChildren && Boolean(item.anchor)
+            const isLink = "href" in item && !hasChildren && Boolean(item.href)
+            const isActive = isLink && pathname === (item as NavLinkItem).href
 
             return (
               <div
@@ -465,20 +466,20 @@ function MobileMenu({
                 className={cn("nav-row", visible && "vis")}
                 style={{ transitionDelay: visible ? `${45 + i * 45}ms` : "0ms" }}
               >
-                {hasChildren ? (
+                {hasChildren && item.children ? (
                   <div>
                     <button
                       onClick={() => setExpandedSection(isExpanded ? null : item.name)}
                       aria-expanded={isExpanded}
                       aria-controls={`mob-submenu-${item.name.replace(/\s+/g, "-").toLowerCase()}`}
-                      className="flex w-full items-center text-left outline-none transition-colors duration-150 hover:bg-white/[0.03] focus-visible:bg-white/[0.05] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cyan-400/40"
+                      className="flex w-full items-center text-left outline-none transition-colors duration-150 hover:bg-white/[0.03] focus-visible:bg-white/[0.05] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sky-400/40"
                       style={{ padding: "14px 24px" }}
                     >
                       <div
                         style={{
                           width: 2, height: 16, borderRadius: 1, marginRight: 14, flexShrink: 0,
                           background: isExpanded || isChildActive
-                            ? "linear-gradient(to bottom, #06b6d4, #1d6fdb)"
+                            ? "linear-gradient(to bottom, #38bdf8, #1d6fdb)"
                             : "rgba(255,255,255,0.15)",
                           transition: "background 0.2s",
                         }}
@@ -495,7 +496,7 @@ function MobileMenu({
                       <ChevronRight
                         style={{
                           width: 14, height: 14,
-                          color: isExpanded || isChildActive ? "rgba(6,182,212,0.6)" : "rgba(255,255,255,0.3)",
+                          color: isExpanded || isChildActive ? "rgba(56,189,248,0.7)" : "rgba(255,255,255,0.3)",
                           transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)",
                           transition: "transform 0.25s ease, color 0.2s",
                         }}
@@ -516,17 +517,17 @@ function MobileMenu({
                                 href={child.href}
                                 onClick={onClose}
                                 aria-current={isChildCurrent ? "page" : undefined}
-                                className="flex items-center outline-none transition-colors duration-150 hover:bg-white/[0.03] focus-visible:bg-white/[0.05] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cyan-400/40"
+                                className="flex items-center outline-none transition-colors duration-150 hover:bg-white/[0.03] focus-visible:bg-white/[0.05] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sky-400/40"
                                 style={{
                                   padding: "10px 24px 10px 40px",
-                                  background: isChildCurrent ? "rgba(6,182,212,0.05)" : undefined,
+                                  background: isChildCurrent ? "rgba(56,189,248,0.08)" : undefined,
                                 }}
                               >
                                 <div className="flex-1 min-w-0">
                                   <div
                                     style={{
                                       fontSize: 13, fontWeight: 500,
-                                      color: isChildCurrent ? "rgba(6,182,212,0.85)" : "rgba(255,255,255,0.60)",
+                                      color: isChildCurrent ? "rgba(56,189,248,0.9)" : "rgba(255,255,255,0.60)",
                                     }}
                                   >
                                     {child.name}
@@ -538,7 +539,7 @@ function MobileMenu({
                                   )}
                                 </div>
                                 {isChildCurrent && (
-                                  <span style={{ display: "inline-block", width: 4, height: 4, borderRadius: "50%", background: "rgba(6,182,212,0.7)", flexShrink: 0 }} />
+                                  <span style={{ display: "inline-block", width: 4, height: 4, borderRadius: "50%", background: "rgba(56,189,248,0.8)", flexShrink: 0 }} />
                                 )}
                               </Link>
                             )
@@ -547,10 +548,10 @@ function MobileMenu({
                       </div>
                     </div>
                   </div>
-                ) : isAnchor ? (
+                ) : isAnchor && (item as NavAnchorItem).anchor ? (
                   <button
-                    onClick={() => scrollTo(item.anchor, onClose)}
-                    className="flex w-full items-center text-left outline-none transition-colors duration-150 hover:bg-white/[0.02] focus-visible:bg-white/[0.05] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cyan-400/40"
+                    onClick={() => scrollTo((item as NavAnchorItem).anchor, onClose)}
+                    className="flex w-full items-center text-left outline-none transition-colors duration-150 hover:bg-white/[0.02] focus-visible:bg-white/[0.05] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sky-400/40"
                     style={{ padding: "14px 24px" }}
                   >
                     <div style={{ width: 2, height: 16, borderRadius: 1, marginRight: 14, flexShrink: 0, background: "rgba(255,255,255,0.15)" }} />
@@ -558,18 +559,18 @@ function MobileMenu({
                       {item.name}
                     </span>
                   </button>
-                ) : (
+                ) : isLink && (item as NavLinkItem).href ? (
                   <Link
-                    href={item.href}
+                    href={(item as NavLinkItem).href}
                     onClick={onClose}
                     aria-current={isActive ? "page" : undefined}
-                    className="flex items-center outline-none transition-colors duration-150 hover:bg-white/[0.02] focus-visible:bg-white/[0.05] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cyan-400/40"
-                    style={{ padding: "14px 24px", background: isActive ? "rgba(6,182,212,0.04)" : undefined }}
+                    className="flex items-center outline-none transition-colors duration-150 hover:bg-white/[0.02] focus-visible:bg-white/[0.05] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sky-400/40"
+                    style={{ padding: "14px 24px", background: isActive ? "rgba(56,189,248,0.06)" : undefined }}
                   >
                     <div
                       style={{
                         width: 2, height: 16, borderRadius: 1, marginRight: 14, flexShrink: 0,
-                        background: isActive ? "linear-gradient(to bottom, #06b6d4, #1d6fdb)" : "rgba(255,255,255,0.15)",
+                        background: isActive ? "linear-gradient(to bottom, #38bdf8, #1d6fdb)" : "rgba(255,255,255,0.15)",
                       }}
                     />
                     <span
@@ -581,7 +582,7 @@ function MobileMenu({
                       {item.name}
                     </span>
                   </Link>
-                )}
+                ) : null}
 
                 {i < navigation.length - 1 && (
                   <div style={{ margin: "0 24px", height: 1, background: "rgba(255,255,255,0.05)" }} />
@@ -599,7 +600,7 @@ function MobileMenu({
           <Link
             href="/jobs"
             onClick={onClose}
-            className="mb-2.5 block rounded-[10px] outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60"
+            className="mb-2.5 block rounded-[10px] outline-none focus-visible:ring-2 focus-visible:ring-sky-400/60"
           >
             <div
               className="flex items-center justify-center gap-2 transition-all duration-200 hover:brightness-105 active:scale-[0.98]"
@@ -714,7 +715,7 @@ export function Navbar() {
               backdropFilter: "blur(24px)",
               WebkitBackdropFilter: "blur(24px)",
               borderBottom: "1px solid rgba(255,255,255,0.09)",
-              boxShadow: "0 1px 0 rgba(6,182,212,0.12), 0 4px 24px rgba(0,0,0,0.35)",
+              boxShadow: "0 1px 0 rgba(56,189,248,0.15), 0 4px 24px rgba(0,0,0,0.35)",
             }
             : {
               background: "linear-gradient(to bottom, rgba(4,10,22,0.90) 0%, rgba(4,10,22,0.0) 100%)",
@@ -728,7 +729,7 @@ export function Navbar() {
           <div
             className="pointer-events-none absolute bottom-0 left-0 right-0 h-px"
             aria-hidden="true"
-            style={{ background: "linear-gradient(90deg, transparent, rgba(6,182,212,0.25) 50%, transparent)" }}
+            style={{ background: "linear-gradient(90deg, transparent, rgba(56,189,248,0.3) 50%, transparent)" }}
           />
         )}
 
@@ -741,12 +742,12 @@ export function Navbar() {
           <Link
             href="/"
             onClick={handleLogoClick}
-            className="group flex shrink-0 items-center gap-2.5 sm:gap-3 rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/40"
+            className="group flex shrink-0 items-center gap-2.5 sm:gap-3 rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-sky-400/40"
             aria-label="N2P Systems — Home"
           >
             <div
-              className="relative flex h-[34px] w-[34px] sm:h-[38px] sm:w-[38px] items-center justify-center overflow-hidden rounded-lg sm:rounded-xl border border-white/[0.16] transition-all duration-300 group-hover:border-cyan-400/30 group-hover:ring-1 group-hover:ring-cyan-400/25"
-              style={{ background: "linear-gradient(135deg, rgba(29,111,219,0.3) 0%, rgba(6,182,212,0.15) 100%)" }}
+              className="relative flex h-[34px] w-[34px] sm:h-[38px] sm:w-[38px] items-center justify-center overflow-hidden rounded-lg sm:rounded-xl border border-white/[0.16] transition-all duration-300 group-hover:border-sky-400/30 group-hover:ring-1 group-hover:ring-sky-400/25"
+              style={{ background: "linear-gradient(135deg, rgba(29,111,219,0.3) 0%, rgba(56,189,248,0.15) 100%)" }}
             >
               <Image
                 src="/images/n2p-logo-light.png"
@@ -767,11 +768,11 @@ export function Navbar() {
           <div className="hidden flex-1 justify-center lg:flex">
             <div className="flex items-center gap-4 xl:gap-8">
               {navigation.map((item) => {
-                if ("children" in item) {
+                if ("children" in item && Boolean(item.children)) {
                   return (
                     <DesktopDropdown
                       key={item.name}
-                      item={item}
+                      item={item as NavDropdownItem}
                       isOpen={openDropdown === item.name}
                       onEnter={() => handleEnter(item.name)}
                       onLeave={handleLeave}
@@ -779,39 +780,44 @@ export function Navbar() {
                   )
                 }
 
-                if ("anchor" in item) {
+                if ("anchor" in item && Boolean(item.anchor)) {
                   return (
                     <button
                       key={item.name}
-                      onClick={() => scrollTo(item.anchor)}
-                    className="group relative rounded-md py-2 text-[14px] xl:text-[15.5px] font-medium text-white/80 transition-colors duration-200 outline-none hover:text-white focus-visible:text-white focus-visible:ring-2 focus-visible:ring-cyan-400/50"
+                      onClick={() => scrollTo((item as NavAnchorItem).anchor)}
+                    className="group relative rounded-md py-2 text-[14px] xl:text-[15.5px] font-medium text-white/80 transition-colors duration-200 outline-none hover:text-white focus-visible:text-white focus-visible:ring-2 focus-visible:ring-sky-400/50"
                     >
                       {item.name}
-                      <span className="absolute -bottom-0.5 left-0 h-px w-0 bg-cyan-400 transition-all duration-300 group-hover:w-full" />
+                      <span className="absolute -bottom-0.5 left-0 h-px w-0 bg-sky-400 transition-all duration-300 group-hover:w-full" />
                     </button>
                   )
                 }
 
-                const isActive = pathname === item.href
-                return (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    aria-current={isActive ? "page" : undefined}
-                    className={cn(
-                      "group relative rounded-md py-2 text-[14px] xl:text-[15.5px] font-medium transition-colors duration-200 outline-none focus-visible:text-white focus-visible:ring-2 focus-visible:ring-cyan-400/50",
-                      isActive ? "text-white" : "text-white/80 hover:text-white",
-                    )}
-                  >
-                    {item.name}
-                    <span
+                if ("href" in item && Boolean(item.href)) {
+                  const linkItem = item as NavLinkItem
+                  const isActive = pathname === linkItem.href
+                  return (
+                    <Link
+                      key={linkItem.name}
+                      href={linkItem.href}
+                      aria-current={isActive ? "page" : undefined}
                       className={cn(
-                        "absolute -bottom-0.5 left-0 h-px bg-cyan-400 transition-all duration-300",
-                        isActive ? "w-full" : "w-0 group-hover:w-full",
+                        "group relative rounded-md py-2 text-[14px] xl:text-[15.5px] font-medium transition-colors duration-200 outline-none focus-visible:text-white focus-visible:ring-2 focus-visible:ring-sky-400/50",
+                        isActive ? "text-white" : "text-white/80 hover:text-white",
                       )}
-                    />
-                  </Link>
-                )
+                    >
+                      {linkItem.name}
+                      <span
+                        className={cn(
+                          "absolute -bottom-0.5 left-0 h-px bg-sky-400 transition-all duration-300",
+                          isActive ? "w-full" : "w-0 group-hover:w-full",
+                        )}
+                      />
+                    </Link>
+                  )
+                }
+
+                return null
               })}
             </div>
           </div>
@@ -838,7 +844,7 @@ export function Navbar() {
 
             {/* ── Hamburger (FIX: symmetric bar widths for clean X) ── */}
             <button
-              className="flex flex-col items-end justify-center gap-[5px] rounded-lg p-2 transition-all duration-200 active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 lg:hidden"
+              className="flex flex-col items-end justify-center gap-[5px] rounded-lg p-2 transition-all duration-200 active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-sky-400/50 lg:hidden"
               onClick={() => setMobileOpen((prev) => !prev)}
               aria-expanded={mobileOpen}
               aria-controls="mobile-nav-menu"
@@ -850,7 +856,7 @@ export function Navbar() {
                 style={{
                   width: 20,
                   height: 1.5,
-                  background: mobileOpen ? "rgba(6,182,212,0.9)" : "rgba(255,255,255,0.85)",
+                  background: mobileOpen ? "rgba(56,189,248,0.9)" : "rgba(255,255,255,0.85)",
                   transform: mobileOpen ? "translateY(6.5px) rotate(45deg)" : "none",
                   transition: "transform 0.28s ease, background 0.2s ease",
                   transformOrigin: "center",
@@ -877,7 +883,7 @@ export function Navbar() {
                 style={{
                   width: 20,
                   height: 1.5,
-                  background: mobileOpen ? "rgba(6,182,212,0.9)" : "rgba(255,255,255,0.65)",
+                  background: mobileOpen ? "rgba(56,189,248,0.9)" : "rgba(255,255,255,0.65)",
                   transform: mobileOpen ? "translateY(-6.5px) rotate(-45deg)" : "none",
                   transition: "transform 0.28s ease, background 0.2s ease",
                   transformOrigin: "center",

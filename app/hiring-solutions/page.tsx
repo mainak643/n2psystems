@@ -109,7 +109,7 @@ export default function HiringSolutionsPage() {
               <Button
                 asChild
                 size="lg"
-                className="bg-signature-blue text-primary-foreground hover:bg-cyan-support transition-all rounded-lg px-8 shadow-lg shadow-signature-blue/25"
+                className="bg-signature-blue text-primary-foreground hover:bg-[#164e93] transition-all rounded-lg px-8 shadow-lg shadow-signature-blue/25"
               >
                 <Link href="/clients">
                   Request a Consultation
@@ -183,7 +183,7 @@ export default function HiringSolutionsPage() {
 
       {/* CTA */}
       <section className="bg-signature-blue py-20 relative overflow-hidden texture-grain">
-        <div className="absolute top-0 left-1/4 w-80 h-80 rounded-full bg-cyan-support/10 blur-3xl" />
+        <div className="absolute top-0 left-1/4 w-80 h-80 rounded-full bg-sky-400/10 blur-3xl" />
         <div className="relative z-10 mx-auto max-w-7xl px-6 lg:px-8 text-center">
           <h2 className="text-2xl font-sans font-bold text-primary-foreground sm:text-3xl text-balance">
             Ready to Build Your Team?

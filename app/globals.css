@@ -101,6 +101,59 @@
   --color-slate-brand: var(--slate);
   --color-graphite: var(--graphite);
   --color-muted-gray: var(--muted-gray);
+
+  /* ─────────────────────────────────────────────────────
+     TYPE SCALE
+     One fluid scale for the whole site. Each step
+     interpolates between its mobile and desktop size, so
+     headings no longer need a pile of sm:/lg: overrides or
+     hand-picked values like text-[14.5px].
+     ───────────────────────────────────────────────────── */
+  --text-display: clamp(2.25rem, 1.42rem + 3.7vw, 4.75rem);
+  --text-display--line-height: 1.04;
+  --text-display--letter-spacing: -0.035em;
+  --text-display--font-weight: 800;
+
+  --text-heading: clamp(1.75rem, 1.29rem + 2.05vw, 3rem);
+  --text-heading--line-height: 1.1;
+  --text-heading--letter-spacing: -0.028em;
+  --text-heading--font-weight: 700;
+
+  --text-title: clamp(1.25rem, 1.14rem + 0.5vw, 1.5rem);
+  --text-title--line-height: 1.25;
+  --text-title--letter-spacing: -0.018em;
+  --text-title--font-weight: 600;
+
+  --text-subtitle: clamp(1.0625rem, 1.03rem + 0.18vw, 1.1875rem);
+  --text-subtitle--line-height: 1.35;
+  --text-subtitle--letter-spacing: -0.012em;
+  --text-subtitle--font-weight: 600;
+
+  --text-lead: clamp(1rem, 0.95rem + 0.24vw, 1.1875rem);
+  --text-lead--line-height: 1.65;
+  --text-lead--letter-spacing: -0.006em;
+
+  --text-body: 0.9375rem;
+  --text-body--line-height: 1.7;
+
+  --text-caption: 0.8125rem;
+  --text-caption--line-height: 1.6;
+
+  --text-overline: 0.6875rem;
+  --text-overline--line-height: 1.2;
+  --text-overline--letter-spacing: 0.18em;
+  --text-overline--font-weight: 700;
+
+  /* ─────────────────────────────────────────────────────
+     ELEVATION
+     Layered and tinted with the brand navy instead of pure
+     black. Two stacked shadows (contact + ambient) is what
+     separates a considered card from a flat `shadow-lg`.
+     ───────────────────────────────────────────────────── */
+  --shadow-e1: 0 1px 2px rgba(11, 31, 51, 0.04), 0 1px 3px rgba(11, 31, 51, 0.05);
+  --shadow-e2: 0 2px 4px rgba(11, 31, 51, 0.04), 0 6px 16px rgba(11, 31, 51, 0.06);
+  --shadow-e3: 0 4px 8px rgba(11, 31, 51, 0.04), 0 14px 32px rgba(11, 31, 51, 0.08);
+  --shadow-e4: 0 8px 16px rgba(11, 31, 51, 0.05), 0 28px 56px rgba(11, 31, 51, 0.10);
 }
 
 @layer base {
@@ -110,11 +163,51 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  /*
+    Consistent keyboard focus ring across the whole site.
+    Uses :focus-visible so mouse/touch users never see it, but keyboard
+    users always get a visible, high-contrast indicator — including on
+    elements that only declared `outline-none` locally.
+  */
+  :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm, 2px);
+  }
+
+  /* Dark surfaces need a light ring to stay visible against navy. */
+  :where(.bg-navy, footer, header) :where(a, button, [tabindex]):focus-visible {
+    outline-color: #38bdf8;
+  }
+
+  /*
+    The skip-link target is a programmatic focus stop, not a control.
+    Focusing it should move the caret without drawing a ring around
+    the entire page body.
+  */
+  #main-content:focus,
+  #main-content:focus-visible {
+    outline: none;
+  }
 }
 
-/* Smooth scrolling */
+/* ═══════════════════════════════════════════════════════
+   SCROLL BEHAVIOUR
+   The navbar is `position: fixed` (62px mobile / 72px desktop),
+   so every in-page anchor must be offset or the target heading
+   lands underneath it. scroll-padding-top fixes this globally
+   for every #anchor, including ones with no local scroll-mt.
+   ═══════════════════════════════════════════════════════ */
 html {
   scroll-behavior: smooth;
+  scroll-padding-top: 78px;
+}
+
+@media (min-width: 640px) {
+  html {
+    scroll-padding-top: 88px;
+  }
 }
 
 /* Subtle dot grid texture */
@@ -154,6 +247,89 @@ html {
   box-shadow: 0 8px 30px -8px rgba(11, 31, 51, 0.10);
 }
 
+/* ═══════════════════════════════════════════════════════
+   COMPOSED PATTERNS
+   Each of these was previously hand-rolled per section with
+   slightly different values — the eyebrow label alone had
+   three different font weights across three sections.
+
+   These live in @layer components on purpose. Unlayered CSS
+   outranks every layered rule, so an unlayered .surface would
+   quietly beat any Tailwind utility composed with it
+   (`surface shadow-e3` would drop the shadow). Inside the
+   components layer, utilities win — which is what the markup
+   assumes.
+   ═══════════════════════════════════════════════════════ */
+@layer components {
+  /* Section vertical rhythm — one fluid ramp for every section. */
+  .section-y {
+    padding-block: clamp(3.5rem, 2.2rem + 5.4vw, 8rem);
+  }
+
+  /* Eyebrow / overline label above a section heading. */
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.625rem;
+    font-size: var(--text-overline);
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--signature-blue);
+  }
+  /* Short rule that anchors the eyebrow to the left margin. */
+  .eyebrow::before {
+    content: '';
+    width: 1.75rem;
+    height: 1px;
+    background: currentColor;
+    opacity: 0.45;
+  }
+  .eyebrow-center::before {
+    display: none;
+  }
+
+  /* Comfortable reading measure — long lines are a legibility tax. */
+  .measure {
+    max-width: 62ch;
+  }
+  .measure-tight {
+    max-width: 48ch;
+  }
+
+  /*
+    Surface — the standard card treatment.
+    A hairline border plus layered elevation, and a 1px inner
+    top highlight that catches the eye the way real material does.
+  */
+  .surface {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 1rem;
+    box-shadow: var(--shadow-e1), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+    transition: border-color 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease;
+  }
+  .surface-interactive:hover {
+    border-color: color-mix(in srgb, var(--signature-blue) 22%, transparent);
+    box-shadow: var(--shadow-e3), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+    transform: translateY(-3px);
+  }
+
+  /* Hairline divider that fades at both ends. */
+  .hairline {
+    height: 1px;
+    border: 0;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      var(--border) 12%,
+      var(--border) 88%,
+      transparent
+    );
+  }
+}
+
 /* Smooth section divider */
 .section-divider {
   position: relative;
@@ -171,6 +347,87 @@ html {
 }
 
 /* ═══════════════════════════════════════════════════════
+   MOTION PRIMITIVES
+   These classes were referenced by app/template.tsx and the
+   hero section but had never been defined, so both were
+   silently no-ops. Defined here so the entrance motion the
+   markup already asks for actually renders.
+   ═══════════════════════════════════════════════════════ */
+
+@keyframes n2p-fade-in-up {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 16px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes n2p-page-transition {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 8px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: n2p-fade-in-up 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-page-transition {
+  animation: n2p-page-transition 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* ═══════════════════════════════════════════════════════
+   SKIP TO CONTENT
+   Visually hidden until focused, then pinned top-left above
+   the fixed navbar so keyboard users can bypass navigation.
+   ═══════════════════════════════════════════════════════ */
+.skip-link {
+  position: absolute;
+  left: 12px;
+  top: -100px;
+  z-index: 100;
+  padding: 10px 18px;
+  border-radius: 10px;
+  background: var(--signature-blue);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  transition: top 0.2s ease;
+}
+.skip-link:focus-visible {
+  top: 12px;
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+/* ═══════════════════════════════════════════════════════
+   TOUCH TARGETS
+   Expands a small control's tappable area to the 44×44px
+   WCAG 2.5.5 minimum without changing how it looks.
+   ═══════════════════════════════════════════════════════ */
+.tap-target {
+  position: relative;
+}
+.tap-target::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: max(100%, 44px);
+  height: max(100%, 44px);
+  transform: translate(-50%, -50%);
+}
+
+/* ═══════════════════════════════════════════════════════
    MOBILE-ONLY IMPROVEMENTS (≤ 768px)
    Desktop remains completely untouched.
    ═══════════════════════════════════════════════════════ */
@@ -178,7 +435,14 @@ html {
 /* Prevent any horizontal overflow on mobile */
 @media (max-width: 768px) {
   html, body {
+    /*
+      `clip` is declared after `hidden` so modern browsers use it.
+      overflow-x: hidden on the root element silently breaks
+      position: sticky for descendants; clip contains the overflow
+      without creating a scroll container.
+    */
     overflow-x: hidden;
+    overflow-x: clip;
     max-width: 100vw;
   }
 
@@ -202,5 +466,39 @@ html {
   }
   #ai-agent-widget {
     display: none !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   REDUCED MOTION
+   Site-wide honouring of the OS "reduce motion" setting.
+   Individual components previously opted in one at a time,
+   which left smooth scrolling, page transitions and the
+   hero entrance animating regardless of the preference.
+   ═══════════════════════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* Keep entrance animations from leaving elements stuck invisible. */
+  .animate-fade-in-up,
+  .animate-page-transition {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .card-lift:hover {
+    transform: none;
   }
 }

@@ -1,9 +1,28 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { Linkedin, MessageCircle, Mail, Phone, ArrowUpRight, ChevronDown } from "lucide-react"
+
+/*
+  Matches the `md:` breakpoint the footer grid uses. Starts as `true` so
+  the server render and the first client render agree — the accordion is
+  only ever marked inert after we've actually measured the viewport.
+*/
+function useIsDesktop() {
+  const [isDesktop, setIsDesktop] = useState(true)
+
+  useEffect(() => {
+    const query = window.matchMedia("(min-width: 768px)")
+    const sync = () => setIsDesktop(query.matches)
+    sync()
+    query.addEventListener("change", sync)
+    return () => query.removeEventListener("change", sync)
+  }, [])
+
+  return isDesktop
+}
 
 const companyLinks = [
   { name: "Our Services", href: "/#services" },
@@ -53,14 +72,26 @@ function AccordionSection({
   children: React.ReactNode
 }) {
   const isOpen = openSection === id
+  const isDesktop = useIsDesktop()
+  const panelId = `footer-panel-${id}`
+
+  /*
+    The panel collapses to 0fr on mobile but its links stay in the DOM,
+    so without this they remain tabbable and screen-reader readable while
+    visually hidden. `inert` removes them from the tab order and the
+    accessibility tree. Desktop is always expanded, so it is never inert.
+  */
+  const isCollapsed = !isDesktop && !isOpen
 
   return (
     <div className="border-t border-white/[0.06] md:border-0">
       {/* ── Mobile trigger (hidden on md+) ── */}
       <button
+        type="button"
         onClick={() => onToggle(id)}
         aria-expanded={isOpen}
-        className="flex w-full items-center justify-between py-4 outline-none focus-visible:ring-inset focus-visible:ring-2 focus-visible:ring-blue-500/40 md:hidden"
+        aria-controls={panelId}
+        className="flex min-h-11 w-full items-center justify-between py-4 outline-none focus-visible:ring-inset focus-visible:ring-2 focus-visible:ring-blue-500/40 md:hidden"
       >
         <span className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white/45">
           {label}
@@ -80,6 +111,8 @@ function AccordionSection({
       {/* ── Animated container — grid trick for smooth open/close ── */}
       {/* On desktop: always open. On mobile: toggled. */}
       <div
+        id={panelId}
+        inert={isCollapsed}
         className="grid transition-[grid-template-rows] duration-300 ease-in-out md:grid-rows-[1fr]"
         style={{ gridTemplateRows: isOpen ? "1fr" : "0fr" }}
       >

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -11,12 +11,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { CheckCircle2 } from "lucide-react"
+import { CheckCircle2, Loader2, AlertCircle } from "lucide-react"
 
 export function ConsultationFormClient() {
-  const [submitted, setSubmitted] = useState(false)
+  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle")
+  const [serviceInterest, setServiceInterest] = useState("")
+  const [budget, setBudget] = useState("")
+  const [timeline, setTimeline] = useState("")
+  const formRef = useRef<HTMLFormElement>(null)
 
-  if (submitted) {
+  if (status === "success") {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
         <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#7AC943]/10 mb-6">
@@ -33,28 +37,60 @@ export function ConsultationFormClient() {
     )
   }
 
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    if (!formRef.current) return
+
+    const data = new FormData(formRef.current)
+    data.set("serviceInterest", serviceInterest)
+    data.set("budget", budget)
+    data.set("timeline", timeline)
+
+    setStatus("loading")
+    try {
+      const res = await fetch("https://formspree.io/f/xqazpory", {
+        method: "POST",
+        body: data,
+        headers: { Accept: "application/json" },
+      })
+      setStatus(res.ok ? "success" : "error")
+    } catch {
+      setStatus("error")
+    }
+  }
+
   return (
     <form
-      onSubmit={(e) => {
-        e.preventDefault()
-        setSubmitted(true)
-      }}
+      ref={formRef}
+      onSubmit={handleSubmit}
       // ↓ Mobile: tighter vertical rhythm. sm+ unchanged.
       className="space-y-4 sm:space-y-6"
     >
+      {status === "error" && (
+        <div className="flex items-center gap-2.5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          <span>
+            Something went wrong. Email us at{" "}
+            <a href="mailto:info@n2psystems.ca" className="font-semibold underline">
+              info@n2psystems.ca
+            </a>
+          </span>
+        </div>
+      )}
+
       {/* ↓ Mobile: 2-col with tighter gap (short labels fit fine side-by-side). sm+ unchanged. */}
       <div className="grid grid-cols-2 gap-3 sm:gap-6">
         <div className="space-y-2">
           <label htmlFor="firstName" className="text-sm font-medium text-foreground">
             First Name *
           </label>
-          <Input id="firstName" required placeholder="Jane" />
+          <Input id="firstName" name="firstName" required placeholder="Jane" />
         </div>
         <div className="space-y-2">
           <label htmlFor="lastName" className="text-sm font-medium text-foreground">
             Last Name *
           </label>
-          <Input id="lastName" required placeholder="Smith" />
+          <Input id="lastName" name="lastName" required placeholder="Smith" />
         </div>
       </div>
 
@@ -64,13 +100,13 @@ export function ConsultationFormClient() {
           <label htmlFor="companyName" className="text-sm font-medium text-foreground">
             Company / Organization *
           </label>
-          <Input id="companyName" required placeholder="Acme Corporation" />
+          <Input id="companyName" name="companyName" required placeholder="Acme Corporation" />
         </div>
         <div className="space-y-2">
           <label htmlFor="jobTitle" className="text-sm font-medium text-foreground">
             Your Role / Title
           </label>
-          <Input id="jobTitle" placeholder="CTO, Founder, IT Director..." />
+          <Input id="jobTitle" name="jobTitle" placeholder="CTO, Founder, IT Director..." />
         </div>
       </div>
 
@@ -80,13 +116,13 @@ export function ConsultationFormClient() {
           <label htmlFor="email" className="text-sm font-medium text-foreground">
             Work Email *
           </label>
-          <Input id="email" type="email" required placeholder="jane@acme.com" />
+          <Input id="email" name="email" type="email" required placeholder="jane@acme.com" />
         </div>
         <div className="space-y-2">
           <label htmlFor="phone" className="text-sm font-medium text-foreground">
             Phone Number
           </label>
-          <Input id="phone" type="tel" placeholder="+1 (555) 123-4567" />
+          <Input id="phone" name="phone" type="tel" placeholder="+1 (555) 123-4567" />
         </div>
       </div>
 
@@ -94,7 +130,7 @@ export function ConsultationFormClient() {
         <label htmlFor="serviceInterest" className="text-sm font-medium text-foreground">
           Service You're Interested In *
         </label>
-        <Select required>
+        <Select required value={serviceInterest} onValueChange={setServiceInterest}>
           <SelectTrigger id="serviceInterest">
             <SelectValue placeholder="Select a service area" />
           </SelectTrigger>
@@ -117,7 +153,7 @@ export function ConsultationFormClient() {
           <label htmlFor="budget" className="text-sm font-medium text-foreground">
             Estimated Budget
           </label>
-          <Select>
+          <Select value={budget} onValueChange={setBudget}>
             <SelectTrigger id="budget">
               <SelectValue placeholder="Select a range" />
             </SelectTrigger>
@@ -135,7 +171,7 @@ export function ConsultationFormClient() {
           <label htmlFor="timeline" className="text-sm font-medium text-foreground">
             Expected Timeline
           </label>
-          <Select>
+          <Select value={timeline} onValueChange={setTimeline}>
             <SelectTrigger id="timeline">
               <SelectValue placeholder="Select a timeline" />
             </SelectTrigger>
@@ -157,6 +193,7 @@ export function ConsultationFormClient() {
         {/* ↓ Mobile: 1 fewer row saves ~20px of height */}
         <Textarea
           id="details"
+          name="details"
           rows={4}
           placeholder="Describe your goals, challenges, or the scope of work you need help with. The more detail you provide, the more accurate our quote will be."
         />
@@ -165,9 +202,17 @@ export function ConsultationFormClient() {
       <Button
         type="submit"
         size="lg"
-        className="w-full bg-[#1E63B5] text-white hover:bg-[#174f94]"
+        disabled={status === "loading"}
+        className="w-full bg-[#1E63B5] text-white hover:bg-[#174f94] disabled:opacity-70"
       >
-        Submit Quote Request
+        {status === "loading" ? (
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Submitting...
+          </>
+        ) : (
+          "Submit Quote Request"
+        )}
       </Button>
       <p className="text-center text-xs text-muted-foreground">
         Your information is kept confidential and will only be used to prepare

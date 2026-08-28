@@ -10,6 +10,8 @@ import {
   BookOpenCheck,
   Handshake,
   ArrowRight,
+  Pause,
+  Play,
 } from "lucide-react"
 
 const AUTOPLAY_MS = 4000
@@ -65,85 +67,161 @@ const allCards = [...services, closingService]
 
 export function SpecializationSection() {
   const scrollRef = useRef<HTMLDivElement>(null)
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const isInteractedRef = useRef(false)
-  const [isInteractedUI, setIsInteractedUI] = useState(false)
-  const [activeIndex, setActiveIndex] = useState(0)
+  /* Mirrors activeIndex so the autoplay tick can read it without
+     re-creating the interval on every slide change. */
+  const activeIndexRef = useRef(0)
 
-  /* ── scroll to a card by index ── */
-  const goTo = useCallback((index: number) => {
-    const el = scrollRef.current
-    if (!el) return
-    const cards = el.querySelectorAll<HTMLElement>("article")
-    const target = cards[index]
-    if (!target) return
-    const left = target.offsetLeft - (el.clientWidth - target.offsetWidth) / 2
-    el.scrollTo({ left, behavior: "smooth" })
+  const [activeIndex, setActiveIndex] = useState(0)
+  const [hasInteracted, setHasInteracted] = useState(false)
+  const [isPaused, setIsPaused] = useState(false)
+  const [isTabVisible, setIsTabVisible] = useState(true)
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false)
+
+  /* Autoplay only runs when nothing says otherwise. */
+  const autoplayActive =
+    !hasInteracted && !isPaused && isTabVisible && !prefersReducedMotion
+
+  const setActive = useCallback((index: number) => {
+    activeIndexRef.current = index
     setActiveIndex(index)
   }, [])
 
-  /* ── start (or restart) the autoplay interval ── */
-  const startTimer = useCallback(() => {
-    if (isInteractedRef.current) return
-    if (timerRef.current) clearInterval(timerRef.current)
-    timerRef.current = setInterval(() => {
-      setActiveIndex(prev => {
-        const next = (prev + 1) % allCards.length
-        goTo(next)
-        return next
-      })
-    }, AUTOPLAY_MS)
-  }, [goTo])
+  /*
+    Card centre positions, measured once per layout rather than on every
+    scroll event. Reading offsetLeft/offsetWidth forces a synchronous
+    layout; doing that for all seven cards on each of the ~60 scroll
+    events a second that a smooth scroll emits is pure layout thrash.
+  */
+  const cardCentresRef = useRef<number[]>([])
+  const rafRef = useRef<number | null>(null)
 
-  /* ── stop the interval (no boolean flag — just kill it) ── */
-  const stopTimer = useCallback(() => {
-    if (timerRef.current) {
-      clearInterval(timerRef.current)
-      timerRef.current = null
-    }
-  }, [])
-
-  /* ── boot on mount ── */
-  useEffect(() => {
-    startTimer()
-    return stopTimer
-  }, [startTimer, stopTimer])
-
-  /* ── recover if tab goes background then comes back ── */
-  useEffect(() => {
-    const onVisible = () => {
-      if (document.visibilityState === "visible") startTimer()
-      else stopTimer()
-    }
-    document.addEventListener("visibilitychange", onVisible)
-    return () => document.removeEventListener("visibilitychange", onVisible)
-  }, [startTimer, stopTimer])
-
-  /* ── sync dot while user manually swipes ── */
-  const handleScroll = useCallback(() => {
+  const measureCards = useCallback(() => {
     const el = scrollRef.current
     if (!el) return
-    const ratio = el.scrollLeft / (el.scrollWidth - el.clientWidth)
-    setActiveIndex(Math.round(ratio * (allCards.length - 1)))
+    cardCentresRef.current = Array.from(
+      el.querySelectorAll<HTMLElement>("article"),
+    ).map((card) => card.offsetLeft + card.offsetWidth / 2)
   }, [])
 
-  /* ── permanently stop on user interaction ── */
-  const handleInteraction = useCallback(() => {
-    isInteractedRef.current = true
-    setIsInteractedUI(true)
-    stopTimer()
-  }, [stopTimer])
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    measureCards()
+    const observer = new ResizeObserver(measureCards)
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [measureCards])
 
-  /* ── dot click: jump + stop timer permanently ── */
+  useEffect(() => {
+    return () => {
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current)
+    }
+  }, [])
+
+  /* ── scroll to a card by index ── */
+  const goTo = useCallback(
+    (index: number) => {
+      const el = scrollRef.current
+      if (!el) return
+      const centre = cardCentresRef.current[index]
+      if (centre === undefined) return
+      el.scrollTo({
+        left: centre - el.clientWidth / 2,
+        behavior: prefersReducedMotion ? "auto" : "smooth",
+      })
+      setActive(index)
+    },
+    [prefersReducedMotion, setActive],
+  )
+
+  /* ── track the reduced-motion preference ── */
+  useEffect(() => {
+    const query = window.matchMedia("(prefers-reduced-motion: reduce)")
+    const sync = () => setPrefersReducedMotion(query.matches)
+    sync()
+    query.addEventListener("change", sync)
+    return () => query.removeEventListener("change", sync)
+  }, [])
+
+  /* ── pause autoplay while the tab is in the background ── */
+  useEffect(() => {
+    const onVisibility = () =>
+      setIsTabVisible(document.visibilityState === "visible")
+    document.addEventListener("visibilitychange", onVisibility)
+    return () => document.removeEventListener("visibilitychange", onVisibility)
+  }, [])
+
+  /*
+    ── autoplay ──
+    The advance happens in an effect rather than inside a setState
+    updater. Scrolling from within an updater is a side effect, which
+    React StrictMode double-invokes — that made the carousel skip a
+    card on every tick in development.
+  */
+  useEffect(() => {
+    if (!autoplayActive) return
+    const id = setInterval(() => {
+      goTo((activeIndexRef.current + 1) % allCards.length)
+    }, AUTOPLAY_MS)
+    return () => clearInterval(id)
+  }, [autoplayActive, goTo])
+
+  /*
+    ── sync the active dot while the user swipes ──
+    Picks the card whose centre sits closest to the viewport centre.
+    The previous scrollLeft-ratio calculation assumed cards were evenly
+    distributed across the full scroll width, so it reported the wrong
+    card for everything except the first and last.
+  */
+  const handleScroll = useCallback(() => {
+    /* Coalesce the scroll burst into one read per frame. */
+    if (rafRef.current !== null) return
+    rafRef.current = requestAnimationFrame(() => {
+      rafRef.current = null
+      const el = scrollRef.current
+      const centres = cardCentresRef.current
+      if (!el || centres.length === 0) return
+
+      const viewportCentre = el.scrollLeft + el.clientWidth / 2
+      let nearest = 0
+      let smallestDelta = Number.POSITIVE_INFINITY
+      for (let i = 0; i < centres.length; i++) {
+        const delta = Math.abs(centres[i] - viewportCentre)
+        if (delta < smallestDelta) {
+          smallestDelta = delta
+          nearest = i
+        }
+      }
+
+      /* Only re-render when the highlighted card actually changes. */
+      if (nearest !== activeIndexRef.current) {
+        activeIndexRef.current = nearest
+        setActiveIndex(nearest)
+      }
+    })
+  }, [])
+
+  /* ── a swipe or drag hands control to the user for good ── */
+  const handleInteraction = useCallback(() => {
+    setHasInteracted(true)
+  }, [])
+
+  /* ── dot click: jump + stop autoplay ── */
   const handleDotClick = (index: number) => {
-    handleInteraction()
+    setHasInteracted(true)
     goTo(index)
   }
 
+  /*
+    No local scroll-mt on the section: the anchor offset comes from
+    html { scroll-padding-top } in globals.css. A scroll-margin on the
+    target would stack on top of that padding and overshoot the heading.
+  */
   return (
     <section
       id="services"
-      className="relative scroll-mt-24 overflow-hidden bg-frost pb-10 pt-12 sm:pb-16 sm:pt-24 lg:pb-20 lg:pt-32"
+      aria-labelledby="services-heading"
+      className="section-y relative overflow-hidden bg-frost"
     >
       <style>{`
         @keyframes n2p-fill {
@@ -152,22 +230,18 @@ export function SpecializationSection() {
         }
       `}</style>
 
-      <div className="absolute inset-0 opacity-30">
-        <div className="absolute right-0 top-0 h-96 w-96 rounded-full bg-signature-blue/5 blur-3xl" />
-        <div className="absolute bottom-0 left-0 h-72 w-72 rounded-full bg-tech-green/5 blur-3xl" />
-      </div>
-
       <div className="relative mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
 
         {/* ── Section header ── */}
-        <div className="mb-7 sm:mb-16 max-w-3xl">
-          <p className="mb-2 sm:mb-3 text-sm font-bold uppercase tracking-[0.24em] text-signature-blue">
-            Our Services
-          </p>
-          <h2 className="text-balance font-sans text-2xl font-bold tracking-tight text-foreground sm:text-4xl lg:text-5xl">
+        <div className="mb-9 max-w-3xl sm:mb-16">
+          <p className="eyebrow mb-4">Our Services</p>
+          <h2
+            id="services-heading"
+            className="text-heading text-balance text-foreground"
+          >
             Technology Solutions Built for Modern Business
           </h2>
-          <p className="hidden sm:block mt-4 max-w-2xl text-pretty font-serif text-base leading-relaxed text-muted-foreground sm:text-lg">
+          <p className="measure mt-5 text-pretty text-lead text-muted-foreground">
             From consulting and digital transformation to AI integration and cloud
             infrastructure, we help organizations modernize operations, improve
             efficiency, and accelerate business growth.
@@ -178,15 +252,45 @@ export function SpecializationSection() {
             MOBILE — auto-scroll carousel
         ════════════════════════════════ */}
         <div className="sm:hidden">
-          <div className="mb-3 flex items-center justify-end gap-1.5 text-muted-foreground/70 pr-2">
-            <span className="text-[10px] font-semibold tracking-wider uppercase">Swipe to explore</span>
-            <ArrowRight className="size-3 animate-pulse" />
+          <div className="mb-3 flex items-center justify-between gap-2 pr-2 text-muted-foreground/70">
+            {/*
+              WCAG 2.2.2 — auto-advancing content needs an explicit
+              pause control. Swiping already stops it, but that is not
+              reachable by keyboard or assistive tech.
+            */}
+            {autoplayActive || isPaused ? (
+              <button
+                type="button"
+                onClick={() => setIsPaused((paused) => !paused)}
+                aria-label={
+                  isPaused ? "Resume automatic scrolling" : "Pause automatic scrolling"
+                }
+                className="-ml-2 inline-flex min-h-11 items-center gap-1.5 rounded-lg px-2 text-overline uppercase transition-colors hover:text-foreground"
+              >
+                {isPaused ? (
+                  <Play className="size-3" aria-hidden="true" />
+                ) : (
+                  <Pause className="size-3" aria-hidden="true" />
+                )}
+                {isPaused ? "Play" : "Pause"}
+              </button>
+            ) : (
+              <span aria-hidden="true" />
+            )}
+
+            <span className="flex items-center gap-1.5">
+              <span className="text-overline uppercase">Swipe to explore</span>
+              <ArrowRight className="size-3 animate-pulse" aria-hidden="true" />
+            </span>
           </div>
           <div
             ref={scrollRef}
             onScroll={handleScroll}
             onTouchStart={handleInteraction}
             onPointerDown={handleInteraction}
+            role="group"
+            aria-roledescription="carousel"
+            aria-label="Our services"
             className="flex snap-x snap-mandatory overflow-x-auto scroll-smooth gap-3 -mx-5 pl-5 pr-20 pb-1"
             style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
           >
@@ -198,35 +302,39 @@ export function SpecializationSection() {
               return (
                 <article
                   key={card.title}
+                  aria-roledescription="slide"
+                  aria-label={`${i + 1} of ${allCards.length}: ${card.title}`}
                   className={`
-                    flex-shrink-0 w-[82vw] snap-center flex flex-col
-                    rounded-2xl border bg-card p-5 shadow-sm
-                    transition-all duration-300
+                    surface flex w-[82vw] flex-shrink-0 snap-center flex-col p-6
                     ${isActive
-                      ? "border-signature-blue/30 shadow-md scale-[1.01]"
-                      : "border-border opacity-75 scale-[0.98]"
+                      ? "border-signature-blue/25 shadow-e3"
+                      : "opacity-70"
                     }
                   `}
                 >
-                  <div
-                    className={`mb-4 flex size-11 items-center justify-center rounded-xl shadow-sm
-                      ${isClosing
-                        ? "bg-gradient-to-br from-signature-blue to-indigo-600"
-                        : "bg-navy/[0.05] ring-1 ring-navy/[0.08]"
-                      }
-                    `}
-                  >
-                    <Icon className={`size-5 ${isClosing ? "text-white" : "text-navy/70"}`} />
+                  <div className="mb-5 flex items-center justify-between">
+                    <div
+                      className={`flex size-11 items-center justify-center rounded-xl
+                        ${isClosing
+                          ? "bg-gradient-to-br from-signature-blue to-indigo-600 shadow-e2"
+                          : "bg-navy/[0.04] ring-1 ring-navy/[0.07]"
+                        }
+                      `}
+                    >
+                      <Icon
+                        className={`size-5 ${isClosing ? "text-white" : "text-navy/70"}`}
+                        aria-hidden="true"
+                      />
+                    </div>
+                    <span className="text-overline tabular-nums text-muted-foreground/40">
+                      {String(i + 1).padStart(2, "0")}
+                      <span className="mx-0.5">/</span>
+                      {String(allCards.length).padStart(2, "0")}
+                    </span>
                   </div>
 
-                  <span className="mb-2 text-xs font-semibold tabular-nums text-muted-foreground/40">
-                    {String(i + 1).padStart(2, "0")} / {String(allCards.length).padStart(2, "0")}
-                  </span>
-
-                  <h3 className="font-sans text-[17px] font-bold leading-snug text-foreground">
-                    {card.title}
-                  </h3>
-                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                  <h3 className="text-subtitle text-foreground">{card.title}</h3>
+                  <p className="mt-2.5 text-body text-muted-foreground">
                     {card.description}
                   </p>
                 </article>
@@ -234,28 +342,42 @@ export function SpecializationSection() {
             })}
           </div>
 
-          {/* Dots */}
-          <div className="mt-5 flex items-center justify-center gap-2">
+          {/*
+            Dots — each button is a 44px-tall hit area with the 5px pill
+            centred inside it. Previously the button *was* the 5px pill,
+            which is far below the WCAG 2.5.5 minimum target size.
+          */}
+          <div className="mt-3 flex items-center justify-center">
             {allCards.map((_, i) => {
               const isActive = i === activeIndex
               return (
                 <button
                   key={i}
+                  type="button"
                   onClick={() => handleDotClick(i)}
-                  aria-label={`Go to ${allCards[i].title}`}
-                  className={`
-                    relative h-[5px] rounded-full overflow-hidden
-                    transition-all duration-300 ease-out
-                    ${isActive ? "w-8 bg-signature-blue/20" : "w-[5px] bg-border"}
-                  `}
+                  aria-label={`Show ${allCards[i].title}`}
+                  aria-current={isActive ? "true" : undefined}
+                  className="flex h-11 w-6 items-center justify-center rounded-lg"
                 >
-                  {isActive && (
-                    <span
-                      key={activeIndex}
-                      className={`absolute inset-y-0 left-0 rounded-full bg-signature-blue ${isInteractedUI ? 'w-full' : ''}`}
-                      style={!isInteractedUI ? { animation: `n2p-fill ${AUTOPLAY_MS}ms linear forwards` } : undefined}
-                    />
-                  )}
+                  <span
+                    className={`
+                      relative block h-[5px] overflow-hidden rounded-full
+                      transition-all duration-300 ease-out
+                      ${isActive ? "w-8 bg-signature-blue/20" : "w-[5px] bg-border"}
+                    `}
+                  >
+                    {isActive && (
+                      <span
+                        key={activeIndex}
+                        className={`absolute inset-y-0 left-0 rounded-full bg-signature-blue ${autoplayActive ? "" : "w-full"}`}
+                        style={
+                          autoplayActive
+                            ? { animation: `n2p-fill ${AUTOPLAY_MS}ms linear forwards` }
+                            : undefined
+                        }
+                      />
+                    )}
+                  </span>
                 </button>
               )
             })}
@@ -265,30 +387,47 @@ export function SpecializationSection() {
         {/* ════════════════════════════════
             DESKTOP — original grid
         ════════════════════════════════ */}
-        <div className="hidden sm:grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
-          {services.map((service) => (
+        <div className="hidden gap-5 sm:grid sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+          {services.map((service, i) => (
             <article
               key={service.title}
-              className="group flex h-full flex-col rounded-2xl border border-border bg-card p-5 sm:p-7 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-signature-blue/15 hover:shadow-lg"
+              className="surface surface-interactive group relative flex h-full flex-col overflow-hidden p-7"
             >
-              <div className="mb-5 flex size-12 items-center justify-center rounded-xl bg-navy/[0.04] ring-1 ring-navy/[0.06] transition-all duration-300 group-hover:bg-signature-blue/10 group-hover:ring-signature-blue/15">
-                <service.icon className="size-5 text-navy/70 transition-colors duration-300 group-hover:text-signature-blue" />
+              {/* Index marker — quiet structure, visible on hover. */}
+              <span className="absolute right-6 top-6 text-overline tabular-nums text-muted-foreground/25 transition-colors duration-300 group-hover:text-signature-blue/40">
+                {String(i + 1).padStart(2, "0")}
+              </span>
+
+              <div className="mb-6 flex size-12 items-center justify-center rounded-xl bg-navy/[0.04] ring-1 ring-navy/[0.06] transition-all duration-300 group-hover:bg-signature-blue/10 group-hover:ring-signature-blue/20">
+                <service.icon
+                  className="size-5 text-navy/70 transition-colors duration-300 group-hover:text-signature-blue"
+                  aria-hidden="true"
+                />
               </div>
-              <h3 className="font-sans text-lg font-semibold text-foreground">{service.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{service.description}</p>
-              <div className="mt-auto pt-6">
-                <div className="h-px w-full bg-border/70 transition-colors duration-300 group-hover:bg-signature-blue/10" />
+
+              <h3 className="text-subtitle text-foreground">{service.title}</h3>
+              <p className="mt-2.5 text-body text-muted-foreground">
+                {service.description}
+              </p>
+
+              {/* Baseline rule that draws in from the left on hover. */}
+              <div className="mt-auto pt-7">
+                <div className="relative h-px w-full bg-border/70">
+                  <span className="absolute inset-y-0 left-0 w-0 bg-signature-blue transition-all duration-500 ease-out group-hover:w-12" />
+                </div>
               </div>
             </article>
           ))}
 
-          <article className="group flex flex-col gap-5 rounded-2xl border border-border bg-card p-7 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-signature-blue/15 hover:shadow-lg sm:flex-row sm:items-center md:col-span-2 lg:col-span-3">
-            <div className="flex size-12 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-signature-blue to-indigo-600 shadow-sm transition-transform duration-300 group-hover:scale-105">
-              <Handshake className="size-5 text-white" />
+          <article className="surface surface-interactive group flex flex-col gap-6 p-7 sm:flex-row sm:items-center md:col-span-2 lg:col-span-3">
+            <div className="flex size-12 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-signature-blue to-indigo-600 shadow-e2 transition-transform duration-300 group-hover:scale-105">
+              <Handshake className="size-5 text-white" aria-hidden="true" />
             </div>
             <div className="flex-1">
-              <h3 className="font-sans text-lg font-semibold text-foreground">{closingService.title}</h3>
-              <p className="mt-1 text-sm leading-relaxed text-muted-foreground sm:max-w-2xl">{closingService.description}</p>
+              <h3 className="text-subtitle text-foreground">{closingService.title}</h3>
+              <p className="measure mt-1.5 text-body text-muted-foreground">
+                {closingService.description}
+              </p>
             </div>
           </article>
         </div>

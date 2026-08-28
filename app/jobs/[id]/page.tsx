@@ -1,3 +1,4 @@
+import { cache } from "react"
 import { notFound } from "next/navigation"
 import Link from "next/link"
 import {
@@ -8,22 +9,47 @@ import {
   ArrowLeft,
   ArrowRight,
   CheckCircle2,
+  Building2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { jobs } from "@/lib/jobs-data"
+import { fetchJobById } from "@/lib/jobs-service"
+import { buildJobPostingSchema } from "@/lib/job-schema"
 
-export function generateStaticParams() {
-  return jobs.map((job) => ({ id: job.id }))
-}
+/**
+ * Revalidate rather than `force-dynamic`. Every crawler hit and every visitor
+ * used to open its own Supabase round trip for a page that changes when a
+ * recruiter edits a requisition — minutes or days apart, not seconds. The
+ * board's realtime channel already pushes live changes to open tabs, so a
+ * 60-second window costs nothing a visitor would notice and takes the database
+ * out of the critical path for TTFB.
+ */
+export const revalidate = 60
+
+/**
+ * `generateMetadata` and the component both need the job. `cache` collapses
+ * them into one query per request instead of two.
+ */
+const getJob = cache(fetchJobById)
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const job = jobs.find((j) => j.id === id)
+  const job = await getJob(id)
   if (!job) return { title: "Job Not Found | N2P Systems" }
+
+  const description = job.description.replace(/\s+/g, " ").trim().slice(0, 160)
+  const canonical = `/jobs/${encodeURIComponent(job.id)}`
+
   return {
-    title: `${job.title} | N2P Systems`,
-    description: job.description,
+    title: `${job.title} | N2P Systems Careers`,
+    description,
+    alternates: { canonical },
+    openGraph: {
+      title: `${job.title} at ${job.company}`,
+      description,
+      url: canonical,
+      type: "website",
+    },
   }
 }
 
@@ -33,188 +59,224 @@ export default async function JobDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const job = jobs.find((j) => j.id === id)
+  const job = await getJob(id)
   if (!job) notFound()
 
+  // A live requisition gets the native form, which files the CV against this
+  // req in Supabase. Seed listings have no requirement row to attach to, so
+  // they keep the general-profile route.
+  const applyUrl = job.requirementUuid
+    ? `/jobs/${encodeURIComponent(job.id)}/apply`
+    : `/resume?role=${encodeURIComponent(job.title)}&req=${encodeURIComponent(job.id)}&category=${encodeURIComponent(job.domain)}`
+
   return (
-    <main>
-      {/* Header */}
-      <section className="bg-navy pt-24 pb-10 sm:pt-32 sm:pb-16">
-          <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
-            <Link
-              href="/jobs"
-              className="inline-flex items-center gap-2 text-sm text-frost/80 hover:text-frost transition-colors mb-6"
-            >
-              <ArrowLeft className="size-4" />
-              Back to All Jobs
-            </Link>
+    <main className="min-h-screen bg-slate-50">
+      {/* JobPosting structured data — makes the role eligible for Google Jobs. */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(buildJobPostingSchema(job)),
+        }}
+      />
 
-            <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-              <div>
-                <div className="flex flex-wrap gap-2 mb-4">
-                  <Badge className="bg-signature-blue/20 text-cyan-support border-none font-sans text-xs">
-                    {job.domain}
-                  </Badge>
-                  <Badge className="bg-frost/10 text-frost border-none text-xs">
-                    {job.mode}
-                  </Badge>
-                  <Badge className="bg-frost/10 text-frost border-none text-xs">
-                    {job.type}
-                  </Badge>
-                </div>
-                <h1 className="font-sans font-bold text-[1.5rem] tracking-tight text-frost sm:text-4xl leading-[1.15]">
-                  {job.title}
-                </h1>
-                <p className="mt-2 text-base sm:text-lg text-frost/80">{job.company}</p>
+      {/* ── Header Band ── */}
+      <section className="bg-[#07101f] pt-24 pb-12 sm:pt-32 sm:pb-16 text-white relative overflow-hidden">
+        {/* Ambient Glows */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,#0e1e38_0%,transparent_70%)] opacity-60" />
+        <div className="absolute inset-0 texture-dots opacity-20 pointer-events-none" />
 
-                <div className="mt-3 sm:mt-4 flex flex-wrap gap-3 sm:gap-5 text-sm text-frost/80">
-                  <span className="flex items-center gap-1.5">
-                    <MapPin className="size-4" />
-                    {job.location}
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <Briefcase className="size-4" />
-                    {job.experience}
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <DollarSign className="size-4" />
-                    {job.salary}
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <Clock className="size-4" />
-                    Posted {job.postedDate}
-                  </span>
-                </div>
+        <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8 relative">
+          <Link
+            href="/jobs"
+            className="inline-flex items-center gap-2 text-sm text-slate-300 hover:text-white transition-colors mb-6 font-medium"
+          >
+            <ArrowLeft className="size-4" />
+            Back to All Positions
+          </Link>
+
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+            <div className="max-w-3xl">
+              <div className="flex flex-wrap gap-2 mb-4">
+                <Badge className="bg-signature-blue/20 text-sky-400 border border-sky-500/20 font-sans text-xs px-3 py-1">
+                  {job.domain}
+                </Badge>
+                <Badge className="bg-white/10 text-slate-200 border-none text-xs px-3 py-1">
+                  {job.mode}
+                </Badge>
+                <Badge className="bg-white/10 text-slate-200 border-none text-xs px-3 py-1">
+                  {job.type}
+                </Badge>
+                <span className="text-xs font-mono text-slate-400 self-center ml-1">
+                  ID: {job.id}
+                </span>
               </div>
 
-              <Link href="/resume" className="w-full sm:w-auto">
+              <h1 className="font-sans font-bold text-2xl tracking-tight text-white sm:text-4xl lg:text-5xl leading-[1.15]">
+                {job.title}
+              </h1>
+
+              <div className="mt-3 flex items-center gap-2 text-slate-300 font-medium text-base">
+                <Building2 className="size-4 text-slate-400" />
+                <span>{job.company}</span>
+              </div>
+
+              <div className="mt-4 flex flex-wrap gap-4 sm:gap-6 text-sm text-slate-300">
+                <span className="flex items-center gap-1.5">
+                  <MapPin className="size-4 text-slate-400" />
+                  {job.location}
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <Briefcase className="size-4 text-slate-400" />
+                  {job.experience}
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <DollarSign className="size-4 text-slate-400" />
+                  {job.salary}
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <Clock className="size-4 text-slate-400" />
+                  Posted {job.postedDate}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row lg:flex-col gap-3 shrink-0">
+              <Link href={applyUrl} className="w-full sm:w-auto">
                 <Button
                   size="lg"
-                  className="w-full sm:w-auto bg-signature-blue text-primary-foreground hover:bg-cyan-support transition-colors rounded-lg px-8 py-6 text-base font-sans font-semibold shrink-0 active:scale-[0.98] min-h-[44px]"
+                  className="w-full sm:w-auto bg-[#1E63B5] text-white hover:bg-[#164e93] transition-colors rounded-xl px-8 py-6 text-base font-semibold shrink-0 active:scale-[0.98] shadow-lg shadow-blue-950/40"
                 >
-                  Apply Now
-                  <ArrowRight className="size-4 ml-1" />
+                  Apply for this Role
+                  <ArrowRight className="size-4 ml-1.5" />
                 </Button>
               </Link>
             </div>
           </div>
-        </section>
+        </div>
+      </section>
 
-        {/* Job Content */}
-        <section className="py-8 sm:py-12 lg:py-16 bg-frost">
-          <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
-            <div className="grid grid-cols-1 gap-5 sm:gap-8 lg:grid-cols-3">
-              {/* Main Content */}
-              <div className="lg:col-span-2 flex flex-col gap-5 sm:gap-8">
-                {/* Description */}
-                <div className="rounded-xl border border-border bg-card p-5 sm:p-8">
-                  <h2 className="font-sans font-bold text-xl text-foreground mb-4">
-                    Role Overview
-                  </h2>
-                  <p className="text-muted-foreground leading-relaxed">
-                    {job.description}
-                  </p>
-                </div>
-
-                {/* Responsibilities */}
-                <div className="rounded-xl border border-border bg-card p-5 sm:p-8">
-                  <h2 className="font-sans font-bold text-xl text-foreground mb-4">
-                    Responsibilities
-                  </h2>
-                  <ul className="flex flex-col gap-3">
-                    {job.responsibilities.map((item) => (
-                      <li
-                        key={item}
-                        className="flex items-start gap-3 text-muted-foreground leading-relaxed"
-                      >
-                        <CheckCircle2 className="size-5 shrink-0 text-tech-green mt-0.5" />
-                        {item}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                {/* Requirements */}
-                <div className="rounded-xl border border-border bg-card p-5 sm:p-8">
-                  <h2 className="font-sans font-bold text-xl text-foreground mb-4">
-                    Required Skills & Qualifications
-                  </h2>
-                  <ul className="flex flex-col gap-3">
-                    {job.requirements.map((item) => (
-                      <li
-                        key={item}
-                        className="flex items-start gap-3 text-muted-foreground leading-relaxed"
-                      >
-                        <CheckCircle2 className="size-5 shrink-0 text-signature-blue mt-0.5" />
-                        {item}
-                      </li>
-                    ))}
-                  </ul>
+      {/* ── Role Content Section ── */}
+      <section className="py-10 sm:py-16">
+        <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+            {/* Main Content (Left 2 cols) */}
+            <div className="lg:col-span-2 flex flex-col gap-8">
+              {/* Role Overview */}
+              <div className="rounded-2xl border border-slate-200/80 bg-white p-6 sm:p-8 shadow-sm">
+                <h2 className="font-sans font-bold text-xl text-slate-900 mb-4">
+                  Role Overview
+                </h2>
+                <div className="text-slate-600 leading-relaxed whitespace-pre-line text-[15px]">
+                  {job.description}
                 </div>
               </div>
 
-              {/* Sidebar */}
-              <div className="flex flex-col gap-4 sm:gap-6">
-                {/* Tech Stack */}
-                <div className="rounded-xl border border-border bg-card p-5 sm:p-6">
-                  <h3 className="font-sans font-semibold text-sm uppercase tracking-wide text-muted-foreground mb-4">
-                    Tech Stack
+              {/* Responsibilities */}
+              {job.responsibilities && job.responsibilities.length > 0 && (
+                <div className="rounded-2xl border border-slate-200/80 bg-white p-6 sm:p-8 shadow-sm">
+                  <h2 className="font-sans font-bold text-xl text-slate-900 mb-4">
+                    Key Responsibilities
+                  </h2>
+                  <ul className="flex flex-col gap-3">
+                    {job.responsibilities.map((item, idx) => (
+                      <li
+                        key={idx}
+                        className="flex items-start gap-3 text-slate-600 leading-relaxed text-[15px]"
+                      >
+                        <CheckCircle2 className="size-5 shrink-0 text-emerald-600 mt-0.5" />
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Requirements & Skills */}
+              {job.requirements && job.requirements.length > 0 && (
+                <div className="rounded-2xl border border-slate-200/80 bg-white p-6 sm:p-8 shadow-sm">
+                  <h2 className="font-sans font-bold text-xl text-slate-900 mb-4">
+                    Required Skills & Qualifications
+                  </h2>
+                  <ul className="flex flex-col gap-3">
+                    {job.requirements.map((item, idx) => (
+                      <li
+                        key={idx}
+                        className="flex items-start gap-3 text-slate-600 leading-relaxed text-[15px]"
+                      >
+                        <CheckCircle2 className="size-5 shrink-0 text-signature-blue mt-0.5" />
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+
+            {/* Sidebar (Right 1 col) */}
+            <div className="flex flex-col gap-6">
+              {/* Tech Stack */}
+              {job.techStack && job.techStack.length > 0 && (
+                <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm">
+                  <h3 className="font-semibold text-xs uppercase tracking-wider text-slate-500 mb-3">
+                    Target Tech Stack
                   </h3>
                   <div className="flex flex-wrap gap-2">
                     {job.techStack.map((tech) => (
                       <Badge
                         key={tech}
                         variant="secondary"
-                        className="bg-frost text-foreground border border-border"
+                        className="bg-slate-100 text-slate-800 border border-slate-200 rounded-lg px-2.5 py-1 text-xs font-medium"
                       >
                         {tech}
                       </Badge>
                     ))}
                   </div>
                 </div>
+              )}
 
-                {/* Quick Facts */}
-                <div className="rounded-xl border border-border bg-card p-5 sm:p-6">
-                  <h3 className="font-sans font-semibold text-sm uppercase tracking-wide text-muted-foreground mb-4">
-                    Quick Facts
-                  </h3>
-                  <dl className="flex flex-col gap-4">
-                    {[
-                      { label: "Location", value: job.location },
-                      { label: "Employment", value: job.type },
-                      { label: "Work Mode", value: job.mode },
-                      { label: "Experience", value: job.experience },
-                      { label: "Compensation", value: job.salary },
-                    ].map((fact) => (
-                      <div key={fact.label}>
-                        <dt className="text-xs text-muted-foreground">{fact.label}</dt>
-                        <dd className="text-sm font-sans font-medium text-foreground mt-0.5">
-                          {fact.value}
-                        </dd>
-                      </div>
-                    ))}
-                  </dl>
-                </div>
+              {/* Quick Facts */}
+              <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm">
+                <h3 className="font-semibold text-xs uppercase tracking-wider text-slate-500 mb-4">
+                  Quick Details
+                </h3>
+                <dl className="flex flex-col gap-3.5 divide-y divide-slate-100">
+                  {[
+                    { label: "Location", value: job.location },
+                    { label: "Employment Type", value: job.type },
+                    { label: "Work Arrangement", value: job.mode },
+                    { label: "Experience Level", value: job.experience },
+                    { label: "Compensation", value: job.salary },
+                    { label: "Domain Focus", value: job.domain },
+                    { label: "Requisition Ref", value: job.id },
+                  ].map((fact, idx) => (
+                    <div key={fact.label} className={idx > 0 ? "pt-3 flex justify-between items-center" : "flex justify-between items-center"}>
+                      <dt className="text-xs text-slate-500">{fact.label}</dt>
+                      <dd className="text-sm font-semibold text-slate-900 text-right">
+                        {fact.value}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
 
-                {/* Apply CTA */}
-                <div className="rounded-xl border border-signature-blue/20 bg-signature-blue/5 p-5 sm:p-6">
-                  <h3 className="font-sans font-semibold text-foreground mb-2">
-                    Interested in this role?
-                  </h3>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Submit your profile through the relevant application form
-                    and our team will review it for matching opportunities.
-                  </p>
-                  <Link href="/resume" className="w-full">
-                    <Button className="w-full bg-signature-blue text-primary-foreground hover:bg-cyan-support transition-colors font-sans font-semibold min-h-[44px] active:scale-[0.98]">
-                      Apply Now
-                    </Button>
-                  </Link>
-                </div>
+              {/* Apply Card */}
+              <div className="rounded-2xl border border-signature-blue/20 bg-gradient-to-b from-blue-50/80 to-white p-6 shadow-sm">
+                <h3 className="font-bold text-slate-950 text-lg mb-1.5">
+                  Ready to Apply?
+                </h3>
+                <p className="text-sm text-slate-600 mb-5 leading-relaxed">
+                  Submit your resume and contact information. Our recruitment lead for this role will review your dossier and connect with you.
+                </p>
+                <Link href={applyUrl} className="w-full">
+                  <Button className="w-full bg-[#1E63B5] hover:bg-[#164e93] text-white font-semibold py-5 rounded-xl shadow-md active:scale-[0.98]">
+                    Apply for this Role
+                  </Button>
+                </Link>
               </div>
             </div>
           </div>
-        </section>
+        </div>
+      </section>
     </main>
   )
 }

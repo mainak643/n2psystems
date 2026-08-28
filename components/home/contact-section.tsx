@@ -1,25 +1,46 @@
 "use client"
 
-import { useState } from "react"
-import { Clock, Globe, Mail, Phone, CheckCircle2 } from "lucide-react"
+import { useState, useRef, useEffect, useId } from "react"
+import { Clock, Globe, Mail, Phone, CheckCircle2, Loader2, AlertCircle } from "lucide-react"
 
 const contactDetails = [
-  { icon: Phone, label: "Canada & USA", value: "+1 (437) 335-9390" },
-  { icon: Phone, label: "India", value: "+91 97760 47567" },
-  { icon: Mail, label: "Email", value: "info@n2psystems.ca" },
-  { icon: Globe, label: "Operates In", value: "India, Canada, USA" },
-  { icon: Clock, label: "Hours", value: "Mon - Fri, 9:00 AM – 6:00 PM EST" },
+  { icon: Phone, label: "Canada & USA", value: "+1 (437) 335-9390", href: "tel:+14373359390" },
+  { icon: Phone, label: "India", value: "+91 97760 47567", href: "tel:+919776047567" },
+  { icon: Mail, label: "Email", value: "info@n2psystems.ca", href: "mailto:info@n2psystems.ca" },
+  { icon: Globe, label: "Operates In", value: "India, Canada, USA", href: null },
+  { icon: Clock, label: "Hours", value: "Mon - Fri, 9:00 AM – 6:00 PM EST", href: null },
 ]
 
+/*
+  min-h-11 keeps every field at a comfortable touch size, and the 16px
+  font size on mobile is deliberate: iOS Safari zooms the viewport when
+  a focused input renders below 16px.
+*/
 const inputClass =
-  "w-full rounded-lg border border-border bg-background px-3.5 py-2 text-sm text-foreground placeholder:text-muted-foreground/60 outline-none transition-colors focus:border-signature-blue focus:ring-2 focus:ring-signature-blue/15"
+  "w-full min-h-11 rounded-xl border border-border bg-background px-4 py-2.5 text-base sm:text-sm text-foreground placeholder:text-muted-foreground/50 outline-none transition-[border-color,box-shadow] duration-200 hover:border-muted-foreground/30 focus:border-signature-blue focus:ring-4 focus:ring-signature-blue/10"
+
+const labelClass =
+  "block text-overline uppercase text-muted-foreground"
 
 function ContactForm() {
-  const [submitted, setSubmitted] = useState(false)
+  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle")
+  const formRef = useRef<HTMLFormElement>(null)
+  const successRef = useRef<HTMLDivElement>(null)
 
-  if (submitted) {
+  /* Move focus to the confirmation so screen reader users are told the
+     message actually sent, instead of being left on a removed button. */
+  useEffect(() => {
+    if (status === "success") successRef.current?.focus()
+  }, [status])
+
+  if (status === "success") {
     return (
-      <div className="flex flex-col items-center justify-center py-10 text-center">
+      <div
+        ref={successRef}
+        tabIndex={-1}
+        role="status"
+        className="flex flex-col items-center justify-center py-10 text-center outline-none"
+      >
         <div className="flex h-14 w-14 items-center justify-center rounded-full bg-green-500/10 mb-4">
           <CheckCircle2 className="h-7 w-7 text-green-500" />
         </div>
@@ -31,46 +52,102 @@ function ContactForm() {
     )
   }
 
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    if (!formRef.current) return
+    setStatus("loading")
+    try {
+      const res = await fetch("https://formspree.io/f/xqazpory", {
+        method: "POST",
+        body: new FormData(formRef.current),
+        headers: { Accept: "application/json" },
+      })
+      setStatus(res.ok ? "success" : "error")
+    } catch {
+      setStatus("error")
+    }
+  }
+
   return (
     <form
-      onSubmit={(e) => { e.preventDefault(); setSubmitted(true) }}
+      ref={formRef}
+      onSubmit={handleSubmit}
       className="space-y-4"
     >
+      {/* Live region so submission failures are announced, not just shown. */}
+      <div role="alert" aria-live="assertive">
+        {status === "error" && (
+          <div className="flex items-center gap-2.5 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-xs text-red-700">
+            <AlertCircle className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            <span>Failed to send. Email us at <a href="mailto:info@n2psystems.ca" className="font-semibold underline">info@n2psystems.ca</a></span>
+          </div>
+        )}
+      </div>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
-          <label htmlFor="name" className="block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <label htmlFor="name" className={labelClass}>
             Full Name *
           </label>
-          <input id="name" type="text" required placeholder="Jane Smith" className={inputClass} />
+          <input
+            id="name"
+            name="name"
+            type="text"
+            required
+            autoComplete="name"
+            autoCapitalize="words"
+            placeholder="Jane Smith"
+            className={inputClass}
+          />
         </div>
         <div className="space-y-1.5">
-          <label htmlFor="email" className="block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <label htmlFor="email" className={labelClass}>
             Email *
           </label>
-          <input id="email" type="email" required placeholder="jane@company.com" className={inputClass} />
+          <input
+            id="email"
+            name="email"
+            type="email"
+            required
+            autoComplete="email"
+            inputMode="email"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            placeholder="jane@company.com"
+            className={inputClass}
+          />
         </div>
       </div>
 
       <div className="space-y-1.5">
-        <label htmlFor="phone" className="block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        <label htmlFor="phone" className={labelClass}>
           Phone Number
         </label>
-        <input id="phone" type="tel" placeholder="+1 (555) 000-0000" className={inputClass} />
+        <input
+          id="phone"
+          name="phone"
+          type="tel"
+          autoComplete="tel"
+          inputMode="tel"
+          placeholder="+1 (555) 000-0000"
+          className={inputClass}
+        />
       </div>
 
       <div className="space-y-1.5">
-        <label htmlFor="subject" className="block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        <label htmlFor="subject" className={labelClass}>
           Subject *
         </label>
-        <input id="subject" type="text" required placeholder="How can we help?" className={inputClass} />
+        <input id="subject" name="subject" type="text" required placeholder="How can we help?" className={inputClass} />
       </div>
 
       <div className="space-y-1.5">
-        <label htmlFor="message" className="block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        <label htmlFor="message" className={labelClass}>
           Message *
         </label>
         <textarea
           id="message"
+          name="message"
           required
           rows={4}
           placeholder="Tell us more about your inquiry..."
@@ -80,51 +157,82 @@ function ContactForm() {
 
       <button
         type="submit"
-        className="w-full rounded-lg bg-signature-blue px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-signature-blue/90 focus:outline-none focus:ring-2 focus:ring-signature-blue/40 active:scale-[0.98] min-h-[44px]"
+        disabled={status === "loading"}
+        className="flex min-h-[50px] w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#1E63B5] to-[#164e93] px-6 text-sm font-semibold text-white shadow-[0_6px_20px_-6px_rgba(30,99,181,0.55)] transition-all duration-200 hover:shadow-[0_10px_28px_-6px_rgba(30,99,181,0.7)] hover:brightness-110 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:shadow-[0_6px_20px_-6px_rgba(30,99,181,0.55)] disabled:hover:brightness-100"
       >
-        Send Message
+        {status === "loading" ? (
+          <>
+            <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+            Sending…
+          </>
+        ) : (
+          "Send Message"
+        )}
       </button>
     </form>
   )
 }
 
-// ─── Contact Details Card (shared between mobile tab + desktop grid) ──────────
+// ─── Contact Details Card ─────────────────────────────────────────────────────
 function ContactInfoPanel() {
   return (
-    <div className="rounded-2xl sm:rounded-3xl border border-border bg-card p-5 sm:p-7 shadow-sm">
-      <h3 className="text-lg font-semibold text-foreground">Need assistance?</h3>
-      <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+    <div className="surface h-full p-6 sm:p-8">
+      <h3 className="text-title text-foreground">Need assistance?</h3>
+      <p className="mt-2 text-body text-muted-foreground">
         Reach out directly to the N2P team.
       </p>
-      <div className="mt-5 space-y-3">
-        {contactDetails.map((item) => (
-          <div
-            key={item.label}
-            className="flex items-center gap-3.5 rounded-2xl border border-border bg-background px-4 py-3"
-          >
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-signature-blue/10 text-signature-blue">
-              <item.icon className="h-4 w-4" />
+
+      <div className="mt-6 space-y-2.5">
+        {contactDetails.map((item) => {
+          const content = (
+            <>
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-signature-blue/[0.08] text-signature-blue transition-colors duration-200 group-hover:bg-signature-blue/[0.14]">
+                <item.icon className="size-4" aria-hidden="true" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-overline uppercase text-muted-foreground/70">
+                  {item.label}
+                </p>
+                <p className="mt-1 truncate text-body leading-snug text-foreground">
+                  {item.value}
+                </p>
+              </div>
+            </>
+          )
+
+          /* Phone numbers and email are actionable — on mobile these are
+             the fastest path to a conversation, so they are real links. */
+          return item.href ? (
+            <a
+              key={item.label}
+              href={item.href}
+              className="group flex min-h-11 items-center gap-4 rounded-xl border border-border bg-background px-4 py-3 transition-colors duration-200 hover:border-signature-blue/25 hover:bg-signature-blue/[0.03]"
+            >
+              {content}
+            </a>
+          ) : (
+            <div
+              key={item.label}
+              className="group flex min-h-11 items-center gap-4 rounded-xl border border-border bg-background px-4 py-3"
+            >
+              {content}
             </div>
-            <div>
-              <p className="text-xs font-semibold text-foreground">{item.label}</p>
-              <p className="text-sm text-muted-foreground">{item.value}</p>
-            </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
     </div>
   )
 }
 
-// ─── Form Card (shared between mobile tab + desktop grid) ─────────────────────
+// ─── Form Card ────────────────────────────────────────────────────────────────
 function ContactFormPanel() {
   return (
-    <div className="rounded-2xl sm:rounded-3xl border border-border bg-card p-5 sm:p-7 shadow-sm">
-      <h3 className="text-lg font-semibold text-foreground">Send a message</h3>
-      <p className="mt-1 text-sm text-muted-foreground">
+    <div className="surface h-full p-6 sm:p-8">
+      <h3 className="text-title text-foreground">Send a message</h3>
+      <p className="mt-2 text-body text-muted-foreground">
         We'll get back to you within one business day.
       </p>
-      <div className="mt-5">
+      <div className="mt-6">
         <ContactForm />
       </div>
     </div>
@@ -132,84 +240,123 @@ function ContactFormPanel() {
 }
 
 // ─── Main Section ─────────────────────────────────────────────────────────────
+const TABS = [
+  { id: "info" as const, label: "Contact Info" },
+  { id: "message" as const, label: "Send Message" },
+]
+
 export function ContactSection() {
   const [activeTab, setActiveTab] = useState<"info" | "message">("info")
+  const uid = useId()
+
+  const tabId = (id: string) => `${uid}-tab-${id}`
+  const panelId = (id: string) => `${uid}-panel-${id}`
+
+  /* Roving arrow-key navigation between the two tabs. */
+  const handleTabKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>) => {
+    if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return
+    e.preventDefault()
+    const next = activeTab === "info" ? "message" : "info"
+    setActiveTab(next)
+    document.getElementById(tabId(next))?.focus()
+  }
 
   return (
     <section
       id="contact"
-      className="relative overflow-hidden bg-background border-t border-border pt-10 pb-16 sm:pt-12 sm:pb-20 lg:pt-16 lg:pb-24"
+      aria-labelledby="contact-heading"
+      className="section-y relative overflow-hidden border-t border-border bg-background"
     >
       <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
 
-        {/* Header — unchanged */}
+        {/* Header */}
         <div className="mx-auto max-w-3xl text-center">
-          <p className="mb-4 text-sm font-semibold uppercase tracking-[0.24em] text-signature-blue">
-            Contact
-          </p>
-          <h2 className="text-balance font-sans text-2xl font-bold tracking-tight text-foreground sm:text-4xl lg:text-5xl">
+          <p className="eyebrow eyebrow-center mb-4">Contact</p>
+          <h2
+            id="contact-heading"
+            className="text-heading text-balance text-foreground"
+          >
             Connect with our team
           </h2>
-          <p className="mx-auto mt-4 sm:mt-5 max-w-2xl text-[15px] sm:text-lg leading-relaxed text-muted-foreground">
+          <p className="mx-auto mt-5 max-w-2xl text-lead text-muted-foreground">
             Share the details of your hiring, transformation, or talent strategy
             and our team will respond fast.
           </p>
         </div>
 
         {/*
-          ── MOBILE TAB SWITCHER (<lg) ────────────────────────────────────────
-          Pill-style toggle between "Contact Info" and "Send Message".
-          Hidden on lg+ where both panels are always visible side-by-side.
+          ── TAB SWITCHER — mobile/tablet only (<lg) ──────────────────────────
+          Segmented control between "Contact Info" and "Send Message".
+          Removed from the accessibility tree on lg+, where both panels
+          are shown side by side and there is nothing to switch between.
         */}
         <div className="mt-8 sm:mt-10 lg:hidden">
-          <div className="flex rounded-xl border border-border bg-card p-1 gap-1">
-            <button
-              onClick={() => setActiveTab("info")}
-              className={`
-                flex-1 rounded-lg py-2.5 text-sm font-semibold
-                transition-all duration-200
-                ${activeTab === "info"
-                  ? "bg-signature-blue text-white shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-                }
-              `}
-            >
-              Contact Info
-            </button>
-            <button
-              onClick={() => setActiveTab("message")}
-              className={`
-                flex-1 rounded-lg py-2.5 text-sm font-semibold
-                transition-all duration-200
-                ${activeTab === "message"
-                  ? "bg-signature-blue text-white shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-                }
-              `}
-            >
-              Send Message
-            </button>
+          <div
+            role="tablist"
+            aria-label="Contact options"
+            className="flex gap-1 rounded-xl border border-border bg-card p-1"
+          >
+            {TABS.map((tab) => {
+              const isActive = activeTab === tab.id
+              return (
+                <button
+                  key={tab.id}
+                  id={tabId(tab.id)}
+                  type="button"
+                  role="tab"
+                  aria-selected={isActive}
+                  aria-controls={panelId(tab.id)}
+                  tabIndex={isActive ? 0 : -1}
+                  onClick={() => setActiveTab(tab.id)}
+                  onKeyDown={handleTabKeyDown}
+                  className={`
+                    min-h-11 flex-1 rounded-lg py-2.5 text-sm font-semibold
+                    transition-all duration-200
+                    ${isActive
+                      ? "bg-signature-blue text-white shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                    }
+                  `}
+                >
+                  {tab.label}
+                </button>
+              )
+            })}
           </div>
         </div>
 
         {/*
-          ── MOBILE: single active panel (<lg) ───────────────────────────────
-          Only the active tab's panel is rendered; avoids long scroll.
-          Hidden entirely on lg+ (desktop uses the grid below instead).
-        */}
-        <div className="mt-3 lg:hidden">
-          {activeTab === "info" && <ContactInfoPanel />}
-          {activeTab === "message" && <ContactFormPanel />}
-        </div>
+          ── PANELS ───────────────────────────────────────────────────────────
+          Each panel is rendered exactly once and shown/hidden with CSS.
 
-        {/*
-          ── DESKTOP: original two-column grid (lg+) ─────────────────────────
-          Hidden on mobile — panels are handled by the tab switcher above.
-          Pixel-identical to the original layout.
+          Previously the mobile stack and the desktop grid each rendered
+          their own <ContactFormPanel />, so two copies of the form — and
+          therefore two elements with id="name", id="email", etc. — were in
+          the DOM at the same time. Labels resolve to the first matching id,
+          which meant tapping a label on mobile could focus the
+          display:none desktop input instead.
+
+          Toggling with `hidden` rather than unmounting also means a
+          half-filled message survives a trip to the Contact Info tab.
         */}
-        <div className="hidden lg:grid mt-12 gap-8 lg:grid-cols-2 lg:items-start">
-          <ContactInfoPanel />
-          <ContactFormPanel />
+        <div className="mt-3 grid gap-8 lg:mt-12 lg:grid-cols-2 lg:items-start">
+          <div
+            id={panelId("info")}
+            role="tabpanel"
+            aria-labelledby={tabId("info")}
+            className={activeTab === "info" ? "" : "hidden lg:block"}
+          >
+            <ContactInfoPanel />
+          </div>
+
+          <div
+            id={panelId("message")}
+            role="tabpanel"
+            aria-labelledby={tabId("message")}
+            className={activeTab === "message" ? "" : "hidden lg:block"}
+          >
+            <ContactFormPanel />
+          </div>
         </div>
 
       </div>
