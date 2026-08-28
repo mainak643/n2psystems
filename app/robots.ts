@@ -1,14 +1,15 @@
 import { MetadataRoute } from 'next'
+import { SITE_URL } from '@/lib/site'
 
 export default function robots(): MetadataRoute.Robots {
-  const baseUrl = 'https://n2psystems.com'
-
   return {
     rules: {
       userAgent: '*',
       allow: '/',
-      disallow: ['/api/'],
+      // The apply form is noindex per-page; keeping it out of the crawl budget
+      // here too avoids crawlers walking every requisition's form.
+      disallow: ['/api/', '/jobs/*/apply'],
     },
-    sitemap: `${baseUrl}/sitemap.xml`,
+    sitemap: `${SITE_URL}/sitemap.xml`,
   }
 }

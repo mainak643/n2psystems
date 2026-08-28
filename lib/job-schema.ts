@@ -1,6 +1,7 @@
 import type { Job } from './jobs-data';
+import { SITE_URL } from './site';
 
-export const SITE_URL = 'https://n2psystems.com';
+export { SITE_URL };
 
 const EMPLOYMENT_TYPE: Record<Job['type'], string> = {
   'Full-time': 'FULL_TIME',

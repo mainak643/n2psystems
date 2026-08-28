@@ -1,6 +1,6 @@
 import { MetadataRoute } from 'next'
 import { fetchPublishedJobs } from '@/lib/jobs-service'
-import { SITE_URL } from '@/lib/job-schema'
+import { SITE_URL } from '@/lib/site'
 
 /** Matches the boards' ISR window so newly published roles are discoverable. */
 export const revalidate = 60
