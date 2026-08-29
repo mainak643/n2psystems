@@ -44,6 +44,14 @@ export const metadata: Metadata = {
     // images: auto-populated from app/opengraph-image.tsx for every route
     // that doesn't declare its own.
   },
+  icons: {
+    icon: [
+      { url: '/images/n2p-logo-light.png', type: 'image/png' },
+    ],
+    apple: [
+      { url: '/images/n2p-logo-light.png', sizes: '180x180', type: 'image/png' },
+    ],
+  },
   twitter: {
     card: 'summary_large_image',
     title: 'N2P Systems | Global Technology Recruitment',
