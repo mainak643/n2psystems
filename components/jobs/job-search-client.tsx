@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { jobs as defaultJobs, type Job } from "@/lib/jobs-data"
+import type { Job } from "@/lib/jobs-data"
 import { fetchPublishedJobs, getDynamicFilterOptions } from "@/lib/jobs-service"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 
@@ -22,7 +22,7 @@ interface JobSearchClientProps {
 }
 
 export function JobSearchClient({ initialJobs }: JobSearchClientProps) {
-  const [jobsList, setJobsList] = useState<Job[]>(initialJobs && initialJobs.length > 0 ? initialJobs : defaultJobs)
+  const [jobsList, setJobsList] = useState<Job[]>(initialJobs ?? [])
   const [searchQuery, setSearchQuery] = useState("")
   const [location, setLocation] = useState("All Locations")
   const [domain, setDomain] = useState("All Domains")

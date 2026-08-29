@@ -1,5 +1,5 @@
 import { supabase, isSupabaseConfigured } from './supabase';
-import { jobs as fallbackJobs, type Job } from './jobs-data';
+import type { Job } from './jobs-data';
 
 function formatRelativeTime(dateString?: string): string {
   if (!dateString) return 'Recently';
@@ -282,13 +282,10 @@ export async function fetchPublishedJobs(): Promise<Job[]> {
         memoryCachedJobs = { data: mapped, timestamp: Date.now() };
         return mapped;
       } else {
-        // A successful query returning no rows is also exactly what RLS gives
-        // an `anon` caller with no SELECT policy, so name the case instead of
-        // letting seed data quietly stand in for a misconfigured database.
-        console.warn('[jobs] No published requirements visible to the public key — serving seed data.');
+        console.warn('[jobs] No published requirements visible to the public key.');
       }
     } catch (err) {
-      console.warn('[jobs] Error or timeout fetching live jobs from Supabase, falling back to local dataset:', err);
+      console.warn('[jobs] Error or timeout fetching live jobs from Supabase:', err);
     }
   }
 
@@ -296,10 +293,7 @@ export async function fetchPublishedJobs(): Promise<Job[]> {
     return memoryCachedJobs.data;
   }
 
-  // Seed data is a fallback for an offline or empty database, never a
-  // supplement: merging it into a live result puts fictional openings
-  // ("Confidential - Series B Fintech") on the real careers page.
-  return fallbackJobs;
+  return [];
 }
 
 /** Reference codes are opaque, so only try the UUID column when it can be one. */
@@ -355,9 +349,8 @@ export async function fetchJobById(id: string): Promise<Job | null> {
     }
   }
 
-  const fallback = fallbackJobs.find((j) => j.id.toLowerCase() === decodedId.toLowerCase()) || null;
-  jobCache.set(decodedId.toLowerCase(), { data: fallback, timestamp: Date.now() });
-  return fallback;
+  jobCache.set(decodedId.toLowerCase(), { data: null, timestamp: Date.now() });
+  return null;
 }
 
 export function getDynamicFilterOptions(jobs: Job[]) {
