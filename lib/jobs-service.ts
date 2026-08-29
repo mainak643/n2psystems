@@ -246,19 +246,41 @@ export function mapRequirementToJob(req: any): Job {
   };
 }
 
+let memoryCachedJobs: { data: Job[]; timestamp: number } | null = null;
+const jobCache = new Map<string, { data: Job | null; timestamp: number }>();
+const CACHE_TTL_MS = 60 * 1000; // 60 seconds memory cache
+
+async function withTimeout<T>(promise: PromiseLike<T>, timeoutMs = 1200): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(`Operation timed out after ${timeoutMs}ms`)), timeoutMs)
+    ),
+  ]);
+}
+
 export async function fetchPublishedJobs(): Promise<Job[]> {
+  const now = Date.now();
+  if (memoryCachedJobs && now - memoryCachedJobs.timestamp < CACHE_TTL_MS) {
+    return memoryCachedJobs.data;
+  }
+
   if (isSupabaseConfigured()) {
     try {
-      const { data, error } = await supabase
+      const queryPromise = supabase
         .from('requirements')
         .select(PUBLIC_JOB_COLUMNS)
         .in('status', ['Active', 'Open'])
         .order('created_at', { ascending: false });
 
+      const { data, error } = (await withTimeout(queryPromise, 1200)) as any;
+
       if (error) {
         console.warn('[jobs] Supabase rejected the published-roles query:', error.message);
       } else if (data && data.length > 0) {
-        return data.map(mapRequirementToJob);
+        const mapped = data.map(mapRequirementToJob);
+        memoryCachedJobs = { data: mapped, timestamp: Date.now() };
+        return mapped;
       } else {
         // A successful query returning no rows is also exactly what RLS gives
         // an `anon` caller with no SELECT policy, so name the case instead of
@@ -266,8 +288,12 @@ export async function fetchPublishedJobs(): Promise<Job[]> {
         console.warn('[jobs] No published requirements visible to the public key — serving seed data.');
       }
     } catch (err) {
-      console.warn('[jobs] Error fetching live jobs from Supabase, falling back to local dataset:', err);
+      console.warn('[jobs] Error or timeout fetching live jobs from Supabase, falling back to local dataset:', err);
     }
+  }
+
+  if (memoryCachedJobs) {
+    return memoryCachedJobs.data;
   }
 
   // Seed data is a fallback for an offline or empty database, never a
@@ -297,29 +323,41 @@ export async function fetchJobById(id: string): Promise<Job | null> {
   const decodedId = safeDecode(id);
   if (!decodedId) return null;
 
+  const now = Date.now();
+  const cached = jobCache.get(decodedId.toLowerCase());
+  if (cached && now - cached.timestamp < CACHE_TTL_MS) {
+    return cached.data;
+  }
+
   if (isSupabaseConfigured()) {
     try {
       // One round trip, not two: `.eq('id', 'REQ-1001')` against a uuid column
       // is a 22P02 type error, so the old unconditional UUID retry spent a
       // query and logged a Postgres error on every reference-code lookup.
-      const { data, error } = await supabase
+      const queryPromise = supabase
         .from('requirements')
         .select(PUBLIC_JOB_COLUMNS)
         .eq(UUID_RE.test(decodedId) ? 'id' : 'reference_code', decodedId)
         .in('status', ['Active', 'Open'])
         .maybeSingle();
 
+      const { data, error } = (await withTimeout(queryPromise, 1200)) as any;
+
       if (error) {
         console.warn(`[jobs] Supabase rejected the lookup for "${decodedId}":`, error.message);
       } else if (data) {
-        return mapRequirementToJob(data);
+        const mapped = mapRequirementToJob(data);
+        jobCache.set(decodedId.toLowerCase(), { data: mapped, timestamp: Date.now() });
+        return mapped;
       }
     } catch (err) {
-      console.warn(`[jobs] Error fetching job ${decodedId} from Supabase:`, err);
+      console.warn(`[jobs] Error or timeout fetching job ${decodedId} from Supabase:`, err);
     }
   }
 
-  return fallbackJobs.find((j) => j.id.toLowerCase() === decodedId.toLowerCase()) || null;
+  const fallback = fallbackJobs.find((j) => j.id.toLowerCase() === decodedId.toLowerCase()) || null;
+  jobCache.set(decodedId.toLowerCase(), { data: fallback, timestamp: Date.now() });
+  return fallback;
 }
 
 export function getDynamicFilterOptions(jobs: Job[]) {

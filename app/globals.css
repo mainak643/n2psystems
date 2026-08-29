@@ -35,6 +35,36 @@
   --graphite: #1A1A1A;
   --muted-gray: #6B7280;
 
+  /* ── Dark surfaces ────────────────────────────────────────────
+     Rich, soothing corporate navy palette replacing the harsh blackish tones.
+     --navy is the core brand tone (#0B1F33), while --surface-dark provides
+     a deep, calming navy backdrop with subtle cyan/sky undertones. */
+  --surface-dark: #0B1D36;
+  --surface-dark-raised: #10284A;
+  --surface-dark-glow: #163866;
+
+  /* Text and lines on --surface-dark. Contrast against #0B1D36:
+     on-dark 15.6:1, muted 10.5:1, subtle 6.1:1 — on-dark-faint (3.4:1)
+     is for decorative separators only, never body text. */
+  --on-dark: #FFFFFF;
+  --on-dark-muted: #CBD5E1;
+  --on-dark-subtle: #94A3B8;
+  --on-dark-faint: #64748B;
+  --on-dark-line: rgba(255, 255, 255, 0.09);
+  --on-dark-line-strong: rgba(255, 255, 255, 0.16);
+  --on-dark-fill: rgba(255, 255, 255, 0.05);
+  --on-dark-fill-hover: rgba(56, 189, 248, 0.10);
+  /* signature-blue is only 3.2:1 on navy (fails AA) — eyebrows on a
+     dark band use tech-green (9.5:1) instead. */
+  --on-dark-accent: var(--tech-green);
+
+  /* ── Layout ───────────────────────────────────────────────────
+     One container standard, matching the navbar's 1280px cap.
+     Replaces five different gutter recipes scattered per page. */
+  --container-max: 80rem;
+  --gutter: 1.25rem;
+  --navbar-h: 62px;
+
   --chart-1: #1E63B5;
   --chart-2: #7AC943;
   --chart-3: #22A7F0;
@@ -51,9 +81,22 @@
   --sidebar-ring: #1E63B5;
 }
 
+/* Matches the navbar's own h-[62px] sm:h-[72px] and the gutter steps
+   every page's px-5 sm:px-6 lg:px-8 already converged on. */
+@media (min-width: 640px) {
+  :root {
+    --gutter: 1.5rem;
+    --navbar-h: 72px;
+  }
+}
+@media (min-width: 1024px) {
+  :root {
+    --gutter: 2rem;
+  }
+}
+
 @theme inline {
   --font-sans: 'Inter', 'Inter Fallback', sans-serif;
-  --font-serif: 'Source Sans 3', 'Source Sans 3 Fallback', sans-serif;
   --font-mono: 'Geist Mono', 'Geist Mono Fallback', monospace;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -101,6 +144,17 @@
   --color-slate-brand: var(--slate);
   --color-graphite: var(--graphite);
   --color-muted-gray: var(--muted-gray);
+
+  --color-surface-dark: var(--surface-dark);
+  --color-surface-dark-raised: var(--surface-dark-raised);
+  --color-on-dark: var(--on-dark);
+  --color-on-dark-muted: var(--on-dark-muted);
+  --color-on-dark-subtle: var(--on-dark-subtle);
+  --color-on-dark-faint: var(--on-dark-faint);
+  --color-on-dark-line: var(--on-dark-line);
+  --color-on-dark-line-strong: var(--on-dark-line-strong);
+  --color-on-dark-fill: var(--on-dark-fill);
+  --color-on-dark-fill-hover: var(--on-dark-fill-hover);
 
   /* ─────────────────────────────────────────────────────
      TYPE SCALE
@@ -201,13 +255,7 @@
    ═══════════════════════════════════════════════════════ */
 html {
   scroll-behavior: smooth;
-  scroll-padding-top: 78px;
-}
-
-@media (min-width: 640px) {
-  html {
-    scroll-padding-top: 88px;
-  }
+  scroll-padding-top: calc(var(--navbar-h) + 16px);
 }
 
 /* Subtle dot grid texture */
@@ -327,6 +375,92 @@ html {
       var(--border) 88%,
       transparent
     );
+  }
+
+  /* Compact rhythm for strips: trust bars, legal-page bodies, meta bands. */
+  .section-y-sm {
+    padding-block: clamp(2.25rem, 1.6rem + 2.6vw, 4rem);
+  }
+
+  /* The one page container, matching the navbar's own max width. */
+  .container-page {
+    width: 100%;
+    max-width: var(--container-max);
+    margin-inline: auto;
+    padding-inline: var(--gutter);
+  }
+  .container-narrow {
+    max-width: 64rem;
+  }
+  .container-prose {
+    max-width: 46rem;
+  }
+
+  /*
+    Dark-section scope. Re-points the semantic colour variables for the
+    subtree, so .surface, .hairline, .eyebrow, text-foreground,
+    text-muted-foreground and the base `* { border-color }` rule all keep
+    working on navy with zero per-element overrides — this is what makes
+    migrating a page onto a dark band a class swap instead of a rewrite.
+    Always apply to a sibling of content, never wrap a light .surface in
+    it — use .on-light on that card instead (below).
+  */
+  .on-dark {
+    --card: var(--surface-dark-raised);
+    --border: var(--on-dark-line);
+    --foreground: var(--on-dark);
+    --muted-foreground: var(--on-dark-muted);
+    color: var(--on-dark-muted);
+  }
+  .on-dark .eyebrow {
+    color: var(--on-dark-accent);
+  }
+  .on-dark .surface {
+    box-shadow: var(--shadow-e2);
+  }
+
+  /* Escape hatch: a light card deliberately placed on a dark band. */
+  .on-light {
+    --card: #FFFFFF;
+    --border: var(--slate);
+    --foreground: var(--navy);
+    --muted-foreground: var(--muted-gray);
+    color: var(--foreground);
+  }
+
+  /* The dark hero band every non-home page opens with. Top padding is
+     derived from --navbar-h so it can never drift from the real header
+     height again — this is what the seven divergent pt-24/pt-32/pt-24
+     md:pt-28 recipes were each trying to approximate by hand. */
+  .page-hero {
+    position: relative;
+    overflow: hidden;
+    background: var(--surface-dark);
+    padding-top: calc(var(--navbar-h) + clamp(2.5rem, 1.6rem + 3.4vw, 5rem));
+    padding-bottom: clamp(2.5rem, 1.6rem + 3.4vw, 5rem);
+  }
+  .page-hero--compact {
+    padding-bottom: clamp(2rem, 1.5rem + 1.8vw, 3rem);
+  }
+  .page-hero__glow {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.6;
+    background: radial-gradient(ellipse at top, var(--surface-dark-glow) 0%, transparent 70%);
+  }
+
+  /* Chip / badge. Replaces four hand-rolled rounded-full recipes. */
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    border-radius: 9999px;
+    border: 1px solid var(--border);
+    background: color-mix(in srgb, var(--foreground) 4%, transparent);
+    padding: 0.375rem 0.875rem;
+    font-size: var(--text-caption);
+    line-height: 1.2;
   }
 }
 
@@ -459,11 +593,14 @@ html {
   }
 }
 
-/* Reapdat widget: extra footer room on small mobile and hide widget on mobile */
+/*
+  Reapdat widget: hidden on mobile to avoid overlapping the bottom nav.
+  This used to also add 80px of footer padding "to clear the widget" —
+  but the widget is display:none in the same breakpoint, so it occupies
+  no space and that padding was pure dead air under the footer on every
+  phone. Removed; keeping the widget hidden.
+*/
 @media (max-width: 639px) {
-  footer {
-    padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px)) !important;
-  }
   #ai-agent-widget {
     display: none !important;
   }

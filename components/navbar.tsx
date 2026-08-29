@@ -219,7 +219,7 @@ function DesktopDropdown({
         {/* Invisible gap bridge so hover doesn't drop between trigger and menu */}
         <div className="absolute -top-3 left-0 right-0 h-3" aria-hidden="true" />
 
-        <div className="overflow-hidden rounded-2xl border border-white/[0.08] bg-slate-950/95 shadow-[0_16px_50px_rgba(0,0,0,0.4)] backdrop-blur-xl">
+        <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#0B1D36] shadow-[0_16px_50px_rgba(0,0,0,0.5)]">
           <div className="h-px bg-gradient-to-r from-blue-500/50 via-sky-400/40 to-transparent" />
           <div className="p-2">
             {item.children.map((child) => {
@@ -400,9 +400,9 @@ function MobileMenu({
           visible && "vis",
         )}
         style={{
-          background: "linear-gradient(160deg, #071420 0%, #050e1b 100%)",
-          borderLeft: "1px solid rgba(255,255,255,0.06)",
-          boxShadow: "-12px 0 40px rgba(0,0,0,0.45)",
+          background: "#0B1D36",
+          borderLeft: "1px solid rgba(255,255,255,0.10)",
+          boxShadow: "-12px 0 40px rgba(0,0,0,0.5)",
         }}
       >
         {/* Top accent line */}
@@ -606,7 +606,10 @@ function MobileMenu({
               className="flex items-center justify-center gap-2 transition-all duration-200 hover:brightness-105 active:scale-[0.98]"
               style={{
                 padding: "13px 20px", borderRadius: 10,
-                background: "linear-gradient(90deg, #38bdf8 0%, #2563eb 55%, #4f46e5 100%)",
+                // Was a sky→blue→indigo gradient unrelated to the brand
+                // palette; now the same two-stop blue every other primary
+                // CTA on the site uses (hero, jobs board, apply forms).
+                background: "linear-gradient(90deg, #1E63B5 0%, #164e93 100%)",
               }}
             >
               <span style={{ fontSize: 14, fontWeight: 600, color: "#fff", letterSpacing: "-0.01em" }}>
@@ -671,24 +674,39 @@ export function Navbar() {
   )
 
   useEffect(() => {
+    let ticking = false
+
     const handleScroll = () => {
-      setScrolled(window.scrollY > 20)
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          const y =
+            window.scrollY ||
+            window.pageYOffset ||
+            document.documentElement.scrollTop ||
+            document.body.scrollTop ||
+            0
+          setScrolled((prev) => {
+            const next = y > 30
+            return prev === next ? prev : next
+          })
+          ticking = false
+        })
+        ticking = true
+      }
     }
 
     handleScroll() // Initialize state immediately
 
     window.addEventListener("scroll", handleScroll, { passive: true })
+    window.addEventListener("resize", handleScroll, { passive: true })
     window.addEventListener("pageshow", handleScroll)
 
-    // Delay enabling transitions to avoid hydration/initial paint flickering
-    const transitionTimer = setTimeout(() => {
-      setNavReady(true)
-    }, 150)
+    setNavReady(true)
 
     return () => {
       window.removeEventListener("scroll", handleScroll)
+      window.removeEventListener("resize", handleScroll)
       window.removeEventListener("pageshow", handleScroll)
-      clearTimeout(transitionTimer)
     }
   }, [])
 
@@ -701,41 +719,45 @@ export function Navbar() {
     return () => { if (leaveTimeoutRef.current) clearTimeout(leaveTimeoutRef.current) }
   }, [])
 
+  const isTransparent = !scrolled
+
   return (
     <>
       <header
         className={cn(
-          "fixed left-0 right-0 top-0 z-50",
-          navReady && "transition-all duration-300",
+          "fixed left-0 right-0 top-0 z-50 transition-all duration-300",
         )}
         style={
-          scrolled
+          isTransparent
             ? {
-              backgroundColor: "rgba(5, 14, 28, 0.97)",
-              backdropFilter: "blur(24px)",
-              WebkitBackdropFilter: "blur(24px)",
-              borderBottom: "1px solid rgba(255,255,255,0.09)",
-              boxShadow: "0 1px 0 rgba(56,189,248,0.15), 0 4px 24px rgba(0,0,0,0.35)",
+              backgroundColor: "transparent",
+              borderBottom: "1px solid transparent",
+              boxShadow: "none",
             }
             : {
-              background: "linear-gradient(to bottom, rgba(4,10,22,0.90) 0%, rgba(4,10,22,0.0) 100%)",
-              backdropFilter: "blur(6px)",
-              WebkitBackdropFilter: "blur(6px)",
+              backgroundColor: "#0B1D36",
+              borderBottom: "1px solid rgba(255, 255, 255, 0.10)",
+              boxShadow: "0 1px 0 rgba(56, 189, 248, 0.15), 0 4px 20px rgba(0, 0, 0, 0.35)",
             }
         }
       >
-        {/* Scrolled bottom accent */}
-        {scrolled && (
+        {/* Bottom accent line — only visible when scrolled */}
+        {!isTransparent && (
           <div
             className="pointer-events-none absolute bottom-0 left-0 right-0 h-px"
             aria-hidden="true"
-            style={{ background: "linear-gradient(90deg, transparent, rgba(56,189,248,0.3) 50%, transparent)" }}
+            style={{ background: "linear-gradient(90deg, transparent, rgba(56,189,248,0.35) 50%, transparent)" }}
           />
         )}
 
         <nav
           aria-label="Main navigation"
-          className="relative mx-auto flex h-[62px] sm:h-[72px] w-full items-center justify-between px-4 sm:px-6 lg:px-6 xl:px-10"
+          // h-[var(--navbar-h)]: the one source of truth for the header's
+          // real height, also consumed by .page-hero's top padding and by
+          // html { scroll-padding-top } in globals.css. Hardcoding 62px/72px
+          // here again would let those three drift out of sync exactly the
+          // way they had before this pass.
+          className="relative mx-auto flex h-[var(--navbar-h)] w-full items-center justify-between px-4 sm:px-6 lg:px-6 xl:px-10"
           style={{ maxWidth: "1280px" }}
         >
           {/* ── Logo ── */}
@@ -766,7 +788,7 @@ export function Navbar() {
 
           {/* ── Desktop nav ── */}
           <div className="hidden flex-1 justify-center lg:flex">
-            <div className="flex items-center gap-4 xl:gap-8">
+            <div className="flex items-center gap-5 xl:gap-7">
               {navigation.map((item) => {
                 if ("children" in item && Boolean(item.children)) {
                   return (
@@ -785,10 +807,9 @@ export function Navbar() {
                     <button
                       key={item.name}
                       onClick={() => scrollTo((item as NavAnchorItem).anchor)}
-                    className="group relative rounded-md py-2 text-[14px] xl:text-[15.5px] font-medium text-white/80 transition-colors duration-200 outline-none hover:text-white focus-visible:text-white focus-visible:ring-2 focus-visible:ring-sky-400/50"
+                      className="group relative rounded-md px-1 py-2 text-[14px] xl:text-[15px] font-medium text-slate-200/80 transition-colors duration-200 outline-none hover:text-white focus-visible:text-white focus-visible:ring-2 focus-visible:ring-sky-400/50"
                     >
                       {item.name}
-                      <span className="absolute -bottom-0.5 left-0 h-px w-0 bg-sky-400 transition-all duration-300 group-hover:w-full" />
                     </button>
                   )
                 }
@@ -802,17 +823,11 @@ export function Navbar() {
                       href={linkItem.href}
                       aria-current={isActive ? "page" : undefined}
                       className={cn(
-                        "group relative rounded-md py-2 text-[14px] xl:text-[15.5px] font-medium transition-colors duration-200 outline-none focus-visible:text-white focus-visible:ring-2 focus-visible:ring-sky-400/50",
-                        isActive ? "text-white" : "text-white/80 hover:text-white",
+                        "group relative rounded-md px-1 py-2 text-[14px] xl:text-[15px] font-medium transition-colors duration-200 outline-none focus-visible:text-white focus-visible:ring-2 focus-visible:ring-sky-400/50",
+                        isActive ? "text-white" : "text-slate-200/80 hover:text-white",
                       )}
                     >
                       {linkItem.name}
-                      <span
-                        className={cn(
-                          "absolute -bottom-0.5 left-0 h-px bg-sky-400 transition-all duration-300",
-                          isActive ? "w-full" : "w-0 group-hover:w-full",
-                        )}
-                      />
                     </Link>
                   )
                 }
@@ -829,14 +844,15 @@ export function Navbar() {
               className="hidden lg:block"
               aria-hidden="true"
               style={{
-                width: 1, height: 22,
-                background: "linear-gradient(to bottom, transparent, rgba(255,255,255,0.14) 30%, rgba(255,255,255,0.14) 70%, transparent)",
+                width: 1,
+                height: 20,
+                background: "rgba(255, 255, 255, 0.12)",
               }}
             />
 
             <Link
               href="/clients"
-              className="hidden items-center gap-1.5 rounded-[9px] border border-white/[0.14] bg-white/[0.06] px-[12px] py-[7.5px] xl:px-[16px] xl:py-[9px] text-[12px] xl:text-[13px] font-semibold text-white/80 backdrop-blur-sm transition-all duration-200 hover:border-white/[0.22] hover:bg-white/[0.10] hover:text-white active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-white/30 lg:flex"
+              className="hidden items-center gap-1.5 rounded-lg border border-white/15 bg-white/[0.05] px-3.5 py-2 text-[12px] xl:text-[13px] font-semibold text-slate-200 transition-all duration-150 hover:border-white/25 hover:bg-white/[0.09] hover:text-white active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-white/30 lg:flex"
             >
               Partner With Us
               <ArrowUpRight style={{ width: 12, height: 12, color: "rgba(255,255,255,0.45)" }} className="xl:size-[13px]" />

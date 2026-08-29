@@ -1,10 +1,11 @@
 import { cache } from "react"
 import { notFound } from "next/navigation"
-import Link from "next/link"
-import { ArrowLeft, Briefcase, Building2, MapPin } from "lucide-react"
+import { Briefcase, Building2, MapPin } from "lucide-react"
 
 import { ApplyFormClient, ApplyUnavailable } from "@/components/jobs/apply-form-client"
 import { fetchJobById } from "@/lib/jobs-service"
+import { PageHero } from "@/components/ui/page-hero"
+import { Section } from "@/components/ui/section"
 
 export const revalidate = 60
 
@@ -31,56 +32,41 @@ export default async function ApplyPage({ params }: { params: Promise<{ id: stri
   if (!job) notFound()
 
   return (
-    <main className="min-h-screen bg-slate-50">
-      <section className="relative overflow-hidden bg-[#07101f] pb-12 pt-24 text-white sm:pb-16 sm:pt-32">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,#0e1e38_0%,transparent_70%)] opacity-60" />
-        <div className="texture-dots pointer-events-none absolute inset-0 opacity-20" />
-
-        <div className="relative mx-auto max-w-3xl px-5 sm:px-6 lg:px-8">
-          <Link
-            href={`/jobs/${encodeURIComponent(job.id)}`}
-            className="mb-6 inline-flex items-center gap-2 text-sm font-medium text-slate-300 transition-colors hover:text-white"
-          >
-            <ArrowLeft className="size-4" />
-            Back to role details
-          </Link>
-
-          <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-tech-green">
-            Application
-          </p>
-          <h1 className="mt-2 text-2xl font-bold leading-[1.15] tracking-tight sm:text-4xl">
-            {job.title}
-          </h1>
-
-          <div className="mt-4 flex flex-wrap gap-4 text-sm text-slate-300 sm:gap-6">
+    <main>
+      <PageHero
+        align="start"
+        width="narrow"
+        eyebrow="Application"
+        title={job.title}
+        backLink={{ href: `/jobs/${encodeURIComponent(job.id)}`, label: "Back to role details" }}
+        meta={
+          <div className="flex flex-wrap gap-4 text-caption text-on-dark-muted sm:gap-6">
             <span className="flex items-center gap-1.5">
-              <Building2 className="size-4 text-slate-400" />
+              <Building2 className="size-4 text-on-dark-subtle" aria-hidden="true" />
               {job.company}
             </span>
             <span className="flex items-center gap-1.5">
-              <MapPin className="size-4 text-slate-400" />
+              <MapPin className="size-4 text-on-dark-subtle" aria-hidden="true" />
               {job.location}
             </span>
             <span className="flex items-center gap-1.5">
-              <Briefcase className="size-4 text-slate-400" />
+              <Briefcase className="size-4 text-on-dark-subtle" aria-hidden="true" />
               {job.experience}
             </span>
-            <span className="font-mono text-xs text-slate-400">Ref: {job.id}</span>
+            <span className="font-mono text-caption text-on-dark-subtle">Ref: {job.id}</span>
           </div>
-        </div>
-      </section>
+        }
+      />
 
-      <section className="py-10 sm:py-14">
-        <div className="mx-auto max-w-3xl px-5 sm:px-6 lg:px-8">
-          {job.requirementUuid ? (
-            <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm sm:p-8">
-              <ApplyFormClient job={job} />
-            </div>
-          ) : (
-            <ApplyUnavailable job={job} />
-          )}
-        </div>
-      </section>
+      <Section tone="frost" pad="compact" width="narrow">
+        {job.requirementUuid ? (
+          <div className="surface p-6 sm:p-8">
+            <ApplyFormClient job={job} />
+          </div>
+        ) : (
+          <ApplyUnavailable job={job} />
+        )}
+      </Section>
     </main>
   )
 }

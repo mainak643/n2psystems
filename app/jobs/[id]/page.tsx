@@ -6,7 +6,6 @@ import {
   Briefcase,
   Clock,
   DollarSign,
-  ArrowLeft,
   ArrowRight,
   CheckCircle2,
   Building2,
@@ -15,6 +14,8 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { fetchJobById } from "@/lib/jobs-service"
 import { buildJobPostingSchema } from "@/lib/job-schema"
+import { PageHero } from "@/components/ui/page-hero"
+import { Section } from "@/components/ui/section"
 
 /**
  * Revalidate rather than `force-dynamic`. Every crawler hit and every visitor
@@ -70,7 +71,7 @@ export default async function JobDetailPage({
     : `/resume?role=${encodeURIComponent(job.title)}&req=${encodeURIComponent(job.id)}&category=${encodeURIComponent(job.domain)}`
 
   return (
-    <main className="min-h-screen bg-slate-50">
+    <main>
       {/* JobPosting structured data — makes the role eligible for Google Jobs. */}
       <script
         type="application/ld+json"
@@ -79,204 +80,157 @@ export default async function JobDetailPage({
         }}
       />
 
-      {/* ── Header Band ── */}
-      <section className="bg-[#07101f] pt-24 pb-12 sm:pt-32 sm:pb-16 text-white relative overflow-hidden">
-        {/* Ambient Glows */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,#0e1e38_0%,transparent_70%)] opacity-60" />
-        <div className="absolute inset-0 texture-dots opacity-20 pointer-events-none" />
-
-        <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8 relative">
-          <Link
-            href="/jobs"
-            className="inline-flex items-center gap-2 text-sm text-slate-300 hover:text-white transition-colors mb-6 font-medium"
-          >
-            <ArrowLeft className="size-4" />
-            Back to All Positions
-          </Link>
-
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-            <div className="max-w-3xl">
-              <div className="flex flex-wrap gap-2 mb-4">
-                <Badge className="bg-signature-blue/20 text-sky-400 border border-sky-500/20 font-sans text-xs px-3 py-1">
-                  {job.domain}
-                </Badge>
-                <Badge className="bg-white/10 text-slate-200 border-none text-xs px-3 py-1">
-                  {job.mode}
-                </Badge>
-                <Badge className="bg-white/10 text-slate-200 border-none text-xs px-3 py-1">
-                  {job.type}
-                </Badge>
-                <span className="text-xs font-mono text-slate-400 self-center ml-1">
-                  ID: {job.id}
-                </span>
-              </div>
-
-              <h1 className="font-sans font-bold text-2xl tracking-tight text-white sm:text-4xl lg:text-5xl leading-[1.15]">
-                {job.title}
-              </h1>
-
-              <div className="mt-3 flex items-center gap-2 text-slate-300 font-medium text-base">
-                <Building2 className="size-4 text-slate-400" />
-                <span>{job.company}</span>
-              </div>
-
-              <div className="mt-4 flex flex-wrap gap-4 sm:gap-6 text-sm text-slate-300">
-                <span className="flex items-center gap-1.5">
-                  <MapPin className="size-4 text-slate-400" />
-                  {job.location}
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <Briefcase className="size-4 text-slate-400" />
-                  {job.experience}
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <DollarSign className="size-4 text-slate-400" />
-                  {job.salary}
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <Clock className="size-4 text-slate-400" />
-                  Posted {job.postedDate}
-                </span>
-              </div>
+      <PageHero
+        align="start"
+        backLink={{ href: "/jobs", label: "Back to All Positions" }}
+        title={job.title}
+        actions={
+          <Button asChild variant="brand" size="xl">
+            <Link href={applyUrl}>
+              Apply for this Role
+              <ArrowRight className="size-4" aria-hidden="true" />
+            </Link>
+          </Button>
+        }
+        meta={
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge className="border border-sky-500/20 bg-primary/20 px-3 py-1 text-xs text-sky-400">
+                {job.domain}
+              </Badge>
+              <Badge className="border-none bg-white/10 px-3 py-1 text-xs text-on-dark-muted">
+                {job.mode}
+              </Badge>
+              <Badge className="border-none bg-white/10 px-3 py-1 text-xs text-on-dark-muted">
+                {job.type}
+              </Badge>
+              <span className="ml-1 self-center font-mono text-caption text-on-dark-subtle">
+                ID: {job.id}
+              </span>
             </div>
 
-            <div className="flex flex-col sm:flex-row lg:flex-col gap-3 shrink-0">
-              <Link href={applyUrl} className="w-full sm:w-auto">
-                <Button
-                  size="lg"
-                  className="w-full sm:w-auto bg-[#1E63B5] text-white hover:bg-[#164e93] transition-colors rounded-xl px-8 py-6 text-base font-semibold shrink-0 active:scale-[0.98] shadow-lg shadow-blue-950/40"
-                >
-                  Apply for this Role
-                  <ArrowRight className="size-4 ml-1.5" />
-                </Button>
-              </Link>
+            <div className="flex items-center gap-2 text-body font-medium text-on-dark-muted">
+              <Building2 className="size-4 text-on-dark-subtle" aria-hidden="true" />
+              <span>{job.company}</span>
+            </div>
+
+            <div className="flex flex-wrap gap-4 text-caption text-on-dark-muted sm:gap-6">
+              <span className="flex items-center gap-1.5">
+                <MapPin className="size-4 text-on-dark-subtle" aria-hidden="true" />
+                {job.location}
+              </span>
+              <span className="flex items-center gap-1.5">
+                <Briefcase className="size-4 text-on-dark-subtle" aria-hidden="true" />
+                {job.experience}
+              </span>
+              <span className="flex items-center gap-1.5">
+                <DollarSign className="size-4 text-on-dark-subtle" aria-hidden="true" />
+                {job.salary}
+              </span>
+              <span className="flex items-center gap-1.5">
+                <Clock className="size-4 text-on-dark-subtle" aria-hidden="true" />
+                Posted {job.postedDate}
+              </span>
             </div>
           </div>
-        </div>
-      </section>
+        }
+      />
 
-      {/* ── Role Content Section ── */}
-      <section className="py-10 sm:py-16">
-        <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-            {/* Main Content (Left 2 cols) */}
-            <div className="lg:col-span-2 flex flex-col gap-8">
-              {/* Role Overview */}
-              <div className="rounded-2xl border border-slate-200/80 bg-white p-6 sm:p-8 shadow-sm">
-                <h2 className="font-sans font-bold text-xl text-slate-900 mb-4">
-                  Role Overview
-                </h2>
-                <div className="text-slate-600 leading-relaxed whitespace-pre-line text-[15px]">
-                  {job.description}
-                </div>
+      {/* ── Role content ── */}
+      <Section tone="frost">
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+          {/* Main content */}
+          <div className="flex flex-col gap-8 lg:col-span-2">
+            <div className="surface p-6 sm:p-8">
+              <h2 className="text-title text-foreground">Role Overview</h2>
+              <div className="mt-4 whitespace-pre-line text-body text-muted-foreground">
+                {job.description}
               </div>
-
-              {/* Responsibilities */}
-              {job.responsibilities && job.responsibilities.length > 0 && (
-                <div className="rounded-2xl border border-slate-200/80 bg-white p-6 sm:p-8 shadow-sm">
-                  <h2 className="font-sans font-bold text-xl text-slate-900 mb-4">
-                    Key Responsibilities
-                  </h2>
-                  <ul className="flex flex-col gap-3">
-                    {job.responsibilities.map((item, idx) => (
-                      <li
-                        key={idx}
-                        className="flex items-start gap-3 text-slate-600 leading-relaxed text-[15px]"
-                      >
-                        <CheckCircle2 className="size-5 shrink-0 text-emerald-600 mt-0.5" />
-                        <span>{item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {/* Requirements & Skills */}
-              {job.requirements && job.requirements.length > 0 && (
-                <div className="rounded-2xl border border-slate-200/80 bg-white p-6 sm:p-8 shadow-sm">
-                  <h2 className="font-sans font-bold text-xl text-slate-900 mb-4">
-                    Required Skills & Qualifications
-                  </h2>
-                  <ul className="flex flex-col gap-3">
-                    {job.requirements.map((item, idx) => (
-                      <li
-                        key={idx}
-                        className="flex items-start gap-3 text-slate-600 leading-relaxed text-[15px]"
-                      >
-                        <CheckCircle2 className="size-5 shrink-0 text-signature-blue mt-0.5" />
-                        <span>{item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
             </div>
 
-            {/* Sidebar (Right 1 col) */}
-            <div className="flex flex-col gap-6">
-              {/* Tech Stack */}
-              {job.techStack && job.techStack.length > 0 && (
-                <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm">
-                  <h3 className="font-semibold text-xs uppercase tracking-wider text-slate-500 mb-3">
-                    Target Tech Stack
-                  </h3>
-                  <div className="flex flex-wrap gap-2">
-                    {job.techStack.map((tech) => (
-                      <Badge
-                        key={tech}
-                        variant="secondary"
-                        className="bg-slate-100 text-slate-800 border border-slate-200 rounded-lg px-2.5 py-1 text-xs font-medium"
-                      >
-                        {tech}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Quick Facts */}
-              <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm">
-                <h3 className="font-semibold text-xs uppercase tracking-wider text-slate-500 mb-4">
-                  Quick Details
-                </h3>
-                <dl className="flex flex-col gap-3.5 divide-y divide-slate-100">
-                  {[
-                    { label: "Location", value: job.location },
-                    { label: "Employment Type", value: job.type },
-                    { label: "Work Arrangement", value: job.mode },
-                    { label: "Experience Level", value: job.experience },
-                    { label: "Compensation", value: job.salary },
-                    { label: "Domain Focus", value: job.domain },
-                    { label: "Requisition Ref", value: job.id },
-                  ].map((fact, idx) => (
-                    <div key={fact.label} className={idx > 0 ? "pt-3 flex justify-between items-center" : "flex justify-between items-center"}>
-                      <dt className="text-xs text-slate-500">{fact.label}</dt>
-                      <dd className="text-sm font-semibold text-slate-900 text-right">
-                        {fact.value}
-                      </dd>
-                    </div>
+            {job.responsibilities && job.responsibilities.length > 0 && (
+              <div className="surface p-6 sm:p-8">
+                <h2 className="text-title text-foreground">Key Responsibilities</h2>
+                <ul className="mt-4 flex flex-col gap-3">
+                  {job.responsibilities.map((item, idx) => (
+                    <li key={idx} className="flex items-start gap-3 text-body text-muted-foreground">
+                      <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-tech-green" aria-hidden="true" />
+                      <span>{item}</span>
+                    </li>
                   ))}
-                </dl>
+                </ul>
               </div>
+            )}
 
-              {/* Apply Card */}
-              <div className="rounded-2xl border border-signature-blue/20 bg-gradient-to-b from-blue-50/80 to-white p-6 shadow-sm">
-                <h3 className="font-bold text-slate-950 text-lg mb-1.5">
-                  Ready to Apply?
-                </h3>
-                <p className="text-sm text-slate-600 mb-5 leading-relaxed">
-                  Submit your resume and contact information. Our recruitment lead for this role will review your dossier and connect with you.
-                </p>
-                <Link href={applyUrl} className="w-full">
-                  <Button className="w-full bg-[#1E63B5] hover:bg-[#164e93] text-white font-semibold py-5 rounded-xl shadow-md active:scale-[0.98]">
-                    Apply for this Role
-                  </Button>
-                </Link>
+            {job.requirements && job.requirements.length > 0 && (
+              <div className="surface p-6 sm:p-8">
+                <h2 className="text-title text-foreground">Required Skills & Qualifications</h2>
+                <ul className="mt-4 flex flex-col gap-3">
+                  {job.requirements.map((item, idx) => (
+                    <li key={idx} className="flex items-start gap-3 text-body text-muted-foreground">
+                      <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-primary" aria-hidden="true" />
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
+            )}
+          </div>
+
+          {/* Sidebar */}
+          <div className="flex flex-col gap-6">
+            {job.techStack && job.techStack.length > 0 && (
+              <div className="surface p-6">
+                <h3 className="eyebrow mb-4">Target Tech Stack</h3>
+                <div className="flex flex-wrap gap-2">
+                  {job.techStack.map((tech) => (
+                    <Badge
+                      key={tech}
+                      variant="secondary"
+                      className="rounded-lg border border-border bg-background px-2.5 py-1 text-xs font-medium text-foreground"
+                    >
+                      {tech}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="surface p-6">
+              <h3 className="eyebrow mb-4">Quick Details</h3>
+              <dl className="flex flex-col divide-y divide-border">
+                {[
+                  { label: "Location", value: job.location },
+                  { label: "Employment Type", value: job.type },
+                  { label: "Work Arrangement", value: job.mode },
+                  { label: "Experience Level", value: job.experience },
+                  { label: "Compensation", value: job.salary },
+                  { label: "Domain Focus", value: job.domain },
+                  { label: "Requisition Ref", value: job.id },
+                ].map((fact, idx) => (
+                  <div
+                    key={fact.label}
+                    className={`flex items-center justify-between ${idx > 0 ? "pt-3.5" : ""} ${idx < 6 ? "pb-3.5" : ""}`}
+                  >
+                    <dt className="text-caption text-muted-foreground">{fact.label}</dt>
+                    <dd className="text-right text-body font-semibold text-foreground">{fact.value}</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+
+            <div className="surface border-primary/20 bg-gradient-to-b from-primary/[0.06] to-card p-6">
+              <h3 className="text-subtitle text-foreground">Ready to Apply?</h3>
+              <p className="mb-5 mt-1.5 text-body text-muted-foreground">
+                Submit your resume and contact information. Our recruitment lead for this role will review your dossier and connect with you.
+              </p>
+              <Button asChild variant="brand" size="lg" className="w-full">
+                <Link href={applyUrl}>Apply for this Role</Link>
+              </Button>
             </div>
           </div>
         </div>
-      </section>
+      </Section>
     </main>
   )
 }

@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Inter, Source_Sans_3 } from 'next/font/google'
+import { Inter } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { Navbar } from '@/components/navbar'
 import { Footer } from '@/components/footer'
@@ -10,12 +10,6 @@ import './globals.css'
 const inter = Inter({
   subsets: ['latin'],
   variable: '--font-inter',
-  display: 'swap',
-})
-
-const sourceSans = Source_Sans_3({
-  subsets: ['latin'],
-  variable: '--font-source-sans',
   display: 'swap',
 })
 
@@ -45,6 +39,16 @@ export const metadata: Metadata = {
     description:
       'Connecting elite technology professionals with leading companies across Canada, USA, and India.',
     type: 'website',
+    siteName: 'N2P Systems',
+    locale: 'en_US',
+    // images: auto-populated from app/opengraph-image.tsx for every route
+    // that doesn't declare its own.
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'N2P Systems | Global Technology Recruitment',
+    description:
+      'Connecting elite technology professionals with leading companies across Canada, USA, and India.',
   },
 }
 
@@ -61,7 +65,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} ${sourceSans.variable}`}>
+    <html lang="en" className={inter.variable}>
       <body className="font-sans antialiased overflow-x-hidden min-h-screen bg-background">
         <a href="#main-content" className="skip-link">
           Skip to main content

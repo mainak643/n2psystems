@@ -84,7 +84,7 @@ function AccordionSection({
   const isCollapsed = !isDesktop && !isOpen
 
   return (
-    <div className="border-t border-white/[0.06] md:border-0">
+    <div className="border-t border-on-dark-line md:border-0">
       {/* ── Mobile trigger (hidden on md+) ── */}
       <button
         type="button"
@@ -93,20 +93,16 @@ function AccordionSection({
         aria-controls={panelId}
         className="flex min-h-11 w-full items-center justify-between py-4 outline-none focus-visible:ring-inset focus-visible:ring-2 focus-visible:ring-blue-500/40 md:hidden"
       >
-        <span className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white/45">
-          {label}
-        </span>
+        <span className="eyebrow text-on-dark-subtle before:hidden">{label}</span>
         <ChevronDown
-          className="h-3.5 w-3.5 shrink-0 text-white/30 transition-transform duration-300"
+          className="h-3.5 w-3.5 shrink-0 text-on-dark-faint transition-transform duration-300"
           style={{ transform: isOpen ? "rotate(180deg)" : "rotate(0deg)" }}
           aria-hidden
         />
       </button>
 
       {/* ── Desktop label (hidden on mobile) ── */}
-      <p className="mb-5 hidden text-[10px] font-semibold uppercase tracking-[0.22em] text-white/45 md:block">
-        {label}
-      </p>
+      <p className="eyebrow mb-5 hidden text-on-dark-subtle before:hidden md:flex">{label}</p>
 
       {/* ── Animated container — grid trick for smooth open/close ── */}
       {/* On desktop: always open. On mobile: toggled. */}
@@ -131,10 +127,22 @@ export function Footer() {
     setOpenSection((prev) => (prev === id ? null : id))
 
   return (
-    <footer
-      className="relative overflow-hidden border-t border-white/[0.08]"
-      style={{ background: "#07101f" }}
-    >
+    <footer className="on-dark relative overflow-hidden border-t border-on-dark-line bg-surface-dark">
+      {/* ── Soothing navy ambient glow ── */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background: "radial-gradient(ellipse 80% 60% at 50% 0%, rgba(30, 99, 181, 0.18) 0%, rgba(11, 29, 54, 0) 75%)",
+        }}
+      />
+
+      {/* ── Top edge accent line for smooth visual transition ── */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-sky-400/30 to-transparent"
+      />
+
       {/* ── Background grid — very faint ── */}
       <div
         aria-hidden
@@ -151,7 +159,7 @@ export function Footer() {
       />
 
       {/* ── Content ── */}
-      <div className="relative mx-auto max-w-[1280px] px-5 sm:px-6 lg:px-10">
+      <div className="container-page relative">
 
         {/*
           Desktop: 4-col grid with gap, top/bottom padding
@@ -161,18 +169,14 @@ export function Footer() {
 
           {/* ── Brand column ── */}
           {/* Mobile: bottom border + extra bottom padding acts as visual separator */}
-          <div className="border-b border-white/[0.06] pb-8 md:col-span-2 md:border-0 md:pb-0 lg:col-span-1 lg:pr-6">
+          <div className="border-b border-on-dark-line pb-8 md:col-span-2 md:border-0 md:pb-0 lg:col-span-1 lg:pr-6">
             <Link
               href="/"
               className="group inline-flex items-center gap-3 rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
               aria-label="N2P Systems — Home"
             >
               <div
-                className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/[0.14] transition-all duration-300 group-hover:border-blue-400/30"
-                style={{
-                  background: "linear-gradient(135deg, rgba(29,111,219,0.2) 0%, rgba(6,182,212,0.08) 100%)",
-                  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08), 0 2px 8px rgba(0,0,0,0.3)",
-                }}
+                className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-on-dark-line-strong bg-gradient-to-br from-primary/20 to-cyan-support/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_2px_8px_rgba(0,0,0,0.3)] transition-all duration-300 group-hover:border-blue-400/30"
               >
                 <Image
                   src="/images/n2p-logo-light.png"
@@ -182,12 +186,12 @@ export function Footer() {
                   className="h-full w-full object-contain"
                 />
               </div>
-              <span className="text-[15px] font-semibold tracking-tight text-white">
-                N2P <span className="font-normal text-white/60">Systems</span>
+              <span className="text-subtitle text-on-dark">
+                N2P <span className="font-normal text-on-dark-muted">Systems</span>
               </span>
             </Link>
 
-            <p className="mt-5 max-w-[240px] text-[13px] leading-[1.85] text-white/60">
+            <p className="mt-5 max-w-[240px] text-caption leading-[1.85] text-on-dark-muted">
               Technology partner for AI adoption, cloud transformation, and enterprise growth.
             </p>
 
@@ -201,9 +205,9 @@ export function Footer() {
                   rel="noreferrer"
                   aria-label={label}
                   /* Slightly larger tap target on mobile */
-                  className="group/s flex h-10 w-10 items-center justify-center rounded-lg border border-white/[0.14] bg-white/[0.04] text-white/55 outline-none transition-all duration-200 hover:border-blue-400/35 hover:bg-blue-500/[0.08] hover:text-white/90 focus-visible:ring-2 focus-visible:ring-blue-500/40 md:h-9 md:w-9"
+                  className="group/s flex h-10 w-10 items-center justify-center rounded-lg border border-on-dark-line-strong bg-on-dark-fill text-on-dark-subtle outline-none transition-all duration-200 hover:border-blue-400/35 hover:bg-blue-500/[0.08] hover:text-on-dark focus-visible:ring-2 focus-visible:ring-blue-500/40 md:h-9 md:w-9"
                 >
-                  <Icon className="h-[15px] w-[15px]" />
+                  <Icon className="h-[15px] w-[15px]" aria-hidden="true" />
                 </a>
               ))}
             </div>
@@ -217,12 +221,9 @@ export function Footer() {
                   <Link
                     href={link.href}
                     /* Taller touch target on mobile, tighter on desktop */
-                    className="group flex items-center gap-2 py-2.5 text-[13.5px] text-white/70 outline-none transition-all duration-150 hover:text-white focus-visible:text-white md:py-0 md:mb-3"
+                    className="group flex items-center gap-2 py-2.5 text-caption text-on-dark-muted outline-none transition-all duration-150 hover:text-on-dark focus-visible:text-on-dark md:py-0 md:mb-3"
                   >
-                    <span
-                      className="inline-block h-px w-0 shrink-0 transition-all duration-200 group-hover:w-3"
-                      style={{ background: "linear-gradient(to right, rgba(56,189,248,0.8), rgba(96,165,250,0.5))" }}
-                    />
+                    <span className="inline-block h-px w-0 shrink-0 bg-gradient-to-r from-sky-400/80 to-blue-400/50 transition-all duration-200 group-hover:w-3" />
                     {link.name}
                   </Link>
                 </li>
@@ -237,12 +238,9 @@ export function Footer() {
                 <li key={link.name}>
                   <Link
                     href={link.href}
-                    className="group flex items-center gap-2 py-2.5 text-[13.5px] text-white/70 outline-none transition-all duration-150 hover:text-white focus-visible:text-white md:py-0 md:mb-3"
+                    className="group flex items-center gap-2 py-2.5 text-caption text-on-dark-muted outline-none transition-all duration-150 hover:text-on-dark focus-visible:text-on-dark md:py-0 md:mb-3"
                   >
-                    <span
-                      className="inline-block h-px w-0 shrink-0 transition-all duration-200 group-hover:w-3"
-                      style={{ background: "linear-gradient(to right, rgba(56,189,248,0.8), rgba(96,165,250,0.5))" }}
-                    />
+                    <span className="inline-block h-px w-0 shrink-0 bg-gradient-to-r from-sky-400/80 to-blue-400/50 transition-all duration-200 group-hover:w-3" />
                     {link.name}
                   </Link>
                 </li>
@@ -253,14 +251,10 @@ export function Footer() {
             <div className="mt-5 md:mt-8">
               <Link
                 href="/resume"
-                className="group inline-flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3 text-[12px] font-semibold text-white/80 outline-none transition-all duration-200 hover:text-white focus-visible:ring-2 focus-visible:ring-blue-400/40 md:w-auto md:justify-start md:py-2.5"
-                style={{
-                  border: "1px solid rgba(255,255,255,0.12)",
-                  background: "rgba(255,255,255,0.04)",
-                }}
+                className="group inline-flex w-full items-center justify-center gap-2 rounded-lg border border-on-dark-line-strong bg-on-dark-fill px-4 py-3 text-xs font-semibold text-on-dark-subtle outline-none transition-all duration-200 hover:text-on-dark focus-visible:ring-2 focus-visible:ring-blue-400/40 md:w-auto md:justify-start md:py-2.5"
               >
                 Submit Your Resume
-                <ArrowUpRight className="h-3 w-3 text-white/45 transition-all duration-200 group-hover:text-white/75 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                <ArrowUpRight className="h-3 w-3 text-on-dark-subtle transition-all duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-on-dark-muted" aria-hidden="true" />
               </Link>
             </div>
           </AccordionSection>
@@ -271,51 +265,39 @@ export function Footer() {
               <li>
                 <a
                   href="mailto:info@n2psystems.ca"
-                  className="group flex items-center gap-2.5 text-[13.5px] text-white/70 outline-none transition-colors duration-150 hover:text-white focus-visible:text-white"
+                  className="group flex items-center gap-2.5 text-caption text-on-dark-muted outline-none transition-colors duration-150 hover:text-on-dark focus-visible:text-on-dark"
                 >
-                  <span
-                    className="flex h-[28px] w-[28px] shrink-0 items-center justify-center rounded-lg border transition-all duration-200 group-hover:border-blue-400/30 group-hover:bg-blue-500/[0.08]"
-                    style={{
-                      borderColor: "rgba(255,255,255,0.09)",
-                      background: "rgba(255,255,255,0.03)",
-                    }}
-                  >
-                    <Mail className="h-[13px] w-[13px] text-blue-300/80" aria-hidden />
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-on-dark-line bg-on-dark-fill transition-all duration-200 group-hover:border-blue-400/30 group-hover:bg-blue-500/[0.08]">
+                    <Mail className="h-[13px] w-[13px] text-sky-300/80" aria-hidden="true" />
                   </span>
                   info@n2psystems.ca
                 </a>
               </li>
               <li>
                 <div className="flex items-start gap-2.5">
-                  <span
-                    className="mt-1 flex h-[28px] w-[28px] shrink-0 items-center justify-center rounded-lg border"
-                    style={{
-                      borderColor: "rgba(255,255,255,0.09)",
-                      background: "rgba(255,255,255,0.03)",
-                    }}
-                  >
-                    <Phone className="h-[13px] w-[13px] text-blue-300/80" aria-hidden />
+                  <span className="mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-on-dark-line bg-on-dark-fill">
+                    <Phone className="h-[13px] w-[13px] text-sky-300/80" aria-hidden="true" />
                   </span>
                   <div className="flex flex-col gap-3">
                     <a
                       href="tel:+14373359390"
-                      className="group flex flex-col outline-none transition-colors duration-150 focus-visible:text-white"
+                      className="group flex flex-col outline-none transition-colors duration-150 focus-visible:text-on-dark"
                     >
-                      <span className="text-[10px] font-medium uppercase tracking-wider text-white/45 transition-colors group-hover:text-white/65">
+                      <span className="text-overline uppercase text-on-dark-subtle transition-colors group-hover:text-on-dark-muted">
                         Canada & USA
                       </span>
-                      <span className="text-[13.5px] text-white/70 transition-colors group-hover:text-white">
+                      <span className="text-caption text-on-dark-muted transition-colors group-hover:text-on-dark">
                         +1 (437) 335-9390
                       </span>
                     </a>
                     <a
                       href="tel:+919776047567"
-                      className="group flex flex-col outline-none transition-colors duration-150 focus-visible:text-white"
+                      className="group flex flex-col outline-none transition-colors duration-150 focus-visible:text-on-dark"
                     >
-                      <span className="text-[10px] font-medium uppercase tracking-wider text-white/45 transition-colors group-hover:text-white/65">
+                      <span className="text-overline uppercase text-on-dark-subtle transition-colors group-hover:text-on-dark-muted">
                         India
                       </span>
-                      <span className="text-[13.5px] text-white/70 transition-colors group-hover:text-white">
+                      <span className="text-caption text-on-dark-muted transition-colors group-hover:text-on-dark">
                         +91 97760 47567
                       </span>
                     </a>
@@ -326,20 +308,14 @@ export function Footer() {
 
             {/* Regions */}
             <div className="mt-7">
-              <p className="mb-3.5 text-[10px] font-semibold uppercase tracking-[0.22em] text-white/45">
-                Serving clients in
-              </p>
+              <p className="eyebrow mb-3.5 text-on-dark-subtle before:hidden">Serving clients in</p>
               <div className="flex flex-wrap items-center gap-2">
                 {regions.map(({ flag, name }) => (
                   <span
                     key={name}
-                    className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[12px] text-white/60"
-                    style={{
-                      border: "1px solid rgba(255,255,255,0.09)",
-                      background: "rgba(255,255,255,0.03)",
-                    }}
+                    className="inline-flex items-center gap-1.5 rounded-md border border-on-dark-line bg-on-dark-fill px-2.5 py-1.5 text-xs text-on-dark-muted"
                   >
-                    <span className="text-[12px] leading-none" aria-hidden>{flag}</span>
+                    <span className="text-xs leading-none" aria-hidden="true">{flag}</span>
                     {name}
                   </span>
                 ))}
@@ -349,23 +325,16 @@ export function Footer() {
         </div>
 
         {/* ── Divider ── */}
-        <div
-          aria-hidden
-          className="mt-8 h-px md:mt-0"
-          style={{
-            background:
-              "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.08) 15%, rgba(255,255,255,0.08) 85%, transparent 100%)",
-          }}
-        />
+        <div aria-hidden="true" className="hairline mt-8 md:mt-0" />
 
         {/* ── Bottom bar ── */}
-        <div className="flex flex-col gap-3 py-6 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] md:pb-6 md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-col gap-3 py-6 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] md:flex-row md:items-center md:justify-between md:pb-6">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-            <span className="text-[11px] text-white/45">
+            <span className="text-caption text-on-dark-subtle">
               © 2026 N2P Systems. All rights reserved.
             </span>
-            <span className="hidden h-3 w-px md:inline-block" style={{ background: "rgba(255,255,255,0.12)" }} />
-            <span className="hidden text-[11px] text-white/28 md:inline" style={{ fontStyle: "italic", letterSpacing: "0.03em" }}>
+            <span className="hidden h-3 w-px bg-on-dark-line-strong md:inline-block" aria-hidden="true" />
+            <span className="hidden text-caption italic tracking-wide text-on-dark-faint md:inline">
               Innovate. Integrate. Elevate.
             </span>
           </div>
@@ -373,14 +342,14 @@ export function Footer() {
           <div className="flex items-center gap-4">
             <Link
               href="/privacy-policy"
-              className="text-[11px] text-white/45 outline-none transition-colors hover:text-white/70"
+              className="text-caption text-on-dark-subtle outline-none transition-colors hover:text-on-dark-muted"
             >
               Privacy Policy
             </Link>
-            <span className="h-3 w-px" style={{ background: "rgba(255,255,255,0.08)" }} />
+            <span className="h-3 w-px bg-on-dark-line" aria-hidden="true" />
             <Link
               href="/terms-of-service"
-              className="text-[11px] text-white/45 outline-none transition-colors hover:text-white/70"
+              className="text-caption text-on-dark-subtle outline-none transition-colors hover:text-on-dark-muted"
             >
               Terms of Service
             </Link>

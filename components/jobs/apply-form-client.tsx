@@ -1,6 +1,6 @@
 "use client"
 
-import { useId, useRef, useState } from "react"
+import { useEffect, useId, useRef, useState } from "react"
 import Link from "next/link"
 import { AlertCircle, CheckCircle2, FileText, Loader2, Paperclip, ShieldCheck, X } from "lucide-react"
 
@@ -101,6 +101,28 @@ export function ApplyFormClient({ job }: { job: Job }) {
   const [submitError, setSubmitError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const errorSummaryRef = useRef<HTMLDivElement | null>(null)
+  const successRef = useRef<HTMLDivElement | null>(null)
+  /*
+    Bumped every time a failed submit produces errors, so the effect below
+    can focus the summary once it has actually mounted. The old code called
+    errorSummaryRef.current?.focus() in the same tick as setErrors() — but
+    the summary only renders when invalidFields.length > 0, so on the FIRST
+    failed submit the ref was still null and the focus call silently no-oped.
+    It only worked from the second failed submit onward, once the node
+    already existed from the previous render.
+  */
+  const [errorSeq, setErrorSeq] = useState(0)
+
+  useEffect(() => {
+    if (errorSeq > 0) errorSummaryRef.current?.focus()
+  }, [errorSeq])
+
+  // Move focus to the confirmation so screen reader users are told the
+  // application actually went through, instead of being left on a button
+  // that just got unmounted.
+  useEffect(() => {
+    if (submitState === "done") successRef.current?.focus()
+  }, [submitState])
 
   const set = (field: Field) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setValues((prev) => ({ ...prev, [field]: e.target.value }))
@@ -117,8 +139,7 @@ export function ApplyFormClient({ job }: { job: Job }) {
     const found = validate(values, file)
     if (Object.keys(found).length > 0) {
       setErrors(found)
-      // Move the user to the problem rather than leaving them at a dead button.
-      errorSummaryRef.current?.focus()
+      setErrorSeq((n) => n + 1)
       return
     }
 
@@ -164,25 +185,26 @@ export function ApplyFormClient({ job }: { job: Job }) {
   if (submitState === "done") {
     return (
       <div
+        ref={successRef}
+        tabIndex={-1}
         role="status"
-        className="rounded-2xl border border-tech-green/25 bg-white p-8 text-center shadow-sm"
+        aria-live="polite"
+        className="surface p-8 text-center outline-none"
       >
         <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-full bg-tech-green/10 text-tech-green">
-          <CheckCircle2 className="size-7" />
+          <CheckCircle2 className="size-7" aria-hidden="true" />
         </div>
-        <h2 className="text-xl font-bold text-slate-950">Application received</h2>
-        <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-slate-600">
+        <h2 className="text-title text-foreground">Application received</h2>
+        <p className="mx-auto mt-2 max-w-md text-body text-muted-foreground">
           Thank you, {values.fullName.trim().split(" ")[0]}. Your profile for{" "}
-          <span className="font-semibold text-slate-900">{job.title}</span> is with our recruitment
+          <span className="font-semibold text-foreground">{job.title}</span> is with our recruitment
           lead for this requisition. If it is a fit, we will be in touch by email.
         </p>
-        <p className="mt-3 font-mono text-xs text-slate-500">Requisition Ref: {job.id}</p>
+        <p className="mt-3 font-mono text-caption text-muted-foreground">Requisition Ref: {job.id}</p>
         <div className="mt-6 flex flex-wrap justify-center gap-3">
-          <Link href="/jobs">
-            <Button variant="outline" className="rounded-xl border-slate-200">
-              Browse other roles
-            </Button>
-          </Link>
+          <Button asChild variant="outline">
+            <Link href="/jobs">Browse other roles</Link>
+          </Button>
         </div>
       </div>
     )
@@ -199,7 +221,7 @@ export function ApplyFormClient({ job }: { job: Job }) {
           role="alert"
           className="flex items-start gap-3 rounded-xl border border-rose-200 bg-rose-50 p-4 outline-none"
         >
-          <AlertCircle className="mt-0.5 size-5 shrink-0 text-rose-600" />
+          <AlertCircle className="mt-0.5 size-5 shrink-0 text-rose-600" aria-hidden="true" />
           <div className="text-sm text-rose-800">
             <p className="font-semibold">
               {submitError ? "We could not submit your application" : "Please check the highlighted fields"}
@@ -226,6 +248,10 @@ export function ApplyFormClient({ job }: { job: Job }) {
           label="Email address"
           required
           type="email"
+          inputMode="email"
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
           value={values.email}
           onChange={set("email")}
           error={errors.email}
@@ -235,6 +261,8 @@ export function ApplyFormClient({ job }: { job: Job }) {
           id={fieldId("phone")}
           errorId={errorId("phone")}
           label="Phone"
+          type="tel"
+          inputMode="tel"
           value={values.phone}
           onChange={set("phone")}
           error={errors.phone}
@@ -277,6 +305,11 @@ export function ApplyFormClient({ job }: { job: Job }) {
         errorId={errorId("linkedinUrl")}
         label="LinkedIn profile"
         type="url"
+        inputMode="url"
+        autoComplete="url"
+        autoCapitalize="none"
+        autoCorrect="off"
+        spellCheck={false}
         value={values.linkedinUrl}
         onChange={set("linkedinUrl")}
         error={errors.linkedinUrl}
@@ -285,7 +318,7 @@ export function ApplyFormClient({ job }: { job: Job }) {
 
       {/* Resume upload */}
       <div className="flex flex-col gap-1.5">
-        <label htmlFor={fieldId("resume")} className="text-sm font-semibold text-slate-800">
+        <label htmlFor={fieldId("resume")} className="text-sm font-semibold text-foreground">
           Resume <span className="text-rose-600">*</span>
         </label>
         <input
@@ -300,13 +333,13 @@ export function ApplyFormClient({ job }: { job: Job }) {
             setFile(e.target.files?.[0] ?? null)
             setErrors((prev) => ({ ...prev, resume: undefined }))
           }}
-          className={`block w-full cursor-pointer rounded-xl border bg-white text-sm text-slate-700 outline-none transition-colors file:mr-4 file:cursor-pointer file:border-0 file:bg-slate-100 file:px-4 file:py-2.5 file:text-sm file:font-semibold file:text-slate-700 hover:file:bg-slate-200 focus-visible:ring-2 focus-visible:ring-signature-blue/30 ${
-            errors.resume ? "border-rose-300" : "border-slate-200"
+          className={`block w-full cursor-pointer rounded-xl border bg-background text-base text-foreground outline-none transition-colors file:mr-4 file:cursor-pointer file:border-0 file:bg-secondary file:px-4 file:py-2.5 file:text-sm file:font-semibold file:text-secondary-foreground hover:file:bg-secondary/80 focus-visible:ring-2 focus-visible:ring-primary/30 sm:text-[0.9375rem] ${
+            errors.resume ? "border-rose-300" : "border-border"
           }`}
         />
         {file && !errors.resume && (
-          <p className="flex items-center gap-1.5 text-xs text-slate-600">
-            <FileText className="size-3.5 text-slate-400" />
+          <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <FileText className="size-3.5 text-muted-foreground/70" aria-hidden="true" />
             {file.name} · {(file.size / 1024 / 1024).toFixed(1)} MB
           </p>
         )}
@@ -315,7 +348,7 @@ export function ApplyFormClient({ job }: { job: Job }) {
             {errors.resume}
           </p>
         ) : (
-          <p id={`${formId}-resume-hint`} className="text-xs text-slate-500">
+          <p id={`${formId}-resume-hint`} className="text-xs text-muted-foreground">
             PDF, DOC, or DOCX. Maximum 8 MB.
           </p>
         )}
@@ -323,7 +356,7 @@ export function ApplyFormClient({ job }: { job: Job }) {
 
       {/* Cover note */}
       <div className="flex flex-col gap-1.5">
-        <label htmlFor={fieldId("coverNote")} className="text-sm font-semibold text-slate-800">
+        <label htmlFor={fieldId("coverNote")} className="text-sm font-semibold text-foreground">
           Anything you would like the hiring team to know?
         </label>
         <textarea
@@ -334,8 +367,13 @@ export function ApplyFormClient({ job }: { job: Job }) {
           onChange={set("coverNote")}
           aria-invalid={Boolean(errors.coverNote)}
           aria-describedby={errors.coverNote ? errorId("coverNote") : undefined}
-          className={`w-full rounded-xl border bg-white px-3.5 py-3 text-sm text-slate-800 outline-none transition-colors placeholder:text-slate-400 focus:border-signature-blue focus:ring-2 focus:ring-signature-blue/20 ${
-            errors.coverNote ? "border-rose-300" : "border-slate-200"
+          /*
+            text-base on mobile, text-body from sm+ — the previous text-sm
+            (14px) at every breakpoint triggered iOS Safari's automatic
+            viewport zoom on focus for every one of this form's fields.
+          */
+          className={`w-full rounded-xl border bg-background px-3.5 py-3 text-base text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 sm:text-[0.9375rem] ${
+            errors.coverNote ? "border-rose-300" : "border-border"
           }`}
           placeholder="Optional — a short note on why this role fits."
         />
@@ -346,19 +384,21 @@ export function ApplyFormClient({ job }: { job: Job }) {
         )}
       </div>
 
-      <div className="flex flex-col gap-4 border-t border-slate-100 pt-5 sm:flex-row sm:items-center sm:justify-between">
-        <p className="flex items-center gap-2 text-xs text-slate-500">
-          <ShieldCheck className="size-4 shrink-0 text-slate-400" />
+      <div className="flex flex-col gap-4 border-t border-border pt-5 sm:flex-row sm:items-center sm:justify-between">
+        <p className="flex items-center gap-2 text-xs text-muted-foreground">
+          <ShieldCheck className="size-4 shrink-0 text-muted-foreground/70" aria-hidden="true" />
           Your details go directly to the N2P recruitment lead for this requisition.
         </p>
         <Button
           type="submit"
+          variant="brand"
+          size="lg"
           disabled={submitState === "submitting"}
-          className="h-11 shrink-0 rounded-xl bg-[#1E63B5] px-8 font-semibold text-white hover:bg-[#164e93] disabled:opacity-70"
+          className="shrink-0"
         >
           {submitState === "submitting" ? (
             <>
-              <Loader2 className="mr-2 size-4 animate-spin" />
+              <Loader2 className="size-4 animate-spin" aria-hidden="true" />
               Submitting…
             </>
           ) : (
@@ -386,7 +426,7 @@ function TextField({
 } & React.InputHTMLAttributes<HTMLInputElement>) {
   return (
     <div className="flex flex-col gap-1.5">
-      <label htmlFor={id} className="text-sm font-semibold text-slate-800">
+      <label htmlFor={id} className="text-sm font-semibold text-foreground">
         {label} {required && <span className="text-rose-600">*</span>}
       </label>
       <input
@@ -394,8 +434,14 @@ function TextField({
         required={required}
         aria-invalid={Boolean(error)}
         aria-describedby={error ? errorId : undefined}
-        className={`h-11 w-full rounded-xl border bg-white px-3.5 text-sm text-slate-800 outline-none transition-colors placeholder:text-slate-400 focus:border-signature-blue focus:ring-2 focus:ring-signature-blue/20 ${
-          error ? "border-rose-300" : "border-slate-200"
+        /*
+          text-base on mobile, text-body (15px) from sm+. This form's inputs
+          used to be text-sm (14px) at every breakpoint — below the 16px
+          threshold that keeps iOS Safari from auto-zooming the viewport on
+          focus, on the highest-intent form on the site.
+        */
+        className={`h-11 w-full rounded-xl border bg-background px-3.5 text-base text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 sm:text-[0.9375rem] ${
+          error ? "border-rose-300" : "border-border"
         }`}
         {...inputProps}
       />
@@ -411,27 +457,27 @@ function TextField({
 /** Shown when a listing came from the seed dataset and has no live requisition. */
 export function ApplyUnavailable({ job }: { job: Job }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
-      <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-slate-100 text-slate-500">
-        <Paperclip className="size-6" />
+    <div className="surface p-8 text-center">
+      <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-secondary text-muted-foreground">
+        <Paperclip className="size-6" aria-hidden="true" />
       </div>
-      <h2 className="text-lg font-bold text-slate-950">Direct apply is not available for this listing</h2>
-      <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-slate-600">
+      <h2 className="text-subtitle text-foreground">Direct apply is not available for this listing</h2>
+      <p className="mx-auto mt-2 max-w-md text-body text-muted-foreground">
         This role is shown as a reference example rather than a live requisition. Submit your profile
         through our general talent form and our team will match you against current openings.
       </p>
       <div className="mt-6 flex flex-wrap justify-center gap-3">
-        <Link href={`/resume?role=${encodeURIComponent(job.title)}&category=${encodeURIComponent(job.domain)}`}>
-          <Button className="rounded-xl bg-[#1E63B5] text-white hover:bg-[#164e93]">
+        <Button asChild variant="brand">
+          <Link href={`/resume?role=${encodeURIComponent(job.title)}&category=${encodeURIComponent(job.domain)}`}>
             Submit general profile
-          </Button>
-        </Link>
-        <Link href="/jobs">
-          <Button variant="outline" className="rounded-xl border-slate-200">
-            <X className="mr-1.5 size-4" />
+          </Link>
+        </Button>
+        <Button asChild variant="outline">
+          <Link href="/jobs">
+            <X className="size-4" aria-hidden="true" />
             Back to all roles
-          </Button>
-        </Link>
+          </Link>
+        </Button>
       </div>
     </div>
   )

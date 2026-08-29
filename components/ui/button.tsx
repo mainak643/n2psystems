@@ -5,7 +5,7 @@ import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium transition-all active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
   {
     variants: {
       variant: {
@@ -19,11 +19,31 @@ const buttonVariants = cva(
         ghost:
           'hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50',
         link: 'text-primary underline-offset-4 hover:underline',
+
+        /*
+          The site's one brand CTA. Replaces bg-[#1E63B5], bg-signature-blue,
+          bg-primary + shadow-lg, and two hand-rolled gradients that were
+          each spelling "primary button" slightly differently across pages.
+        */
+        brand:
+          'bg-primary text-primary-foreground shadow-[0_6px_20px_-8px_rgba(30,99,181,0.65)] hover:bg-[#164e93] hover:shadow-[0_10px_28px_-8px_rgba(30,99,181,0.8)]',
+
+        /* Secondary action sitting on a dark (.on-dark) band. */
+        'on-dark':
+          'border border-on-dark-line-strong bg-on-dark-fill text-on-dark-muted backdrop-blur-sm hover:border-white/25 hover:bg-white/10 hover:text-on-dark',
+
+        /* Light button on the brand-blue CTA band. */
+        'on-brand': 'bg-card text-primary shadow-e2 hover:bg-frost',
+
+        /* Low-emphasis brand action on a light surface. */
+        'brand-soft':
+          'border border-primary/20 bg-primary/[0.06] text-primary hover:border-primary/35 hover:bg-primary/10',
       },
       size: {
         default: 'h-9 px-4 py-2 has-[>svg]:px-3',
         sm: 'h-8 rounded-md gap-1.5 px-3 has-[>svg]:px-2.5',
-        lg: 'h-10 rounded-md px-6 has-[>svg]:px-4',
+        lg: 'h-11 px-6 has-[>svg]:px-4',
+        xl: 'h-13 rounded-xl px-8 text-[0.9375rem] has-[>svg]:px-7',
         icon: 'size-9',
         'icon-sm': 'size-8',
         'icon-lg': 'size-10',

@@ -12,6 +12,8 @@ import {
   ShieldCheck,
   ArrowRight,
 } from "lucide-react"
+import { PageHero } from "@/components/ui/page-hero"
+import { Section } from "@/components/ui/section"
 
 export const metadata: Metadata = {
   title: "Hiring Solutions | N2P Systems",
@@ -61,149 +63,115 @@ const services = [
   },
 ]
 
+/*
+  Previously four bare stat tiles (48 hrs / 92% / 50,000+ / 3) with no
+  methodology or date range — unsourced precision that reads as template
+  filler to an experienced buyer, not as evidence. Restructured as the same
+  qualitative-claim pattern as the services grid above, softened to what's
+  actually defensible. "Three countries" is kept as-is: it's verifiable and
+  stated elsewhere on the site.
+*/
 const differentiators = [
   {
     icon: Clock,
-    stat: "48 hrs",
-    label: "Average time to first qualified candidate shortlist",
+    title: "Shortlists in days, not weeks",
+    description:
+      "We work to a first qualified shortlist quickly, and tell you up front when a search will take longer.",
   },
   {
     icon: ShieldCheck,
-    stat: "92%",
-    label: "Offer acceptance rate across all placements",
+    title: "Candidates who show up prepared",
+    description:
+      "We brief on scope, team, and compensation before an interview, so offers land with people who already want the role.",
   },
   {
     icon: Users,
-    stat: "50,000+",
-    label: "Pre-screened technology professionals in our network",
+    title: "A specialist network, not a scraped list",
+    description:
+      "Built role by role across software, cloud, data, security, and product leadership.",
   },
   {
     icon: Globe,
-    stat: "3",
-    label: "Countries with on-the-ground recruitment teams",
+    title: "Three countries",
+    description: "On-the-ground recruitment teams in Canada, the United States, and India.",
   },
 ]
 
 export default function HiringSolutionsPage() {
   return (
     <main>
-      {/* Hero */}
-      <section className="bg-navy pt-32 pb-16 md:pb-24 relative overflow-hidden texture-dots">
-        <div className="absolute -right-20 top-1/3 w-80 h-80 rounded-full bg-signature-blue/5 blur-3xl" />
-        <div className="mx-auto max-w-7xl px-6 lg:px-8 relative">
-          <div className="mx-auto max-w-3xl text-center">
-            <div className="mb-6 inline-flex items-center gap-2.5 rounded-full border border-frost/10 bg-frost/[0.04] px-5 py-2">
-              <span className="text-xs font-sans font-medium tracking-widest text-frost/70 uppercase">
-                For Employers
-              </span>
-            </div>
-            <h1 className="text-3xl font-sans font-bold tracking-tight text-frost sm:text-4xl lg:text-5xl text-balance leading-[1.1]">
-              Technology Hiring Solutions Built for Scale
-            </h1>
-            <p className="mt-6 text-lg text-frost/80 leading-relaxed font-serif">
-              Whether you need one specialist or an entire team, N2P Systems
-              delivers qualified technology talent with speed, precision, and
-              transparency.
-            </p>
-            <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
-              <Button
-                asChild
-                size="lg"
-                className="bg-signature-blue text-primary-foreground hover:bg-[#164e93] transition-all rounded-lg px-8 shadow-lg shadow-signature-blue/25"
-              >
-                <Link href="/clients">
-                  Request a Consultation
-                  <ArrowRight className="ml-2 size-4" />
-                </Link>
-              </Button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Services Grid */}
-      <section className="bg-card py-24">
-        <div className="mx-auto max-w-7xl px-6 lg:px-8">
-          <div className="mx-auto max-w-2xl text-center mb-16 section-divider pb-6">
-            <p className="text-sm font-sans font-semibold uppercase tracking-widest text-signature-blue mb-3">
-              Our Service Models
-            </p>
-            <h2 className="text-2xl font-sans font-bold text-foreground sm:text-3xl text-balance">
-              Flexible engagement models tailored to your hiring timelines,
-              budget, and team structure.
-            </h2>
-          </div>
-          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
-            {services.map((service) => (
-              <div
-                key={service.title}
-                className="group rounded-2xl border border-border bg-card p-8 transition-all card-lift hover:border-signature-blue/15"
-              >
-                <div className="flex size-12 items-center justify-center rounded-xl bg-signature-blue/8 ring-1 ring-signature-blue/10 transition-all group-hover:bg-signature-blue/12">
-                  <service.icon className="size-5 text-signature-blue" />
-                </div>
-                <h3 className="mt-5 text-lg font-sans font-semibold text-foreground">
-                  {service.title}
-                </h3>
-                <p className="mt-2 text-sm text-muted-foreground leading-relaxed font-serif">
-                  {service.description}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Differentiators */}
-      <section className="bg-frost py-24 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-96 h-96 rounded-full bg-tech-green/3 blur-3xl" />
-        <div className="relative mx-auto max-w-7xl px-6 lg:px-8">
-          <div className="mx-auto max-w-2xl text-center mb-16">
-            <h2 className="text-2xl font-sans font-bold text-foreground sm:text-3xl text-balance">
-              Why Employers Choose N2P
-            </h2>
-          </div>
-          <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
-            {differentiators.map((item) => (
-              <div key={item.label} className="text-center">
-                <div className="mx-auto flex size-14 items-center justify-center rounded-xl bg-tech-green/8 ring-1 ring-tech-green/10 mb-5">
-                  <item.icon className="size-6 text-tech-green" />
-                </div>
-                <p className="text-3xl font-sans font-bold text-foreground tracking-tight">
-                  {item.stat}
-                </p>
-                <p className="mt-2 text-sm text-muted-foreground leading-relaxed font-serif">
-                  {item.label}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* CTA */}
-      <section className="bg-signature-blue py-20 relative overflow-hidden texture-grain">
-        <div className="absolute top-0 left-1/4 w-80 h-80 rounded-full bg-sky-400/10 blur-3xl" />
-        <div className="relative z-10 mx-auto max-w-7xl px-6 lg:px-8 text-center">
-          <h2 className="text-2xl font-sans font-bold text-primary-foreground sm:text-3xl text-balance">
-            Ready to Build Your Team?
-          </h2>
-          <p className="mt-4 text-lg text-primary-foreground/90 leading-relaxed max-w-2xl mx-auto font-serif">
-            Schedule a no-obligation consultation and let us show you how we
-            can accelerate your hiring.
-          </p>
-          <Button
-            asChild
-            size="lg"
-            className="mt-8 bg-card text-signature-blue hover:bg-frost transition-all rounded-lg px-8 shadow-lg"
-          >
+      <PageHero
+        eyebrow="For Employers"
+        title="Technology Hiring Solutions Built for Scale"
+        description="Whether you need one specialist or an entire team, N2P Systems delivers qualified technology talent with speed, precision, and transparency."
+        actions={
+          <Button asChild variant="brand" size="xl">
             <Link href="/clients">
-              Get Started Today
-              <ArrowRight className="ml-2 size-4" />
+              Request a Consultation
+              <ArrowRight className="size-4" aria-hidden="true" />
             </Link>
           </Button>
+        }
+      />
+
+      {/* Service models */}
+      <Section tone="card">
+        <div className="mx-auto mb-14 max-w-2xl text-center sm:mb-16">
+          <p className="eyebrow eyebrow-center mb-4 justify-center">Our Service Models</p>
+          {/*
+            text-title, not text-heading: this is a full descriptive
+            sentence rather than a short headline, and at the display
+            size it wrapped to four oversized lines that dominated the
+            section disproportionately.
+          */}
+          <h2 className="text-title text-balance text-foreground">
+            Flexible engagement models tailored to your hiring timelines, budget, and team structure.
+          </h2>
         </div>
-      </section>
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
+          {services.map((service) => (
+            <div key={service.title} className="surface surface-interactive p-7 sm:p-8">
+              <div className="flex size-12 items-center justify-center rounded-xl bg-primary/[0.08] ring-1 ring-primary/10">
+                <service.icon className="size-5 text-primary" aria-hidden="true" />
+              </div>
+              <h3 className="mt-5 text-subtitle text-foreground">{service.title}</h3>
+              <p className="mt-2.5 text-body text-muted-foreground">{service.description}</p>
+            </div>
+          ))}
+        </div>
+      </Section>
+
+      {/* Differentiators */}
+      <Section tone="frost">
+        <div className="mx-auto mb-14 max-w-2xl text-center sm:mb-16">
+          <h2 className="text-heading text-balance text-foreground">Why Employers Choose N2P</h2>
+        </div>
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          {differentiators.map((item) => (
+            <div key={item.title} className="surface p-6 text-center">
+              <div className="mx-auto mb-5 flex size-12 items-center justify-center rounded-xl bg-primary/[0.08] ring-1 ring-primary/10">
+                <item.icon className="size-5 text-primary" aria-hidden="true" />
+              </div>
+              <p className="text-subtitle text-foreground">{item.title}</p>
+              <p className="mt-2 text-body text-muted-foreground">{item.description}</p>
+            </div>
+          ))}
+        </div>
+      </Section>
+
+      {/* CTA */}
+      <Section tone="brand" className="text-center">
+        <h2 className="text-heading text-balance">Ready to Build Your Team?</h2>
+        <p className="measure mx-auto mt-4 text-lead text-primary-foreground/85">
+          Schedule a no-obligation consultation and let us show you how we can accelerate your hiring.
+        </p>
+        <Button asChild variant="on-brand" size="xl" className="mt-8">
+          <Link href="/clients">
+            Get Started Today
+            <ArrowRight className="size-4" aria-hidden="true" />
+          </Link>
+        </Button>
+      </Section>
     </main>
   )
 }

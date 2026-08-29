@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -18,18 +18,39 @@ export function ConsultationFormClient() {
   const [serviceInterest, setServiceInterest] = useState("")
   const [budget, setBudget] = useState("")
   const [timeline, setTimeline] = useState("")
+  /*
+    Tracks whether the required-Select check has run at least once, so the
+    empty-field error only appears after a real submit attempt rather than
+    on first render.
+  */
+  const [serviceInterestTouched, setServiceInterestTouched] = useState(false)
   const formRef = useRef<HTMLFormElement>(null)
+  const successRef = useRef<HTMLDivElement>(null)
+  const serviceTriggerRef = useRef<HTMLButtonElement>(null)
+
+  const serviceInterestInvalid = serviceInterestTouched && serviceInterest === ""
+  const serviceInterestErrorId = "serviceInterest-error"
+
+  // Move focus to the confirmation so screen reader users are told the
+  // request actually went through, instead of being left on a removed button.
+  useEffect(() => {
+    if (status === "success") successRef.current?.focus()
+  }, [status])
 
   if (status === "success") {
     return (
-      <div className="flex flex-col items-center justify-center py-16 text-center">
-        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#7AC943]/10 mb-6">
-          <CheckCircle2 className="h-8 w-8 text-[#7AC943]" />
+      <div
+        ref={successRef}
+        tabIndex={-1}
+        role="status"
+        aria-live="polite"
+        className="flex flex-col items-center justify-center py-16 text-center outline-none"
+      >
+        <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-tech-green/10">
+          <CheckCircle2 className="h-8 w-8 text-tech-green" aria-hidden="true" />
         </div>
-        <h3 className="text-2xl font-bold text-foreground">
-          Quote Request Received
-        </h3>
-        <p className="mt-3 max-w-md text-muted-foreground leading-relaxed">
+        <h3 className="text-title text-foreground">Quote Request Received</h3>
+        <p className="mt-3 max-w-md text-body text-muted-foreground">
           Thank you for your interest. A member of our team will review your
           requirements and respond within one business day with a tailored proposal.
         </p>
@@ -40,6 +61,20 @@ export function ConsultationFormClient() {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (!formRef.current) return
+
+    /*
+      The Select's Radix Root used to carry `required`, which renders a
+      visually-hidden native <select> mirror inside the <form> and lets the
+      browser's own constraint validation block the submit — showing a
+      validation bubble anchored to a 1x1px clipped element that nobody
+      could see. The button looked dead. Validating explicitly here, with a
+      visible + announced error, replaces that invisible block.
+    */
+    if (serviceInterest === "") {
+      setServiceInterestTouched(true)
+      serviceTriggerRef.current?.focus()
+      return
+    }
 
     const data = new FormData(formRef.current)
     data.set("serviceInterest", serviceInterest)
@@ -63,20 +98,24 @@ export function ConsultationFormClient() {
     <form
       ref={formRef}
       onSubmit={handleSubmit}
+      noValidate
       // ↓ Mobile: tighter vertical rhythm. sm+ unchanged.
       className="space-y-4 sm:space-y-6"
     >
-      {status === "error" && (
-        <div className="flex items-center gap-2.5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          <AlertCircle className="h-4 w-4 shrink-0" />
-          <span>
-            Something went wrong. Email us at{" "}
-            <a href="mailto:info@n2psystems.ca" className="font-semibold underline">
-              info@n2psystems.ca
-            </a>
-          </span>
-        </div>
-      )}
+      {/* Live region so submission failures are announced, not just shown. */}
+      <div role="alert" aria-live="assertive">
+        {status === "error" && (
+          <div className="flex items-center gap-2.5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
+            <span>
+              Something went wrong. Email us at{" "}
+              <a href="mailto:info@n2psystems.ca" className="font-semibold underline">
+                info@n2psystems.ca
+              </a>
+            </span>
+          </div>
+        )}
+      </div>
 
       {/* ↓ Mobile: 2-col with tighter gap (short labels fit fine side-by-side). sm+ unchanged. */}
       <div className="grid grid-cols-2 gap-3 sm:gap-6">
@@ -84,29 +123,52 @@ export function ConsultationFormClient() {
           <label htmlFor="firstName" className="text-sm font-medium text-foreground">
             First Name *
           </label>
-          <Input id="firstName" name="firstName" required placeholder="Jane" />
+          <Input
+            id="firstName"
+            name="firstName"
+            required
+            autoComplete="given-name"
+            placeholder="Jane"
+          />
         </div>
         <div className="space-y-2">
           <label htmlFor="lastName" className="text-sm font-medium text-foreground">
             Last Name *
           </label>
-          <Input id="lastName" name="lastName" required placeholder="Smith" />
+          <Input
+            id="lastName"
+            name="lastName"
+            required
+            autoComplete="family-name"
+            placeholder="Smith"
+          />
         </div>
       </div>
 
       {/* ↓ Mobile: keep 1-col (long labels), just tighten the gap. sm+ unchanged. */}
-      <div className="grid grid-cols-1 gap-4 sm:gap-6 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
         <div className="space-y-2">
           <label htmlFor="companyName" className="text-sm font-medium text-foreground">
             Company / Organization *
           </label>
-          <Input id="companyName" name="companyName" required placeholder="Acme Corporation" />
+          <Input
+            id="companyName"
+            name="companyName"
+            required
+            autoComplete="organization"
+            placeholder="Acme Corporation"
+          />
         </div>
         <div className="space-y-2">
           <label htmlFor="jobTitle" className="text-sm font-medium text-foreground">
             Your Role / Title
           </label>
-          <Input id="jobTitle" name="jobTitle" placeholder="CTO, Founder, IT Director..." />
+          <Input
+            id="jobTitle"
+            name="jobTitle"
+            autoComplete="organization-title"
+            placeholder="CTO, Founder, IT Director..."
+          />
         </div>
       </div>
 
@@ -116,13 +178,31 @@ export function ConsultationFormClient() {
           <label htmlFor="email" className="text-sm font-medium text-foreground">
             Work Email *
           </label>
-          <Input id="email" name="email" type="email" required placeholder="jane@acme.com" />
+          <Input
+            id="email"
+            name="email"
+            type="email"
+            required
+            autoComplete="email"
+            inputMode="email"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            placeholder="jane@acme.com"
+          />
         </div>
         <div className="space-y-2">
           <label htmlFor="phone" className="text-sm font-medium text-foreground">
             Phone Number
           </label>
-          <Input id="phone" name="phone" type="tel" placeholder="+1 (555) 123-4567" />
+          <Input
+            id="phone"
+            name="phone"
+            type="tel"
+            autoComplete="tel"
+            inputMode="tel"
+            placeholder="+1 (555) 123-4567"
+          />
         </div>
       </div>
 
@@ -130,8 +210,20 @@ export function ConsultationFormClient() {
         <label htmlFor="serviceInterest" className="text-sm font-medium text-foreground">
           Service You're Interested In *
         </label>
-        <Select required value={serviceInterest} onValueChange={setServiceInterest}>
-          <SelectTrigger id="serviceInterest">
+        <Select
+          value={serviceInterest}
+          onValueChange={(value) => {
+            setServiceInterest(value)
+            setServiceInterestTouched(true)
+          }}
+        >
+          <SelectTrigger
+            id="serviceInterest"
+            ref={serviceTriggerRef}
+            aria-invalid={serviceInterestInvalid}
+            aria-describedby={serviceInterestInvalid ? serviceInterestErrorId : undefined}
+            className="w-full"
+          >
             <SelectValue placeholder="Select a service area" />
           </SelectTrigger>
           <SelectContent>
@@ -145,6 +237,11 @@ export function ConsultationFormClient() {
             <SelectItem value="multiple">Multiple Services / Not Sure Yet</SelectItem>
           </SelectContent>
         </Select>
+        {serviceInterestInvalid && (
+          <p id={serviceInterestErrorId} role="alert" className="text-xs font-medium text-red-600">
+            Please select a service area.
+          </p>
+        )}
       </div>
 
       {/* ↓ Mobile: 2-col with tighter gap (short labels fit fine side-by-side). sm+ unchanged. */}
@@ -154,7 +251,7 @@ export function ConsultationFormClient() {
             Estimated Budget
           </label>
           <Select value={budget} onValueChange={setBudget}>
-            <SelectTrigger id="budget">
+            <SelectTrigger id="budget" className="w-full">
               <SelectValue placeholder="Select a range" />
             </SelectTrigger>
             <SelectContent>
@@ -172,7 +269,7 @@ export function ConsultationFormClient() {
             Expected Timeline
           </label>
           <Select value={timeline} onValueChange={setTimeline}>
-            <SelectTrigger id="timeline">
+            <SelectTrigger id="timeline" className="w-full">
               <SelectValue placeholder="Select a timeline" />
             </SelectTrigger>
             <SelectContent>
@@ -195,19 +292,15 @@ export function ConsultationFormClient() {
           id="details"
           name="details"
           rows={4}
+          autoComplete="off"
           placeholder="Describe your goals, challenges, or the scope of work you need help with. The more detail you provide, the more accurate our quote will be."
         />
       </div>
 
-      <Button
-        type="submit"
-        size="lg"
-        disabled={status === "loading"}
-        className="w-full bg-[#1E63B5] text-white hover:bg-[#174f94] disabled:opacity-70"
-      >
+      <Button type="submit" variant="brand" size="lg" disabled={status === "loading"} className="w-full">
         {status === "loading" ? (
           <>
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
             Submitting...
           </>
         ) : (

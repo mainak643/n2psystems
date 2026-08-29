@@ -1,5 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  allowedDevOrigins: [
+    '10.227.206.42',
+    '10.227.206.42:3000',
+    'localhost:3000',
+  ],
   // `typescript.ignoreBuildErrors` was on, so `next build` printed "Skipping
   // validation of types" and shipped whatever compiled. The tree currently
   // passes `tsc --noEmit` clean, so type checking is back on as a build gate —
