@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react"
 import Link from "next/link"
-import { AlertCircle, CheckCircle2, FileText, Loader2, Paperclip, ShieldCheck, X } from "lucide-react"
+import { AlertCircle, CheckCircle2, FileText, HelpCircle, Loader2, Paperclip, ShieldCheck, X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { supabase } from "@/lib/supabase"
@@ -95,8 +95,10 @@ function validate(values: Record<Field, string>, file: File | null) {
 export function ApplyFormClient({ job }: { job: Job }) {
   const formId = useId()
   const [values, setValues] = useState<Record<Field, string>>(EMPTY)
+  const [screeningAnswers, setScreeningAnswers] = useState<Record<number, string>>({})
   const [file, setFile] = useState<File | null>(null)
   const [errors, setErrors] = useState<Partial<Record<Field | "resume", string>>>({})
+  const [screeningErrors, setScreeningErrors] = useState<Record<number, string>>({})
   const [submitState, setSubmitState] = useState<"idle" | "submitting" | "done">("idle")
   const [submitError, setSubmitError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
@@ -129,6 +131,16 @@ export function ApplyFormClient({ job }: { job: Job }) {
     setErrors((prev) => (prev[field] ? { ...prev, [field]: undefined } : prev))
   }
 
+  const handleScreeningChange = (index: number, val: string) => {
+    setScreeningAnswers((prev) => ({ ...prev, [index]: val }))
+    setScreeningErrors((prev) => {
+      if (!prev[index]) return prev
+      const next = { ...prev }
+      delete next[index]
+      return next
+    })
+  }
+
   const fieldId = (field: string) => `${formId}-${field}`
   const errorId = (field: string) => `${formId}-${field}-error`
 
@@ -137,8 +149,18 @@ export function ApplyFormClient({ job }: { job: Job }) {
     setSubmitError(null)
 
     const found = validate(values, file)
-    if (Object.keys(found).length > 0) {
+    const sErrors: Record<number, string> = {}
+    if (job.screeningQuestions && job.screeningQuestions.length > 0) {
+      job.screeningQuestions.forEach((_, idx) => {
+        if (!screeningAnswers[idx] || !screeningAnswers[idx].trim()) {
+          sErrors[idx] = "Please answer this screening question."
+        }
+      })
+    }
+
+    if (Object.keys(found).length > 0 || Object.keys(sErrors).length > 0) {
       setErrors(found)
+      setScreeningErrors(sErrors)
       setErrorSeq((n) => n + 1)
       return
     }
@@ -153,6 +175,27 @@ export function ApplyFormClient({ job }: { job: Job }) {
 
       if (uploadError) throw new Error(`We could not upload your resume. ${uploadError.message}`)
 
+      // Format screening questions & answers cleanly into cover_note
+      const formattedScreeningNotes = (job.screeningQuestions || [])
+        .map((q, idx) => {
+          const a = (screeningAnswers[idx] || "").trim()
+          return `Q: ${q}\nA: ${a}`
+        })
+        .join("\n\n")
+
+      const noteParts: string[] = []
+      if (formattedScreeningNotes) {
+        noteParts.push(`--- Pre-Screening Questions ---\n${formattedScreeningNotes}`)
+      }
+      if (values.coverNote.trim()) {
+        noteParts.push(`--- Candidate Note ---\n${values.coverNote.trim()}`)
+      }
+      const combinedCoverNote = noteParts.length > 0 ? noteParts.join("\n\n").slice(0, 4000) : null
+
+      // Do not add `.select()` here. `anon` holds an INSERT grant on these
+      // columns and no SELECT grant at all (migration 00025), so asking for the
+      // inserted row back turns a working submission into "permission denied
+      // for table job_applications" and the applicant loses their upload.
       const { error: insertError } = await supabase.from("job_applications").insert({
         requirement_id: job.requirementUuid,
         full_name: values.fullName.trim(),
@@ -162,7 +205,7 @@ export function ApplyFormClient({ job }: { job: Job }) {
         current_company: values.currentCompany.trim() || null,
         experience_years: values.experienceYears.trim() ? Number(values.experienceYears) : null,
         linkedin_url: values.linkedinUrl.trim() || null,
-        cover_note: values.coverNote.trim() || null,
+        cover_note: combinedCoverNote,
         resume_path: path,
         resume_filename: file!.name.slice(0, 260),
       })
@@ -211,10 +254,11 @@ export function ApplyFormClient({ job }: { job: Job }) {
   }
 
   const invalidFields = Object.entries(errors).filter(([, message]) => Boolean(message))
+  const invalidScreeningCount = Object.keys(screeningErrors).length
 
   return (
     <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-6">
-      {(invalidFields.length > 0 || submitError) && (
+      {(invalidFields.length > 0 || invalidScreeningCount > 0 || submitError) && (
         <div
           ref={errorSummaryRef}
           tabIndex={-1}
@@ -227,6 +271,9 @@ export function ApplyFormClient({ job }: { job: Job }) {
               {submitError ? "We could not submit your application" : "Please check the highlighted fields"}
             </p>
             {submitError && <p className="mt-1 leading-relaxed">{submitError}</p>}
+            {!submitError && invalidScreeningCount > 0 && invalidFields.length === 0 && (
+              <p className="mt-1 leading-relaxed">Please answer all required pre-screening questions below.</p>
+            )}
           </div>
         </div>
       )}
@@ -353,6 +400,55 @@ export function ApplyFormClient({ job }: { job: Job }) {
           </p>
         )}
       </div>
+
+      {/* Role Pre-Screening Questions */}
+      {job.screeningQuestions && job.screeningQuestions.length > 0 && (
+        <div className="flex flex-col gap-4 rounded-xl border border-primary/20 bg-primary/[0.02] p-5 sm:p-6">
+          <div>
+            <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+              <HelpCircle className="size-4 text-primary" aria-hidden="true" />
+              Role Pre-Screening Questions
+            </h3>
+            <p className="text-xs text-muted-foreground mt-1">
+              Please answer these qualifying questions from the hiring team for this requisition.
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-4">
+            {job.screeningQuestions.map((question, idx) => {
+              const qFieldId = fieldId(`screening_${idx}`)
+              const qErrorId = errorId(`screening_${idx}`)
+              const hasError = Boolean(screeningErrors[idx])
+
+              return (
+                <div key={idx} className="flex flex-col gap-1.5">
+                  <label htmlFor={qFieldId} className="text-sm font-medium text-foreground leading-snug">
+                    <span className="font-mono text-xs text-primary font-semibold mr-1.5">Q{idx + 1}.</span>
+                    {question} <span className="text-rose-600">*</span>
+                  </label>
+                  <input
+                    id={qFieldId}
+                    required
+                    aria-invalid={hasError}
+                    aria-describedby={hasError ? qErrorId : undefined}
+                    value={screeningAnswers[idx] || ""}
+                    onChange={(e) => handleScreeningChange(idx, e.target.value)}
+                    placeholder="Enter your answer…"
+                    className={`h-11 w-full rounded-xl border bg-background px-3.5 text-base text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 sm:text-[0.9375rem] ${
+                      hasError ? "border-rose-300" : "border-border"
+                    }`}
+                  />
+                  {hasError && (
+                    <p id={qErrorId} className="text-xs font-medium text-rose-600">
+                      {screeningErrors[idx]}
+                    </p>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Cover note */}
       <div className="flex flex-col gap-1.5">

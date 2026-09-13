@@ -195,7 +195,7 @@ const GENERIC_REQUIREMENTS = [
 const PUBLIC_JOB_COLUMNS =
   'id, reference_code, title, department, employment_type, experience_level, location, work_mode, ' +
   'salary_min, salary_max, salary_currency, openings, status, skills, description, ' +
-  'min_experience_years, max_experience_years, mandatory_skills, preferred_skills, ' +
+  'min_experience_years, max_experience_years, mandatory_skills, preferred_skills, screening_questions, ' +
   'closing_date, created_at, updated_at, recruitment_clients(name, location, industry)';
 
 export function mapRequirementToJob(req: any): Job {
@@ -211,6 +211,9 @@ export function mapRequirementToJob(req: any): Job {
         : ['Technical Consulting', 'Software Engineering'];
 
   const minYears = toNumber(req.min_experience_years);
+  const screeningQuestions: string[] = Array.isArray(req.screening_questions)
+    ? req.screening_questions.filter((q: any) => typeof q === 'string' && q.trim().length > 0)
+    : [];
 
   return {
     id: req.reference_code || req.id,
@@ -238,6 +241,7 @@ export function mapRequirementToJob(req: any): Job {
           ? mandatory.map((s) => `Strong proficiency and experience with ${s}`)
           : GENERIC_REQUIREMENTS,
     requirementUuid: req.id || undefined,
+    screeningQuestions,
     datePostedISO: req.created_at || undefined,
     validThroughISO: req.closing_date || undefined,
     salaryMin: toNumber(req.salary_min),
@@ -250,7 +254,20 @@ let memoryCachedJobs: { data: Job[]; timestamp: number } | null = null;
 const jobCache = new Map<string, { data: Job | null; timestamp: number }>();
 const CACHE_TTL_MS = 60 * 1000; // 60 seconds memory cache
 
-async function withTimeout<T>(promise: PromiseLike<T>, timeoutMs = 1200): Promise<T> {
+/**
+ * A server render has to finish, but it does not have to finish in a second.
+ *
+ * This was 1200ms, which a cold Supabase connection (DNS + TLS + query) beats
+ * only sometimes — during a production build every request lost the race, so
+ * `/jobs` prerendered an empty board and `/jobs/REQ-11968` returned 404 for a
+ * live posting. Since the seed data was removed there is nothing left to mask
+ * a timeout: a slow query now reads to a visitor, and to Google, as "this role
+ * does not exist". Both pages are ISR-cached for 60s, so paying a slower first
+ * render is much cheaper than serving a wrong one.
+ */
+const QUERY_TIMEOUT_MS = 8000;
+
+async function withTimeout<T>(promise: PromiseLike<T>, timeoutMs = QUERY_TIMEOUT_MS): Promise<T> {
   return Promise.race([
     promise,
     new Promise<T>((_, reject) =>
@@ -273,7 +290,7 @@ export async function fetchPublishedJobs(): Promise<Job[]> {
         .in('status', ['Active', 'Open'])
         .order('created_at', { ascending: false });
 
-      const { data, error } = (await withTimeout(queryPromise, 1200)) as any;
+      const { data, error } = (await withTimeout(queryPromise)) as any;
 
       if (error) {
         console.warn('[jobs] Supabase rejected the published-roles query:', error.message);
@@ -335,7 +352,7 @@ export async function fetchJobById(id: string): Promise<Job | null> {
         .in('status', ['Active', 'Open'])
         .maybeSingle();
 
-      const { data, error } = (await withTimeout(queryPromise, 1200)) as any;
+      const { data, error } = (await withTimeout(queryPromise)) as any;
 
       if (error) {
         console.warn(`[jobs] Supabase rejected the lookup for "${decodedId}":`, error.message);
@@ -343,13 +360,21 @@ export async function fetchJobById(id: string): Promise<Job | null> {
         const mapped = mapRequirementToJob(data);
         jobCache.set(decodedId.toLowerCase(), { data: mapped, timestamp: Date.now() });
         return mapped;
+      } else {
+        // The query genuinely came back empty: this reference code is not a
+        // published requisition. That is the only result worth remembering as
+        // a miss.
+        jobCache.set(decodedId.toLowerCase(), { data: null, timestamp: Date.now() });
       }
     } catch (err) {
       console.warn(`[jobs] Error or timeout fetching job ${decodedId} from Supabase:`, err);
     }
   }
 
-  jobCache.set(decodedId.toLowerCase(), { data: null, timestamp: Date.now() });
+  // Deliberately not cached. A timeout or a rejected query says nothing about
+  // whether the role exists, and caching it turned one slow request into a
+  // sticky 404 on a live posting for the whole TTL — long enough for a crawler
+  // to record the job as gone.
   return null;
 }
 

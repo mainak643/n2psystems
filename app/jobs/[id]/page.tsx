@@ -9,6 +9,7 @@ import {
   ArrowRight,
   CheckCircle2,
   Building2,
+  HelpCircle,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -170,6 +171,28 @@ export default async function JobDetailPage({
                     <li key={idx} className="flex items-start gap-3 text-body text-muted-foreground">
                       <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-primary" aria-hidden="true" />
                       <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {job.screeningQuestions && job.screeningQuestions.length > 0 && (
+              <div className="surface p-6 sm:p-8">
+                <div className="flex items-center gap-2">
+                  <HelpCircle className="size-5 text-primary" aria-hidden="true" />
+                  <h2 className="text-title text-foreground">Role Pre-Screening Criteria</h2>
+                </div>
+                <p className="mt-2 text-body text-muted-foreground">
+                  Applicants will be asked to answer the following qualifying questions when applying for this position:
+                </p>
+                <ul className="mt-4 flex flex-col gap-3">
+                  {job.screeningQuestions.map((item, idx) => (
+                    <li key={idx} className="flex items-start gap-3 text-body text-muted-foreground">
+                      <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                        {idx + 1}
+                      </span>
+                      <span className="font-medium text-foreground">{item}</span>
                     </li>
                   ))}
                 </ul>

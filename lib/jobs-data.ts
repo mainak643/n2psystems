@@ -28,6 +28,7 @@ export interface Job {
    * job_applications FK needs the UUID.
    */
   requirementUuid?: string
+  screeningQuestions?: string[]
 }
 
 export const jobs: Job[] = [];
