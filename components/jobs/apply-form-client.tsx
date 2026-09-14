@@ -10,6 +10,9 @@ import type { Job } from "@/lib/jobs-data"
 
 /** Mirrors the `applications` bucket limits so a rejection is explained here. */
 const MAX_BYTES = 8 * 1024 * 1024
+
+/** Budget for `job_applications.cover_note`. Screening answers get it first. */
+const COVER_NOTE_MAX_CHARS = 4000
 const ACCEPTED = {
   "application/pdf": ".pdf",
   "application/msword": ".doc",
@@ -183,14 +186,39 @@ export function ApplyFormClient({ job }: { job: Job }) {
         })
         .join("\n\n")
 
+      /*
+        The screening answers are the dealbreaker record — work authorization,
+        knockout skills, notice period — and recruiters triage on them. So the
+        4000-character budget is spent on them first and the free-text note
+        absorbs the cut, rather than one long note silently truncating the
+        answers off the end. A note that is trimmed says so, because a cover
+        letter that just stops mid-sentence reads as the applicant's doing.
+      */
+      const screeningBlock = formattedScreeningNotes
+        ? `--- Pre-Screening Questions ---\n${formattedScreeningNotes}`
+        : ""
+      const noteBody = values.coverNote.trim()
+
       const noteParts: string[] = []
-      if (formattedScreeningNotes) {
-        noteParts.push(`--- Pre-Screening Questions ---\n${formattedScreeningNotes}`)
+      if (screeningBlock) noteParts.push(screeningBlock)
+      if (noteBody) {
+        const header = "--- Candidate Note ---\n"
+        const separator = screeningBlock ? "\n\n" : ""
+        const budget =
+          COVER_NOTE_MAX_CHARS - screeningBlock.length - separator.length - header.length
+        if (budget > 0) {
+          const marker = "\n[note truncated]"
+          const fits = noteBody.length <= budget
+          noteParts.push(
+            header +
+              (fits ? noteBody : noteBody.slice(0, Math.max(0, budget - marker.length)) + marker)
+          )
+        }
       }
-      if (values.coverNote.trim()) {
-        noteParts.push(`--- Candidate Note ---\n${values.coverNote.trim()}`)
-      }
-      const combinedCoverNote = noteParts.length > 0 ? noteParts.join("\n\n").slice(0, 4000) : null
+      // Still bounded: a screening block alone can in principle exceed the
+      // column budget, and losing the tail of it beats losing the whole row.
+      const combinedCoverNote =
+        noteParts.length > 0 ? noteParts.join("\n\n").slice(0, COVER_NOTE_MAX_CHARS) : null
 
       // Do not add `.select()` here. `anon` holds an INSERT grant on these
       // columns and no SELECT grant at all (migration 00025), so asking for the
@@ -211,6 +239,20 @@ export function ApplyFormClient({ job }: { job: Job }) {
       })
 
       if (insertError) {
+        /*
+          The object uploaded above is now orphaned: the CV has to be in the
+          bucket before the row can carry its path, so a failed insert leaves a
+          file nothing references — most often on the ordinary "already
+          applied" retry.
+
+          It is deliberately not cleaned up here. `anon` holds INSERT and only
+          INSERT on storage.objects for this bucket (migration 00026), so a
+          client-side remove is refused every time — dead code that reads like
+          a safeguard. Granting anon DELETE is the wrong trade: these uploads
+          have no owner, so the narrowest policy expressible would let any
+          visitor delete any applicant's CV. Reaping belongs server-side, to a
+          scheduled sweep of objects with no matching `job_applications.resume_path`.
+        */
         // 23505 is the (requirement_id, lower(email)) unique index.
         if (insertError.code === "23505") {
           throw new Error("You have already applied to this role. Our team has your profile.")
