@@ -67,9 +67,10 @@ export async function GET() {
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://n2psystems.vercel.app';
     const formatted = (requirements || []).map((req) => ({
       ...req,
-      apply_url: `${baseUrl}/jobs/${req.reference_code}`,
-      form_url: `${baseUrl}/jobs/${req.reference_code}`,
       job_url: `${baseUrl}/jobs/${req.reference_code}`,
+      apply_url: `${baseUrl}/jobs/${req.reference_code}/apply`,
+      form_url: `${baseUrl}/jobs/${req.reference_code}/apply`,
+      form_link: `${baseUrl}/jobs/${req.reference_code}/apply`,
     }));
 
     return NextResponse.json(formatted, {
