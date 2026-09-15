@@ -64,7 +64,15 @@ export async function GET() {
       );
     }
 
-    return NextResponse.json(requirements || [], {
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://n2psystems.vercel.app';
+    const formatted = (requirements || []).map((req) => ({
+      ...req,
+      apply_url: `${baseUrl}/jobs/${req.reference_code}`,
+      form_url: `${baseUrl}/jobs/${req.reference_code}`,
+      job_url: `${baseUrl}/jobs/${req.reference_code}`,
+    }));
+
+    return NextResponse.json(formatted, {
       status: 200,
       headers: {
         ...corsHeaders,
@@ -79,3 +87,4 @@ export async function GET() {
     );
   }
 }
+
