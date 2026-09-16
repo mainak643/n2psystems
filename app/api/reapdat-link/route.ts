@@ -39,11 +39,12 @@ async function getReapdatToken(): Promise<string> {
     throw new Error('Reapdat login succeeded but returned no access_token');
   }
 
-  cachedToken = data.access_token;
+  const token = String(data.access_token);
+  cachedToken = token;
   const expiresInMs = (data.expires_in || 14400) * 1000;
   tokenExpiresAt = now + expiresInMs;
 
-  return cachedToken;
+  return token;
 }
 
 export async function OPTIONS() {
