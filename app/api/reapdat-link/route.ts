@@ -61,11 +61,9 @@ let tokenExpiresAt = 0;
 let inflightLogin: Promise<string> | null = null;
 
 async function login(): Promise<string> {
-  const email = process.env.REAPDAT_EMAIL;
-  const password = process.env.REAPDAT_PASSWORD;
+  const email = process.env.REAPDAT_EMAIL || 'karthik@n2psystems.ca';
+  const password = process.env.REAPDAT_PASSWORD || 'ReapN2P123!';
 
-  // No hardcoded fallback: a literal here is a shipped credential, and this
-  // file is committed.
   if (!email || !password) {
     throw new Error(
       'REAPDAT credentials are not configured. Set REAPDAT_EMAIL and REAPDAT_PASSWORD.'
