@@ -172,16 +172,22 @@ async function revokeSupersededLinks(token: string, referenceCode: string): Prom
   );
 
   for (const link of superseded) {
-    const revokeRes = await fetch(`${REAPDAT_API}/chat-links/${link.id}/revoke`, {
-      method: 'POST',
+    // Delete rather than merely revoke so that the link's documents are freed
+    // from the account's plan document limit (DELETE /chat-links/{id} frees KB).
+    const delRes = await fetch(`${REAPDAT_API}/chat-links/${link.id}`, {
+      method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` },
       signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
     });
 
-    if (revokeRes.ok) {
-      console.info(`Revoked superseded Reapdat link ${link.id} for ${referenceCode}.`);
+    if (delRes.ok) {
+      console.info(`Deleted superseded Reapdat link ${link.id} for ${referenceCode}.`);
     } else {
-      console.warn(`Could not revoke Reapdat link ${link.id} (status ${revokeRes.status}).`);
+      await fetch(`${REAPDAT_API}/chat-links/${link.id}/revoke`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
+      }).catch(() => {});
     }
   }
 
@@ -201,10 +207,9 @@ interface QuestionItem {
 }
 
 /**
- * Loads the requisition context and screening questions onto the link's knowledge base.
- *
- * Calls POST /knowledge/portal/ingest per item. Best-effort throughout: an
- * ingestion glitch must never abort returning a working chat/call link.
+ * Loads the requisition context and screening questions onto the link's knowledge base
+ * as a single unified guide. This avoids consuming multiple document slots against
+ * the account's plan document limit while keeping all screening criteria indexed together.
  */
 async function ingestKnowledgeForLink(
   token: string,
@@ -214,15 +219,44 @@ async function ingestKnowledgeForLink(
   department: string,
   screeningQuestions: unknown[]
 ): Promise<number> {
-  let ingestedCount = 0;
+  const sections: string[] = [];
 
-  // 1. Ingest role context
+  sections.push(`# Candidate Pre-Screening Guidelines: ${title || 'Open Position'} (${referenceCode})`);
+  if (department) {
+    sections.push(`Department: ${department}`);
+  }
+  sections.push(
+    `Role Scope: You are the AI screening assistant for N2P Systems. Screen candidates politely, verify their background against the job criteria, and evaluate their responses against the required pre-screening dealbreakers.`
+  );
+
+  const formattedQuestions: string[] = [];
+  screeningQuestions.forEach((q, idx) => {
+    let questionText = '';
+    let targetText = 'Candidate must meet or confirm this requirement during screening.';
+
+    if (typeof q === 'string') {
+      questionText = q.trim();
+    } else if (typeof q === 'object' && q !== null) {
+      const item = q as QuestionItem;
+      questionText = String(item.question ?? '').trim();
+      if (item.idealAnswer || item.answer) {
+        targetText = `Target / Ideal response: ${String(item.idealAnswer || item.answer).trim()}`;
+      }
+    }
+
+    if (questionText) {
+      formattedQuestions.push(`${idx + 1}. Question: ${questionText}\n   Evaluation Criteria: ${targetText}`);
+    }
+  });
+
+  if (formattedQuestions.length > 0) {
+    sections.push(`## Pre-Screening Questions & Evaluation Rules:\n${formattedQuestions.join('\n\n')}`);
+  }
+
+  const unifiedDoc = sections.join('\n\n');
+
   try {
-    const roleOverview = `Job Requisition: ${title || 'Open Position'} (${referenceCode}).${
-      department ? ` Department: ${department}.` : ''
-    } You are the AI screening assistant for N2P Systems. Screen candidates politely and verify all role criteria and pre-screening questions.`;
-
-    const overviewRes = await fetch(`${REAPDAT_API}/knowledge/portal/ingest`, {
+    const res = await fetch(`${REAPDAT_API}/knowledge/portal/ingest`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
@@ -230,63 +264,22 @@ async function ingestKnowledgeForLink(
       },
       body: JSON.stringify({
         link_id: linkId,
-        content: roleOverview,
+        content: unifiedDoc,
       }),
       signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
     });
 
-    if (overviewRes.ok) {
-      ingestedCount++;
+    if (res.ok) {
+      return 1;
     } else {
-      console.warn(`Could not ingest role overview for link ${linkId}: status ${overviewRes.status}`);
+      const errText = await res.text().catch(() => '');
+      console.warn(`Could not ingest knowledge for link ${linkId}: status ${res.status}`, errText);
+      return 0;
     }
   } catch (err) {
-    console.warn(`Failed to ingest role overview for link ${linkId}:`, err);
+    console.warn(`Failed to ingest knowledge for link ${linkId}:`, err);
+    return 0;
   }
-
-  // 2. Ingest screening questions
-  for (const q of screeningQuestions) {
-    try {
-      let questionText = '';
-      let answerText = 'Candidate must meet or confirm this requirement during screening.';
-
-      if (typeof q === 'string') {
-        questionText = q.trim();
-      } else if (typeof q === 'object' && q !== null) {
-        const item = q as QuestionItem;
-        questionText = String(item.question ?? '').trim();
-        if (item.idealAnswer || item.answer) {
-          answerText = `Ideal response / target requirement: ${String(item.idealAnswer || item.answer).trim()}`;
-        }
-      }
-
-      if (!questionText) continue;
-
-      const qRes = await fetch(`${REAPDAT_API}/knowledge/portal/ingest`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          link_id: linkId,
-          question: questionText.slice(0, 500),
-          answer: answerText.slice(0, 500),
-        }),
-        signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
-      });
-
-      if (qRes.ok) {
-        ingestedCount++;
-      } else {
-        console.warn(`Could not ingest question for link ${linkId}: status ${qRes.status}`);
-      }
-    } catch (err) {
-      console.warn(`Failed to ingest question for link ${linkId}:`, err);
-    }
-  }
-
-  return ingestedCount;
 }
 
 export async function OPTIONS(req: NextRequest) {
