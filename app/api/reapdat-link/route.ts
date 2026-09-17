@@ -217,17 +217,45 @@ async function ingestKnowledgeForLink(
   referenceCode: string,
   title: string,
   department: string,
-  screeningQuestions: unknown[]
+  screeningQuestions: unknown[],
+  details?: {
+    description?: string;
+    location?: string;
+    workMode?: string;
+    experienceLevel?: string;
+    minExperienceYears?: number;
+    mandatorySkills?: string[];
+  }
 ): Promise<number> {
   const sections: string[] = [];
 
   sections.push(`# Candidate Pre-Screening Guidelines: ${title || 'Open Position'} (${referenceCode})`);
-  if (department) {
-    sections.push(`Department: ${department}`);
+  
+  const roleSpecs: string[] = [];
+  if (department) roleSpecs.push(`- Department: ${department}`);
+  if (details?.location) roleSpecs.push(`- Location: ${details.location}`);
+  if (details?.workMode) roleSpecs.push(`- Work Mode: ${details.workMode}`);
+  if (details?.experienceLevel || details?.minExperienceYears) {
+    const exp = [details.experienceLevel, details.minExperienceYears ? `${details.minExperienceYears}+ years` : null]
+      .filter(Boolean)
+      .join(' / ');
+    roleSpecs.push(`- Required Experience: ${exp}`);
   }
+  if (details?.mandatorySkills && details.mandatorySkills.length > 0) {
+    roleSpecs.push(`- Key Mandatory Skills: ${details.mandatorySkills.join(', ')}`);
+  }
+
+  if (roleSpecs.length > 0) {
+    sections.push(`## Role Specifications:\n${roleSpecs.join('\n')}`);
+  }
+
   sections.push(
-    `Role Scope: You are the AI screening assistant for N2P Systems. Screen candidates politely, verify their background against the job criteria, and evaluate their responses against the required pre-screening dealbreakers.`
+    `## Role Scope & Screening Mission:\nYou are the AI screening assistant for N2P Systems. Screen candidates politely, verify their qualifications against the required criteria, and evaluate their responses to the mandatory pre-screening questions.`
   );
+
+  if (details?.description) {
+    sections.push(`## Job Description & Responsibilities:\n${details.description}`);
+  }
 
   const formattedQuestions: string[] = [];
   screeningQuestions.forEach((q, idx) => {
@@ -250,7 +278,7 @@ async function ingestKnowledgeForLink(
   });
 
   if (formattedQuestions.length > 0) {
-    sections.push(`## Pre-Screening Questions & Evaluation Rules:\n${formattedQuestions.join('\n\n')}`);
+    sections.push(`## Mandatory Pre-Screening Questions & Dealbreakers:\n${formattedQuestions.join('\n\n')}`);
   }
 
   const unifiedDoc = sections.join('\n\n');
@@ -308,6 +336,14 @@ export async function POST(req: NextRequest) {
     const referenceCode = String(body.referenceCode ?? '').trim().slice(0, 20);
     const title = String(body.title ?? '').trim().slice(0, 100);
     const department = String(body.department ?? '').trim().slice(0, 40);
+    const description = typeof body.description === 'string' ? body.description.trim() : '';
+    const location = typeof body.location === 'string' ? body.location.trim().slice(0, 100) : '';
+    const workMode = typeof body.workMode === 'string' ? body.workMode.trim().slice(0, 50) : '';
+    const experienceLevel = typeof body.experienceLevel === 'string' ? body.experienceLevel.trim().slice(0, 50) : '';
+    const minExperienceYears = typeof body.minExperienceYears === 'number' ? body.minExperienceYears : undefined;
+    const mandatorySkills = Array.isArray(body.mandatorySkills)
+      ? body.mandatorySkills.map((s: unknown) => String(s).trim()).filter(Boolean).slice(0, 20)
+      : [];
     const screeningQuestions = Array.isArray(body.screeningQuestions)
       ? body.screeningQuestions
       : [];
@@ -372,7 +408,7 @@ export async function POST(req: NextRequest) {
     const linkUrl = linkData.url;
     const linkId = String(linkData.id ?? '');
 
-    // Ingest the role context and screening questions into the link's isolated knowledge base
+    // Ingest the role context, job description, and screening questions into the link's isolated knowledge base
     let ingestedItems = 0;
     if (linkId) {
       try {
@@ -382,7 +418,15 @@ export async function POST(req: NextRequest) {
           referenceCode,
           title,
           department,
-          screeningQuestions
+          screeningQuestions,
+          {
+            description,
+            location,
+            workMode,
+            experienceLevel,
+            minExperienceYears,
+            mandatorySkills,
+          }
         );
       } catch (ingestErr) {
         console.warn(`Reapdat knowledge ingest skipped for ${referenceCode}:`, ingestErr);
