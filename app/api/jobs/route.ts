@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
-// Real-time freshness with fast edge caching (10s stale-while-revalidate)
-export const revalidate = 10;
+// Real-time freshness with fast edge caching
+export const revalidate = 30;
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -27,43 +27,68 @@ export async function GET(req: NextRequest) {
 
     let query = supabase
       .from('requirements')
-      .select(`
-        id,
-        reference_code,
-        title,
-        department,
-        employment_type,
-        experience_level,
-        location,
-        work_mode,
-        salary_min,
-        salary_max,
-        salary_currency,
-        openings,
-        status,
-        skills,
-        description,
-        min_experience_years,
-        max_experience_years,
-        mandatory_skills,
-        preferred_skills,
-        closing_date,
-        created_at,
-        updated_at,
-        screening_questions,
-        reapdat_enabled,
-        reapdat_chat_link,
-        recruitment_clients (
-          name,
-          location,
-          industry
-        )
-      `)
+      .select(
+        isSummary
+          ? `
+            id,
+            reference_code,
+            title,
+            department,
+            employment_type,
+            experience_level,
+            location,
+            work_mode,
+            salary_min,
+            salary_max,
+            salary_currency,
+            openings,
+            status,
+            mandatory_skills,
+            min_experience_years,
+            reapdat_chat_link
+          `
+          : `
+            id,
+            reference_code,
+            title,
+            department,
+            employment_type,
+            experience_level,
+            location,
+            work_mode,
+            salary_min,
+            salary_max,
+            salary_currency,
+            openings,
+            status,
+            skills,
+            description,
+            min_experience_years,
+            max_experience_years,
+            mandatory_skills,
+            preferred_skills,
+            closing_date,
+            created_at,
+            updated_at,
+            screening_questions,
+            reapdat_enabled,
+            reapdat_chat_link,
+            recruitment_clients (
+              name,
+              location,
+              industry
+            )
+          `
+      )
       .in('status', ['Active', 'Open'])
       .order('created_at', { ascending: false });
 
     if (codeParam.trim()) {
       query = query.ilike('reference_code', codeParam.trim());
+    } else if (limitParam > 0) {
+      query = query.limit(limitParam);
+    } else if (isSummary) {
+      query = query.limit(8);
     }
 
     const { data: requirements, error } = await query;
