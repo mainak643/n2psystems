@@ -193,13 +193,18 @@ async function revokeSupersededLinks(authHeaders: Record<string, string>, refere
 }
 
 interface QuestionItem {
+  id?: string;
   question?: string;
   idealAnswer?: string;
   answer?: string;
+  responseType?: string;
+  mustPass?: boolean;
+  numericThreshold?: unknown;
 }
 
 /**
- * Loads requisition context and screening questions onto the link's knowledge base.
+ * Loads comprehensive requisition context, structured JSON, and updated screening questions
+ * directly onto the link's isolated knowledge base.
  */
 async function ingestKnowledgeForLink(
   authHeaders: Record<string, string>,
@@ -214,43 +219,73 @@ async function ingestKnowledgeForLink(
     workMode?: string;
     experienceLevel?: string;
     minExperienceYears?: number;
+    maxExperienceYears?: number;
     mandatorySkills?: string[];
+    preferredSkills?: string[];
+    salaryMin?: number;
+    salaryMax?: number;
+    salaryCurrency?: string;
+    clientName?: string;
+    hiringManager?: string;
+    employmentType?: string;
+    rawJson?: Record<string, unknown>;
   }
 ): Promise<number> {
   const sections: string[] = [];
 
   sections.push(`# Candidate Pre-Screening Guidelines: ${title || 'Open Position'} (${referenceCode})`);
 
+  // 1. Comprehensive Role Specifications
   const roleSpecs: string[] = [];
+  roleSpecs.push(`- Requisition Code: ${referenceCode}`);
+  if (title) roleSpecs.push(`- Role Title: ${title}`);
   if (department) roleSpecs.push(`- Department: ${department}`);
+  if (details?.clientName) roleSpecs.push(`- Client / Organization: ${details.clientName}`);
+  if (details?.hiringManager) roleSpecs.push(`- Hiring Manager: ${details.hiringManager}`);
+  if (details?.employmentType) roleSpecs.push(`- Employment Type: ${details.employmentType}`);
   if (details?.location) roleSpecs.push(`- Location: ${details.location}`);
   if (details?.workMode) roleSpecs.push(`- Work Mode: ${details.workMode}`);
+
   if (details?.experienceLevel || details?.minExperienceYears) {
-    const exp = [details.experienceLevel, details.minExperienceYears ? `${details.minExperienceYears}+ years` : null]
-      .filter(Boolean)
-      .join(' / ');
-    roleSpecs.push(`- Required Experience: ${exp}`);
+    const expParts = [details.experienceLevel];
+    if (details.minExperienceYears) {
+      expParts.push(`${details.minExperienceYears}+ years`);
+    }
+    roleSpecs.push(`- Required Experience: ${expParts.filter(Boolean).join(' / ')}`);
   }
+
+  if (details?.salaryMin || details?.salaryMax) {
+    const curr = details.salaryCurrency || 'USD';
+    const min = details.salaryMin ? Number(details.salaryMin).toLocaleString() : '0';
+    const max = details.salaryMax ? Number(details.salaryMax).toLocaleString() : 'Negotiable';
+    roleSpecs.push(`- Target Compensation: ${curr} ${min} - ${max}`);
+  }
+
   if (details?.mandatorySkills && details.mandatorySkills.length > 0) {
-    roleSpecs.push(`- Key Mandatory Skills: ${details.mandatorySkills.join(', ')}`);
+    roleSpecs.push(`- Mandatory Core Skills (Must Have): ${details.mandatorySkills.join(', ')}`);
+  }
+  if (details?.preferredSkills && details.preferredSkills.length > 0) {
+    roleSpecs.push(`- Preferred / Secondary Skills (Nice to Have): ${details.preferredSkills.join(', ')}`);
   }
 
-  if (roleSpecs.length > 0) {
-    sections.push(`## Role Specifications:\n${roleSpecs.join('\n')}`);
-  }
+  sections.push(`## Role Specifications:\n${roleSpecs.join('\n')}`);
 
+  // 2. Persona & Evaluation Directives
   sections.push(
-    `## Role Scope & Screening Mission:\nYou are the AI screening assistant for N2P Systems. Screen candidates politely, verify their qualifications against the required criteria, and evaluate their responses to the mandatory pre-screening questions.`
+    `## Screening Mission & AI Persona:\nYou are the AI conversational screening assistant for N2P Systems. Screen candidates politely, verify their qualifications against the required role criteria, and evaluate their responses to the mandatory pre-screening questions and dealbreakers below.`
   );
 
+  // 3. Full Job Description Body
   if (details?.description) {
     sections.push(`## Job Description & Responsibilities:\n${details.description}`);
   }
 
+  // 4. Pre-Screening Questions & Dealbreaker Evaluation Rubric
   const formattedQuestions: string[] = [];
   screeningQuestions.forEach((q, idx) => {
     let questionText = '';
-    let targetText = 'Candidate must meet or confirm this requirement during screening.';
+    let targetText = 'Candidate must confirm or meet this requirement during screening.';
+    let typeText = '';
 
     if (typeof q === 'string') {
       questionText = q.trim();
@@ -260,15 +295,27 @@ async function ingestKnowledgeForLink(
       if (item.idealAnswer || item.answer) {
         targetText = `Target / Ideal response: ${String(item.idealAnswer || item.answer).trim()}`;
       }
+      if (item.responseType) {
+        typeText = ` [Type: ${item.responseType}]`;
+      }
     }
 
     if (questionText) {
-      formattedQuestions.push(`${idx + 1}. Question: ${questionText}\n   Evaluation Criteria: ${targetText}`);
+      formattedQuestions.push(
+        `${idx + 1}. Question${typeText}: ${questionText}\n   Evaluation Criteria & Ideal Answer: ${targetText}`
+      );
     }
   });
 
   if (formattedQuestions.length > 0) {
     sections.push(`## Mandatory Pre-Screening Questions & Dealbreakers:\n${formattedQuestions.join('\n\n')}`);
+  }
+
+  // 5. Full Structured Dataset (JSON) for semantic entity parsing
+  if (details?.rawJson && Object.keys(details.rawJson).length > 0) {
+    sections.push(
+      `## Complete Requisition Data (Structured JSON):\n\`\`\`json\n${JSON.stringify(details.rawJson, null, 2)}\n\`\`\``
+    );
   }
 
   const unifiedDoc = sections.join('\n\n');
@@ -546,9 +593,20 @@ export async function POST(req: NextRequest) {
     const workMode = typeof body.workMode === 'string' ? body.workMode.trim().slice(0, 50) : '';
     const experienceLevel = typeof body.experienceLevel === 'string' ? body.experienceLevel.trim().slice(0, 50) : '';
     const minExperienceYears = typeof body.minExperienceYears === 'number' ? body.minExperienceYears : undefined;
+    const maxExperienceYears = typeof body.maxExperienceYears === 'number' ? body.maxExperienceYears : undefined;
     const mandatorySkills = Array.isArray(body.mandatorySkills)
       ? body.mandatorySkills.map((s: unknown) => String(s).trim()).filter(Boolean).slice(0, 20)
       : [];
+    const preferredSkills = Array.isArray(body.preferredSkills)
+      ? body.preferredSkills.map((s: unknown) => String(s).trim()).filter(Boolean).slice(0, 20)
+      : [];
+    const salaryMin = typeof body.salaryMin === 'number' ? body.salaryMin : undefined;
+    const salaryMax = typeof body.salaryMax === 'number' ? body.salaryMax : undefined;
+    const salaryCurrency = typeof body.salaryCurrency === 'string' ? body.salaryCurrency.trim() : undefined;
+    const clientName = typeof body.clientName === 'string' ? body.clientName.trim() : undefined;
+    const hiringManager = typeof body.hiringManager === 'string' ? body.hiringManager.trim() : undefined;
+    const employmentType = typeof body.employmentType === 'string' ? body.employmentType.trim() : undefined;
+    const rawJson = typeof body.rawJson === 'object' && body.rawJson !== null ? body.rawJson : undefined;
     const screeningQuestions = Array.isArray(body.screeningQuestions)
       ? body.screeningQuestions
       : [];
@@ -558,6 +616,77 @@ export async function POST(req: NextRequest) {
         { ok: false, success: false, error: 'Missing referenceCode in request body' },
         { status: 400, headers: cors }
       );
+    }
+
+    // Action: Sync Knowledge for existing link without changing URL
+    if (body.action === 'sync_knowledge' || (body.linkId && body.action === 'update_knowledge')) {
+      let targetLinkId = body.linkId ? String(body.linkId) : '';
+      let targetUrl = body.linkUrl ? String(body.linkUrl) : '';
+
+      if (!targetLinkId && referenceCode) {
+        const listRes = await fetch(`${REAPDAT_API}/chat-links`, {
+          headers: authHeaders,
+          signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
+        });
+        if (listRes.ok) {
+          const listData = await listRes.json();
+          const links: ReapdatLink[] = Array.isArray(listData.links) ? listData.links : [];
+          const wanted = referenceCode.toLowerCase();
+          const matched = links.find(
+            (l) =>
+              (l.tags || []).some((t) => String(t).toLowerCase() === wanted) ||
+              (l.label && l.label.toLowerCase().includes(wanted))
+          );
+          if (matched) {
+            targetLinkId = matched.id;
+            targetUrl = matched.url || '';
+          }
+        }
+      }
+
+      if (targetLinkId) {
+        const ingestedCount = await ingestKnowledgeForLink(
+          authHeaders,
+          targetLinkId,
+          referenceCode,
+          title,
+          department,
+          screeningQuestions,
+          {
+            description,
+            location,
+            workMode,
+            experienceLevel,
+            minExperienceYears,
+            maxExperienceYears,
+            mandatorySkills,
+            preferredSkills,
+            salaryMin,
+            salaryMax,
+            salaryCurrency,
+            clientName,
+            hiringManager,
+            employmentType,
+            rawJson,
+          }
+        );
+
+        return NextResponse.json(
+          {
+            ok: true,
+            success: true,
+            status: 'provisioned',
+            link: targetUrl,
+            linkId: targetLinkId,
+            message: `REAPDAT knowledge base updated with latest screening questions for ${referenceCode}`,
+            details: {
+              id: targetLinkId,
+              ingested_knowledge_items: ingestedCount,
+            },
+          },
+          { status: 200, headers: cors }
+        );
+      }
     }
 
     // Best-effort cleanup of previous superseded link for this reference code
@@ -634,7 +763,16 @@ export async function POST(req: NextRequest) {
             workMode,
             experienceLevel,
             minExperienceYears,
+            maxExperienceYears,
             mandatorySkills,
+            preferredSkills,
+            salaryMin,
+            salaryMax,
+            salaryCurrency,
+            clientName,
+            hiringManager,
+            employmentType,
+            rawJson,
           }
         );
       } catch (ingestErr) {
