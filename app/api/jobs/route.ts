@@ -23,6 +23,7 @@ export async function GET(req: NextRequest) {
     const codeParam = searchParams.get('code') || searchParams.get('reference_code') || searchParams.get('ref') || '';
     const queryParam = (searchParams.get('q') || searchParams.get('query') || searchParams.get('search') || '').toLowerCase().trim();
     const isSummary = searchParams.get('summary') === 'true' || searchParams.get('compact') === 'true';
+    const limitParam = parseInt(searchParams.get('limit') || '0', 10);
 
     let query = supabase
       .from('requirements')
@@ -87,6 +88,10 @@ export async function GET(req: NextRequest) {
                             (r.mandatory_skills || []).some((s: string) => s.toLowerCase().includes(queryParam));
         return titleMatch || deptMatch || locMatch || skillsMatch;
       });
+    }
+
+    if (limitParam > 0) {
+      items = items.slice(0, limitParam);
     }
 
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://n2psystems.vercel.app';
