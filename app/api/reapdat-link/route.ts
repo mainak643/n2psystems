@@ -11,6 +11,17 @@ const REAPDAT_API = 'https://api.reapdat.com/api/v1';
 const UPSTREAM_TIMEOUT_MS = 10_000;
 
 /**
+ * Document upload and parse. Deliberately longer than the general ceiling: the
+ * client allows 30s for this call, and a large PDF spends most of it upstream.
+ */
+const UPLOAD_TIMEOUT_MS = 28_000;
+
+/** Kept in step with the panel's file input `accept` list. */
+const ALLOWED_UPLOAD_EXTENSIONS = new Set(['pdf', 'docx', 'txt', 'csv', 'xlsx', 'json']);
+
+const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+
+/**
  * Origins allowed to call this proxy.
  */
 const DEFAULT_ALLOWED_ORIGINS = [
@@ -202,6 +213,34 @@ interface QuestionItem {
   numericThreshold?: unknown;
 }
 
+interface IngestOutcome {
+  ok: boolean;
+  count: number;
+  status?: number;
+  error?: string;
+}
+
+/**
+ * Recruiter-facing wording for a failed knowledge ingest. Every message says
+ * what happened to the candidate link, because that is the recruiter's actual
+ * question when a sync fails mid-hiring-round.
+ */
+function describeIngestFailure(status: number): string {
+  switch (status) {
+    case 401:
+    case 403:
+      return 'Reapdat rejected the indexing request for this link. The screening link is unchanged - please contact an administrator.';
+    case 404:
+      return 'Reapdat no longer recognises this screening link. Generate a new link for this requisition.';
+    case 413:
+      return 'The requisition is too large for Reapdat to index. Shorten the job description and retry.';
+    case 429:
+      return 'Reapdat rate limited the knowledge sync. The screening link is unchanged - please retry in a minute.';
+    default:
+      return `Reapdat could not index the requisition (status ${status}). The screening link is unchanged - please retry the sync.`;
+  }
+}
+
 /**
  * Loads comprehensive requisition context, structured JSON, and updated screening questions
  * directly onto the link's isolated knowledge base.
@@ -230,10 +269,21 @@ async function ingestKnowledgeForLink(
     employmentType?: string;
     rawJson?: Record<string, unknown>;
   }
-): Promise<number> {
+): Promise<IngestOutcome> {
   const sections: string[] = [];
 
+  // Reapdat's portal ingest appends; it has no endpoint for replacing or
+  // deleting a link's existing passages. Every re-sync therefore leaves the
+  // previous revision of this document in the knowledge base, and retrieval can
+  // surface a superseded dealbreaker list. Stamping each revision and stating
+  // the precedence rule in the text is what we can do from this side: it gives
+  // the model the tiebreak it otherwise has to guess at.
+  const revisionStamp = new Date().toISOString();
+
   sections.push(`# Candidate Pre-Screening Guidelines: ${title || 'Open Position'} (${referenceCode})`);
+  sections.push(
+    `## Revision Control (read first):\n- Revision timestamp: ${revisionStamp}\n- Requisition: ${referenceCode}\n- This document is the authoritative specification for ${referenceCode}. If the knowledge base contains any earlier revision of this document for the same requisition code, that earlier revision is void: use only the latest revision timestamp and ignore role details, screening questions and dealbreakers stated in older revisions.`
+  );
 
   // 1. Comprehensive Role Specifications
   const roleSpecs: string[] = [];
@@ -309,6 +359,12 @@ async function ingestKnowledgeForLink(
 
   if (formattedQuestions.length > 0) {
     sections.push(`## Mandatory Pre-Screening Questions & Dealbreakers:\n${formattedQuestions.join('\n\n')}`);
+  } else {
+    // Said out loud rather than omitted. A recruiter who deletes every question
+    // must not leave a document whose silence an older revision can fill in.
+    sections.push(
+      `## Mandatory Pre-Screening Questions & Dealbreakers:\nThis requisition has NO pre-screening questions or dealbreakers configured as of this revision. Do not ask any screening questions listed in an earlier revision of this document.`
+    );
   }
 
   // 5. Full Structured Dataset (JSON) for semantic entity parsing
@@ -335,15 +391,23 @@ async function ingestKnowledgeForLink(
     });
 
     if (res.ok) {
-      return 1;
-    } else {
-      const errText = await res.text().catch(() => '');
-      console.warn(`Could not ingest knowledge for link ${linkId}: status ${res.status}`, errText);
-      return 0;
+      return { ok: true, count: 1 };
     }
+
+    const errText = await res.text().catch(() => '');
+    console.warn(`Could not ingest knowledge for link ${linkId}: status ${res.status}`, errText);
+    return { ok: false, count: 0, status: res.status, error: describeIngestFailure(res.status) };
   } catch (err) {
     console.warn(`Failed to ingest knowledge for link ${linkId}:`, err);
-    return 0;
+    const isTimeout = err instanceof Error && err.name === 'TimeoutError';
+    return {
+      ok: false,
+      count: 0,
+      status: isTimeout ? 504 : 502,
+      error: isTimeout
+        ? 'Reapdat did not finish indexing the requisition within the time limit. The screening link is unchanged - please retry the sync.'
+        : 'Could not reach Reapdat to index the requisition. The screening link is unchanged - please retry the sync.',
+    };
   }
 }
 
@@ -503,6 +567,39 @@ export async function POST(req: NextRequest) {
         );
       }
 
+      // The panel checks type and size before it posts, but that check is a
+      // convenience for the recruiter, not a control: this handler is reachable
+      // directly. Re-check both here, where the trust boundary actually is.
+      const extension = (file.name.split('.').pop() || '').toLowerCase();
+      if (!ALLOWED_UPLOAD_EXTENSIONS.has(extension)) {
+        return NextResponse.json(
+          {
+            ok: false,
+            success: false,
+            error: `Unsupported file type ".${extension}". Allowed: ${[...ALLOWED_UPLOAD_EXTENSIONS].map((e) => `.${e}`).join(', ')}`,
+          },
+          { status: 415, headers: cors }
+        );
+      }
+
+      if (file.size === 0) {
+        return NextResponse.json(
+          { ok: false, success: false, error: 'The uploaded file is empty.' },
+          { status: 400, headers: cors }
+        );
+      }
+
+      if (file.size > MAX_UPLOAD_BYTES) {
+        return NextResponse.json(
+          {
+            ok: false,
+            success: false,
+            error: `File is ${(file.size / (1024 * 1024)).toFixed(1)} MB. The limit is ${MAX_UPLOAD_BYTES / (1024 * 1024)} MB.`,
+          },
+          { status: 413, headers: cors }
+        );
+      }
+
       const uploadData = new FormData();
       uploadData.append('file', file);
       uploadData.append('link_id', linkId);
@@ -511,7 +608,10 @@ export async function POST(req: NextRequest) {
         method: 'POST',
         headers: authHeaders,
         body: uploadData,
-        signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
+        // Parsing and chunking a 10 MB document is not a 10-second job. The
+        // general ceiling here would abort mid-parse and report a network
+        // failure for an upload that was progressing normally.
+        signal: AbortSignal.timeout(UPLOAD_TIMEOUT_MS),
       });
 
       if (!uploadRes.ok) {
@@ -618,18 +718,27 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Action: Sync Knowledge for existing link without changing URL
+    // Action: Sync Knowledge for existing link without changing URL.
+    //
+    // This branch always returns. It must never fall through to the creation
+    // path below: creation revokes the requisition's current link and mints a
+    // fresh 32-character token, so a sync that degraded into a create would
+    // silently invalidate every candidate URL and QR code already handed out -
+    // and burn one of the tenant's 20 link slots doing it. A sync that cannot
+    // find its link is an error the recruiter needs to see, not a new link.
     if (body.action === 'sync_knowledge' || (body.linkId && body.action === 'update_knowledge')) {
-      let targetLinkId = body.linkId ? String(body.linkId) : '';
+      let targetLinkId = body.linkId ? String(body.linkId).trim() : '';
       let targetUrl = body.linkUrl ? String(body.linkUrl) : '';
+      let lookupFailed = false;
 
       if (!targetLinkId && referenceCode) {
         const listRes = await fetch(`${REAPDAT_API}/chat-links`, {
           headers: authHeaders,
           signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
-        });
-        if (listRes.ok) {
-          const listData = await listRes.json();
+        }).catch(() => null);
+
+        if (listRes && listRes.ok) {
+          const listData = await listRes.json().catch(() => ({}));
           const links: ReapdatLink[] = Array.isArray(listData.links) ? listData.links : [];
           const wanted = referenceCode.toLowerCase();
           const matched = links.find(
@@ -641,11 +750,31 @@ export async function POST(req: NextRequest) {
             targetLinkId = matched.id;
             targetUrl = matched.url || '';
           }
+        } else {
+          // Reachability problem, not a missing link. Worth distinguishing:
+          // "retry" and "the link is gone" call for different recruiter action.
+          lookupFailed = true;
+          console.warn(
+            `Reapdat link lookup failed during sync for ${referenceCode} (status ${listRes?.status ?? 'network error'}).`
+          );
         }
       }
 
-      if (targetLinkId) {
-        const ingestedCount = await ingestKnowledgeForLink(
+      if (!targetLinkId) {
+        return NextResponse.json(
+          {
+            ok: false,
+            success: false,
+            error: lookupFailed
+              ? 'Could not reach Reapdat to locate this screening link. The candidate link is unchanged - please retry the sync in a moment.'
+              : `No active Reapdat screening link exists for ${referenceCode}. Generate a link before syncing knowledge.`,
+          },
+          { status: lookupFailed ? 502 : 404, headers: cors }
+        );
+      }
+
+      {
+        const ingested = await ingestKnowledgeForLink(
           authHeaders,
           targetLinkId,
           referenceCode,
@@ -671,6 +800,22 @@ export async function POST(req: NextRequest) {
           }
         );
 
+        // A sync that indexed nothing is a failed sync. Reporting it as success
+        // leaves the recruiter believing the agent screens on questions it has
+        // never seen.
+        if (!ingested.ok) {
+          return NextResponse.json(
+            {
+              ok: false,
+              success: false,
+              error: ingested.error || 'Reapdat could not index the requisition.',
+              linkId: targetLinkId,
+              link: targetUrl,
+            },
+            { status: ingested.status && ingested.status >= 400 ? ingested.status : 502, headers: cors }
+          );
+        }
+
         return NextResponse.json(
           {
             ok: true,
@@ -681,7 +826,7 @@ export async function POST(req: NextRequest) {
             message: `REAPDAT knowledge base updated with latest screening questions for ${referenceCode}`,
             details: {
               id: targetLinkId,
-              ingested_knowledge_items: ingestedCount,
+              ingested_knowledge_items: ingested.count,
             },
           },
           { status: 200, headers: cors }
@@ -748,9 +893,10 @@ export async function POST(req: NextRequest) {
     const linkId = String(linkData.id ?? '');
 
     let ingestedItems = 0;
+    let ingestWarning: string | undefined;
     if (linkId) {
       try {
-        ingestedItems = await ingestKnowledgeForLink(
+        const ingested = await ingestKnowledgeForLink(
           authHeaders,
           linkId,
           referenceCode,
@@ -775,8 +921,16 @@ export async function POST(req: NextRequest) {
             rawJson,
           }
         );
+        ingestedItems = ingested.count;
+        if (!ingested.ok) {
+          // The link exists and is usable, so this is a warning rather than a
+          // failure - but the recruiter has to know the agent is running on an
+          // empty knowledge base until they re-sync.
+          ingestWarning = ingested.error;
+        }
       } catch (ingestErr) {
         console.warn(`Reapdat knowledge ingest skipped for ${referenceCode}:`, ingestErr);
+        ingestWarning = 'The screening link was created, but Reapdat did not index the requisition. Use "Re-sync Knowledge" before sharing the link.';
       }
     }
 
@@ -800,7 +954,10 @@ export async function POST(req: NextRequest) {
         status: 'provisioned',
         link: linkUrl,
         linkId: linkData.id,
-        message: `REAPDAT chat & voice screening link provisioned for ${referenceCode}`,
+        message: ingestWarning
+          ? `Screening link created for ${referenceCode}, but the knowledge base was not indexed: ${ingestWarning}`
+          : `REAPDAT chat & voice screening link provisioned for ${referenceCode}`,
+        warning: ingestWarning,
         details: {
           id: linkData.id,
           token: linkData.token,
