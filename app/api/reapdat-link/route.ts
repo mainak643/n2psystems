@@ -11,13 +11,14 @@ const REAPDAT_API = 'https://api.reapdat.com/api/v1';
 const UPSTREAM_TIMEOUT_MS = 10_000;
 
 /**
- * Origins allowed to call this proxy. `*` cannot be combined with credentials,
- * so the matched origin is echoed back and `Vary: Origin` keeps a CDN from
- * serving one caller's CORS headers to another.
+ * Origins allowed to call this proxy.
  */
 const DEFAULT_ALLOWED_ORIGINS = [
   'https://n2-p-operations.vercel.app',
   'http://localhost:5173',
+  'http://localhost:5174',
+  'http://localhost:5175',
+  'http://localhost:5176',
 ];
 
 const allowedOrigins = new Set(
@@ -30,15 +31,30 @@ const allowedOrigins = new Set(
   ]
 );
 
+function isAllowedOrigin(origin: string): boolean {
+  if (allowedOrigins.has(origin)) return true;
+  // Match any localhost or 127.0.0.1 (any port, http or https)
+  if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) return true;
+  try {
+    const parsed = new URL(origin);
+    if (parsed.hostname.endsWith('.vercel.app') || parsed.hostname === 'n2psystems.ca') {
+      return true;
+    }
+  } catch {
+    return false;
+  }
+  return false;
+}
+
 function corsHeaders(req: NextRequest): Record<string, string> {
   const headers: Record<string, string> = {
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
     Vary: 'Origin',
   };
 
   const origin = req.headers.get('origin');
-  if (origin && allowedOrigins.has(origin)) {
+  if (origin && isAllowedOrigin(origin)) {
     headers['Access-Control-Allow-Origin'] = origin;
     headers['Access-Control-Allow-Credentials'] = 'true';
   }
@@ -49,15 +65,6 @@ function corsHeaders(req: NextRequest): Record<string, string> {
 // In-memory token cache to prevent hitting Reapdat login rate limits
 let cachedToken: string | null = null;
 let tokenExpiresAt = 0;
-
-/**
- * A single in-flight login shared by concurrent callers.
- *
- * Without it, two recruiters pressing "Create REAPDAT Link" in the same second
- * on a cold instance each start their own login, which is exactly the burst
- * Reapdat answers with "Too many login attempts" — and then neither request
- * has a token.
- */
 let inflightLogin: Promise<string> | null = null;
 
 async function login(): Promise<string> {
@@ -102,7 +109,6 @@ async function getReapdatToken(forceRefresh = false): Promise<string> {
     tokenExpiresAt = 0;
   }
 
-  // Reuse token if valid for at least 5 more minutes
   if (cachedToken && tokenExpiresAt > Date.now() + 5 * 60 * 1000) {
     return cachedToken;
   }
@@ -116,16 +122,17 @@ async function getReapdatToken(forceRefresh = false): Promise<string> {
   return inflightLogin;
 }
 
-function createChatLink(token: string, payload: unknown): Promise<Response> {
-  return fetch(`${REAPDAT_API}/chat-links`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(payload),
-    signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
-  });
+/**
+ * Returns authentication headers: prefer Admin API Key (X-API-Key) if provided in env,
+ * otherwise fall back to authenticated bearer token session.
+ */
+async function getAuthHeaders(forceRefresh = false): Promise<Record<string, string>> {
+  const adminKey = process.env.REAPDAT_ADMIN_API_KEY || process.env.REAPDAT_API_KEY;
+  if (adminKey && adminKey.trim().startsWith('ua_admin_')) {
+    return { 'X-API-Key': adminKey.trim() };
+  }
+  const token = await getReapdatToken(forceRefresh);
+  return { Authorization: `Bearer ${token}` };
 }
 
 interface ReapdatLink {
@@ -133,24 +140,22 @@ interface ReapdatLink {
   label?: string;
   tags?: string[];
   status?: string;
+  url?: string;
+  token?: string;
+  channels?: string[];
+  is_active?: boolean;
+  kb_docs?: number;
+  kb_chunks?: number;
+  kb_sources?: Record<string, number>;
+  created_at?: string;
 }
 
 /**
  * Reclaims the slot a superseded link is holding.
- *
- * The tenant is capped at 20 links, so re-provisioning a requisition that
- * already has one would otherwise walk the account into a 403 that no recruiter
- * can resolve from the portal. Links carrying this requisition's reference code
- * are revoked, not deleted: revoking 404s the public URL immediately — which is
- * the point, an old screening link must stop taking candidates — and is
- * reversible, while DELETE also destroys the link's knowledge base.
- *
- * Best-effort throughout. A failure here must not block provisioning; it is
- * logged and the create proceeds.
  */
-async function revokeSupersededLinks(token: string, referenceCode: string): Promise<void> {
+async function revokeSupersededLinks(authHeaders: Record<string, string>, referenceCode: string): Promise<void> {
   const listRes = await fetch(`${REAPDAT_API}/chat-links`, {
-    headers: { Authorization: `Bearer ${token}` },
+    headers: authHeaders,
     signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
   });
 
@@ -161,9 +166,6 @@ async function revokeSupersededLinks(token: string, referenceCode: string): Prom
 
   const data = await listRes.json();
   const links: ReapdatLink[] = Array.isArray(data.links) ? data.links : [];
-  const count = typeof data.count === 'number' ? data.count : links.length;
-  const limit = typeof data.limit === 'number' ? data.limit : 20;
-
   const wanted = referenceCode.toLowerCase();
   const superseded = links.filter(
     (link) =>
@@ -172,11 +174,9 @@ async function revokeSupersededLinks(token: string, referenceCode: string): Prom
   );
 
   for (const link of superseded) {
-    // Delete rather than merely revoke so that the link's documents are freed
-    // from the account's plan document limit (DELETE /chat-links/{id} frees KB).
     const delRes = await fetch(`${REAPDAT_API}/chat-links/${link.id}`, {
       method: 'DELETE',
-      headers: { Authorization: `Bearer ${token}` },
+      headers: authHeaders,
       signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
     });
 
@@ -185,18 +185,10 @@ async function revokeSupersededLinks(token: string, referenceCode: string): Prom
     } else {
       await fetch(`${REAPDAT_API}/chat-links/${link.id}/revoke`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
+        headers: authHeaders,
         signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
       }).catch(() => {});
     }
-  }
-
-  // `-1` is unlimited. Warn while there is still room to act on the warning.
-  const remaining = limit - count + superseded.length;
-  if (limit !== -1 && remaining <= 3) {
-    console.warn(
-      `Reapdat link quota nearly exhausted: ${count}/${limit} used, ~${remaining} slot(s) free.`
-    );
   }
 }
 
@@ -207,12 +199,10 @@ interface QuestionItem {
 }
 
 /**
- * Loads the requisition context and screening questions onto the link's knowledge base
- * as a single unified guide. This avoids consuming multiple document slots against
- * the account's plan document limit while keeping all screening criteria indexed together.
+ * Loads requisition context and screening questions onto the link's knowledge base.
  */
 async function ingestKnowledgeForLink(
-  token: string,
+  authHeaders: Record<string, string>,
   linkId: string,
   referenceCode: string,
   title: string,
@@ -230,7 +220,7 @@ async function ingestKnowledgeForLink(
   const sections: string[] = [];
 
   sections.push(`# Candidate Pre-Screening Guidelines: ${title || 'Open Position'} (${referenceCode})`);
-  
+
   const roleSpecs: string[] = [];
   if (department) roleSpecs.push(`- Department: ${department}`);
   if (details?.location) roleSpecs.push(`- Location: ${details.location}`);
@@ -287,7 +277,7 @@ async function ingestKnowledgeForLink(
     const res = await fetch(`${REAPDAT_API}/knowledge/portal/ingest`, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${token}`,
+        ...authHeaders,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -317,22 +307,237 @@ export async function OPTIONS(req: NextRequest) {
   });
 }
 
+/**
+ * GET /api/reapdat-link?referenceCode=REQ-XXXXX
+ * Fetches the specific active link for a single requisition.
+ */
 export async function GET(req: NextRequest) {
-  return NextResponse.json(
-    { status: 'ok', service: 'reapdat-link-provisioner' },
-    { headers: corsHeaders(req) }
-  );
+  const cors = corsHeaders(req);
+  const ref = req.nextUrl.searchParams.get('referenceCode')?.trim();
+
+  if (!ref) {
+    return NextResponse.json(
+      { status: 'ok', service: 'reapdat-link-provisioner' },
+      { headers: cors }
+    );
+  }
+
+  try {
+    const authHeaders = await getAuthHeaders();
+    const res = await fetch(`${REAPDAT_API}/chat-links`, {
+      headers: authHeaders,
+      signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
+    });
+
+    if (!res.ok) {
+      return NextResponse.json(
+        { ok: false, success: false, error: `Reapdat returned status ${res.status}` },
+        { status: res.status, headers: cors }
+      );
+    }
+
+    const data = await res.json();
+    const links: ReapdatLink[] = Array.isArray(data.links) ? data.links : [];
+    const wanted = ref.toLowerCase();
+
+    // Match by tag (e.g. "req-43674") or matching reference in label
+    const matched = links.find(
+      (l) =>
+        (l.tags || []).some((t) => String(t).toLowerCase() === wanted) ||
+        (l.label && l.label.toLowerCase().includes(wanted))
+    );
+
+    if (!matched) {
+      return NextResponse.json(
+        { ok: true, success: true, found: false, message: `No active link found for ${ref}` },
+        { status: 200, headers: cors }
+      );
+    }
+
+    return NextResponse.json(
+      { ok: true, success: true, found: true, link: matched },
+      { status: 200, headers: cors }
+    );
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'Failed to query link';
+    return NextResponse.json(
+      { ok: false, success: false, error: msg },
+      { status: 500, headers: cors }
+    );
+  }
 }
 
-export async function POST(req: NextRequest) {
+/**
+ * PATCH /api/reapdat-link
+ * Updates channels (chat/call/book) or active state for a specific link.
+ */
+export async function PATCH(req: NextRequest) {
   const cors = corsHeaders(req);
 
   try {
     const body = await req.json().catch(() => ({}));
+    const linkId = String(body.linkId ?? '').trim();
 
-    // Trim and cap before anything is built from these: they reach a vendor
-    // payload with its own length limits (label 120, tags 8x40), and a 422 from
-    // Reapdat is a worse error than a truncation we chose.
+    if (!linkId) {
+      return NextResponse.json(
+        { ok: false, success: false, error: 'Missing linkId' },
+        { status: 400, headers: cors }
+      );
+    }
+
+    const payload: Record<string, unknown> = {};
+    if (Array.isArray(body.channels) && body.channels.length > 0) {
+      payload.channels = body.channels;
+    }
+    if (typeof body.label === 'string') {
+      payload.label = body.label.slice(0, 120);
+    }
+    if (typeof body.is_active === 'boolean') {
+      payload.is_active = body.is_active;
+    }
+
+    const authHeaders = await getAuthHeaders();
+    const patchRes = await fetch(`${REAPDAT_API}/chat-links/${linkId}`, {
+      method: 'PATCH',
+      headers: {
+        ...authHeaders,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
+    });
+
+    if (!patchRes.ok) {
+      const err = await patchRes.json().catch(() => ({}));
+      return NextResponse.json(
+        { ok: false, success: false, error: err.detail || `Update failed (${patchRes.status})` },
+        { status: patchRes.status, headers: cors }
+      );
+    }
+
+    const updated = await patchRes.json();
+    return NextResponse.json(
+      { ok: true, success: true, link: updated },
+      { status: 200, headers: cors }
+    );
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'Error updating link';
+    return NextResponse.json(
+      { ok: false, success: false, error: msg },
+      { status: 500, headers: cors }
+    );
+  }
+}
+
+/**
+ * POST /api/reapdat-link
+ * Handles:
+ * 1. multipart/form-data: Document uploads to link knowledge base (/knowledge/portal/upload)
+ * 2. action="revoke": Revokes an active link
+ * 3. Default: Provisions a new screening link and syncs knowledge
+ */
+export async function POST(req: NextRequest) {
+  const cors = corsHeaders(req);
+  const contentType = req.headers.get('content-type') || '';
+
+  try {
+    const authHeaders = await getAuthHeaders();
+
+    // 1. Handle File Upload (Multipart Form Data)
+    if (contentType.includes('multipart/form-data')) {
+      const formData = await req.formData();
+      const file = formData.get('file') as File | null;
+      const linkId = formData.get('link_id') as string | null;
+
+      if (!file || !linkId) {
+        return NextResponse.json(
+          { ok: false, success: false, error: 'Both file and link_id are required' },
+          { status: 400, headers: cors }
+        );
+      }
+
+      const uploadData = new FormData();
+      uploadData.append('file', file);
+      uploadData.append('link_id', linkId);
+
+      const uploadRes = await fetch(`${REAPDAT_API}/knowledge/portal/upload`, {
+        method: 'POST',
+        headers: authHeaders,
+        body: uploadData,
+        signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
+      });
+
+      if (!uploadRes.ok) {
+        const err = await uploadRes.json().catch(() => ({}));
+        return NextResponse.json(
+          { ok: false, success: false, error: err.detail || `Upload failed (${uploadRes.status})` },
+          { status: uploadRes.status, headers: cors }
+        );
+      }
+
+      const uploadResult = await uploadRes.json();
+      return NextResponse.json(
+        { ok: true, success: true, result: uploadResult },
+        { status: 200, headers: cors }
+      );
+    }
+
+    // 2. JSON Request Handling
+    const body = await req.json().catch(() => ({}));
+
+    // Action: Revoke Link
+    if (body.action === 'revoke' && body.linkId) {
+      const revokeRes = await fetch(`${REAPDAT_API}/chat-links/${body.linkId}/revoke`, {
+        method: 'POST',
+        headers: authHeaders,
+        signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
+      });
+
+      if (!revokeRes.ok) {
+        const err = await revokeRes.json().catch(() => ({}));
+        return NextResponse.json(
+          { ok: false, success: false, error: err.detail || 'Failed to revoke link' },
+          { status: revokeRes.status, headers: cors }
+        );
+      }
+
+      return NextResponse.json(
+        { ok: true, success: true, message: 'Link successfully revoked' },
+        { status: 200, headers: cors }
+      );
+    }
+
+    // Action: Ingest Text / Q&A Knowledge
+    if (body.action === 'ingest' && body.linkId && body.content) {
+      const ingestRes = await fetch(`${REAPDAT_API}/knowledge/portal/ingest`, {
+        method: 'POST',
+        headers: {
+          ...authHeaders,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          link_id: body.linkId,
+          content: body.content,
+        }),
+        signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
+      });
+
+      if (!ingestRes.ok) {
+        const err = await ingestRes.json().catch(() => ({}));
+        return NextResponse.json(
+          { ok: false, success: false, error: err.detail || 'Knowledge ingest failed' },
+          { status: ingestRes.status, headers: cors }
+        );
+      }
+
+      const ingestResult = await ingestRes.json();
+      return NextResponse.json(
+        { ok: true, success: true, result: ingestResult },
+        { status: 200, headers: cors }
+      );
+    }
+
+    // Default: Provision link & sync knowledge
     const referenceCode = String(body.referenceCode ?? '').trim().slice(0, 20);
     const title = String(body.title ?? '').trim().slice(0, 100);
     const department = String(body.department ?? '').trim().slice(0, 40);
@@ -355,45 +560,50 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    let token = await getReapdatToken();
-
-    // Best-effort, and deliberately before the create so the freed slot is
-    // available to it.
+    // Best-effort cleanup of previous superseded link for this reference code
     try {
-      await revokeSupersededLinks(token, referenceCode);
+      await revokeSupersededLinks(authHeaders, referenceCode);
     } catch (cleanupErr) {
       console.warn('Reapdat link cleanup skipped:', cleanupErr);
     }
 
     const linkLabel = title ? `${title} (${referenceCode})` : `Requisition ${referenceCode}`;
-
     const tags: string[] = [referenceCode];
     if (department) tags.push(department);
 
     const payload = {
       label: linkLabel.slice(0, 120),
       tags: tags.slice(0, 8),
-      channels: ['chat', 'call'],
+      channels: Array.isArray(body.channels) && body.channels.length > 0 ? body.channels : ['chat', 'call'],
       inherit_main_kb: true,
     };
 
-    let createRes = await createChatLink(token, payload);
+    let createRes = await fetch(`${REAPDAT_API}/chat-links`, {
+      method: 'POST',
+      headers: {
+        ...authHeaders,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
+    });
 
-    // A token can be revoked on Reapdat's side before its stated expiry, which
-    // leaves a cached token that looks fresh and is not. One forced re-auth and
-    // one retry; a second 401 is a real authorization problem, not staleness.
     if (createRes.status === 401) {
       console.warn('Reapdat rejected cached token; re-authenticating once.');
-      token = await getReapdatToken(true);
-      createRes = await createChatLink(token, payload);
+      const freshHeaders = await getAuthHeaders(true);
+      createRes = await fetch(`${REAPDAT_API}/chat-links`, {
+        method: 'POST',
+        headers: {
+          ...freshHeaders,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
+      });
     }
 
     if (!createRes.ok) {
       const errData = await createRes.json().catch(() => ({}));
-      if (createRes.status === 401) {
-        cachedToken = null;
-        tokenExpiresAt = 0;
-      }
       return NextResponse.json(
         {
           ok: false,
@@ -408,12 +618,11 @@ export async function POST(req: NextRequest) {
     const linkUrl = linkData.url;
     const linkId = String(linkData.id ?? '');
 
-    // Ingest the role context, job description, and screening questions into the link's isolated knowledge base
     let ingestedItems = 0;
     if (linkId) {
       try {
         ingestedItems = await ingestKnowledgeForLink(
-          token,
+          authHeaders,
           linkId,
           referenceCode,
           title,
@@ -433,16 +642,6 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    /*
-      Mirror the link onto the requisition.
-
-      This runs on the public anon key, which RLS grants SELECT and not UPDATE,
-      so it is expected to be refused until a service-role key is configured
-      here. The portal performs the authoritative write itself once this
-      response returns, so a refusal costs nothing — but supabase-js reports it
-      in `error` rather than throwing, and the previous try/catch could not see
-      that, which made a permanent no-op look like a working write.
-    */
     if (supabase) {
       const { error: dbError } = await supabase
         .from('requirements')
@@ -462,6 +661,7 @@ export async function POST(req: NextRequest) {
         success: true,
         status: 'provisioned',
         link: linkUrl,
+        linkId: linkData.id,
         message: `REAPDAT chat & voice screening link provisioned for ${referenceCode}`,
         details: {
           id: linkData.id,
