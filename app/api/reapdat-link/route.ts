@@ -347,7 +347,7 @@ async function ingestKnowledgeForLink(
   // the model the tiebreak it otherwise has to guess at.
   const revisionStamp = new Date().toISOString();
 
-  const publicJobUrl = `https://n2psystems.ca/jobs/${encodeURIComponent(referenceCode)}`;
+  const publicJobUrl = `https://n2psystems.vercel.app/jobs/${encodeURIComponent(referenceCode)}`;
 
   sections.push(`# Candidate Pre-Screening Guidelines: ${title || 'Open Position'} (${referenceCode})`);
   sections.push(
