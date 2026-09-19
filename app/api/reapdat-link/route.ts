@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { supabase, supabaseAdmin } from '@/lib/supabase';
 
 const REAPDAT_API = 'https://api.reapdat.com/api/v1';
 
@@ -162,6 +162,22 @@ interface ReapdatLink {
 }
 
 /**
+ * Matches a link to a requisition code accurately:
+ * 1. Checks that the link is active
+ * 2. Checks exact tag equality OR exact word boundary inside label (prevents REQ-4367 matching REQ-43674)
+ */
+function matchesReferenceCode(link: ReapdatLink, wantedCode: string): boolean {
+  if (link.status && link.status !== 'active') return false;
+  if (link.is_active === false) return false;
+  const wanted = wantedCode.toLowerCase().trim();
+  const hasTag = (link.tags || []).some((t) => String(t).toLowerCase().trim() === wanted);
+  if (hasTag) return true;
+  if (!link.label) return false;
+  const escaped = wanted.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`\\b${escaped}\\b`, 'i').test(link.label);
+}
+
+/**
  * Reclaims the slot a superseded link is holding.
  */
 async function revokeSupersededLinks(authHeaders: Record<string, string>, referenceCode: string): Promise<void> {
@@ -177,15 +193,11 @@ async function revokeSupersededLinks(authHeaders: Record<string, string>, refere
 
   const data = await listRes.json();
   const links: ReapdatLink[] = Array.isArray(data.links) ? data.links : [];
-  const wanted = referenceCode.toLowerCase();
-  const superseded = links.filter(
-    (link) =>
-      link.status === 'active' &&
-      (link.tags || []).some((tag) => String(tag).toLowerCase() === wanted)
-  );
+  const superseded = links.filter((link) => matchesReferenceCode(link, referenceCode));
 
   for (const link of superseded) {
-    const delRes = await fetch(`${REAPDAT_API}/chat-links/${link.id}`, {
+    const safeId = encodeURIComponent(link.id);
+    const delRes = await fetch(`${REAPDAT_API}/chat-links/${safeId}`, {
       method: 'DELETE',
       headers: authHeaders,
       signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
@@ -194,7 +206,7 @@ async function revokeSupersededLinks(authHeaders: Record<string, string>, refere
     if (delRes.ok) {
       console.info(`Deleted superseded Reapdat link ${link.id} for ${referenceCode}.`);
     } else {
-      await fetch(`${REAPDAT_API}/chat-links/${link.id}/revoke`, {
+      await fetch(`${REAPDAT_API}/chat-links/${safeId}/revoke`, {
         method: 'POST',
         headers: authHeaders,
         signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
@@ -482,14 +494,7 @@ export async function GET(req: NextRequest) {
 
     const data = await res.json();
     const links: ReapdatLink[] = Array.isArray(data.links) ? data.links : [];
-    const wanted = ref.toLowerCase();
-
-    // Match by tag (e.g. "req-43674") or matching reference in label
-    const matched = links.find(
-      (l) =>
-        (l.tags || []).some((t) => String(t).toLowerCase() === wanted) ||
-        (l.label && l.label.toLowerCase().includes(wanted))
-    );
+    const matched = links.find((l) => matchesReferenceCode(l, ref));
 
     if (!matched) {
       return NextResponse.json(
@@ -541,7 +546,8 @@ export async function PATCH(req: NextRequest) {
     }
 
     const authHeaders = await getAuthHeaders();
-    const patchRes = await fetch(`${REAPDAT_API}/chat-links/${linkId}`, {
+    const safeLinkId = encodeURIComponent(linkId);
+    const patchRes = await fetch(`${REAPDAT_API}/chat-links/${safeLinkId}`, {
       method: 'PATCH',
       headers: {
         ...authHeaders,
@@ -667,7 +673,8 @@ export async function POST(req: NextRequest) {
 
     // Action: Revoke Link
     if (body.action === 'revoke' && body.linkId) {
-      const revokeRes = await fetch(`${REAPDAT_API}/chat-links/${body.linkId}/revoke`, {
+      const safeRevokeId = encodeURIComponent(body.linkId);
+      const revokeRes = await fetch(`${REAPDAT_API}/chat-links/${safeRevokeId}/revoke`, {
         method: 'POST',
         headers: authHeaders,
         signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
@@ -683,36 +690,6 @@ export async function POST(req: NextRequest) {
 
       return NextResponse.json(
         { ok: true, success: true, message: 'Link successfully revoked' },
-        { status: 200, headers: cors }
-      );
-    }
-
-    // Action: Ingest Text / Q&A Knowledge
-    if (body.action === 'ingest' && body.linkId && body.content) {
-      const ingestRes = await fetch(`${REAPDAT_API}/knowledge/portal/ingest`, {
-        method: 'POST',
-        headers: {
-          ...authHeaders,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          link_id: body.linkId,
-          content: body.content,
-        }),
-        signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
-      });
-
-      if (!ingestRes.ok) {
-        const err = await ingestRes.json().catch(() => ({}));
-        return NextResponse.json(
-          { ok: false, success: false, error: err.detail || 'Knowledge ingest failed' },
-          { status: ingestRes.status, headers: cors }
-        );
-      }
-
-      const ingestResult = await ingestRes.json();
-      return NextResponse.json(
-        { ok: true, success: true, result: ingestResult },
         { status: 200, headers: cors }
       );
     }
@@ -773,12 +750,7 @@ export async function POST(req: NextRequest) {
         if (listRes && listRes.ok) {
           const listData = await listRes.json().catch(() => ({}));
           const links: ReapdatLink[] = Array.isArray(listData.links) ? listData.links : [];
-          const wanted = referenceCode.toLowerCase();
-          const matched = links.find(
-            (l) =>
-              (l.tags || []).some((t) => String(t).toLowerCase() === wanted) ||
-              (l.label && l.label.toLowerCase().includes(wanted))
-          );
+          const matched = links.find((l) => matchesReferenceCode(l, referenceCode));
           if (matched) {
             targetLinkId = matched.id;
             targetUrl = matched.url || '';
@@ -809,7 +781,8 @@ export async function POST(req: NextRequest) {
       {
         const greetingText = `Welcome! I am the AI screening assistant for the ${title || 'Open Position'} role (${referenceCode}) at N2P Systems. I'll be asking a few questions to learn more about your qualifications. Are you ready to begin?`;
         // Update link metadata to ensure greeting is set and main kb contamination is disabled
-        fetch(`${REAPDAT_API}/chat-links/${targetLinkId}`, {
+        const safeTargetLinkId = encodeURIComponent(targetLinkId);
+        await fetch(`${REAPDAT_API}/chat-links/${safeTargetLinkId}`, {
           method: 'PATCH',
           headers: { ...authHeaders, 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -984,8 +957,9 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    if (supabase) {
-      const { error: dbError } = await supabase
+    const dbClient = supabaseAdmin || supabase;
+    if (dbClient) {
+      const { error: dbError } = await dbClient
         .from('requirements')
         .update({ reapdat_chat_link: linkUrl, reapdat_enabled: true })
         .eq('reference_code', referenceCode);

@@ -211,8 +211,15 @@ export function mapRequirementToJob(req: any): Job {
         : ['Technical Consulting', 'Software Engineering'];
 
   const minYears = toNumber(req.min_experience_years);
-  const screeningQuestions: string[] = Array.isArray(req.screening_questions)
-    ? req.screening_questions.filter((q: any) => typeof q === 'string' && q.trim().length > 0)
+  const rawQuestions = req.public_screening_questions || req.screening_questions;
+  const screeningQuestions: string[] = Array.isArray(rawQuestions)
+    ? rawQuestions
+        .map((q: any) => {
+          if (typeof q === 'string') return q.trim();
+          if (typeof q === 'object' && q !== null && q.question) return String(q.question).trim();
+          return '';
+        })
+        .filter((text: string) => text.length > 0)
     : [];
 
   return {

@@ -162,7 +162,24 @@ export async function GET(req: NextRequest) {
       return {
         ...base,
         description: req.description,
-        screening_questions: req.screening_questions || [],
+        screening_questions: Array.isArray(req.screening_questions)
+          ? req.screening_questions
+              .map((q: unknown) => {
+                if (typeof q === 'string') return q.trim();
+                if (typeof q === 'object' && q !== null) {
+                  const item = q as { id?: string; question?: string; responseType?: string };
+                  if (item.question) {
+                    return {
+                      id: item.id,
+                      question: String(item.question).trim(),
+                      responseType: item.responseType,
+                    };
+                  }
+                }
+                return null;
+              })
+              .filter(Boolean)
+          : [],
         closing_date: req.closing_date,
         created_at: req.created_at,
         updated_at: req.updated_at,
