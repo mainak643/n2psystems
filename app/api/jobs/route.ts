@@ -17,19 +17,14 @@ export async function OPTIONS() {
   });
 }
 
-export async function GET(req: NextRequest) {
-  try {
-    const { searchParams } = new URL(req.url);
-    const codeParam = searchParams.get('code') || searchParams.get('reference_code') || searchParams.get('ref') || '';
-    const queryParam = (searchParams.get('q') || searchParams.get('query') || searchParams.get('search') || '').toLowerCase().trim();
-    const isSummary = searchParams.get('summary') === 'true' || searchParams.get('compact') === 'true';
-    const limitParam = parseInt(searchParams.get('limit') || '0', 10);
-
-    let query = supabase
-      .from('requirements')
-      .select(
-        isSummary
-          ? `
+/**
+ * Select lists are module-level literals on purpose. `supabase.select()` derives
+ * its row type by parsing the string at the type level, and a ternary expression
+ * in that position collapses to `ParserError<"Unexpected input: ">` - which is
+ * what put 42 errors on this file and, with type checking wired in as a build
+ * gate in next.config, broke `next build` outright.
+ */
+const SUMMARY_COLUMNS = `
             id,
             reference_code,
             title,
@@ -46,8 +41,9 @@ export async function GET(req: NextRequest) {
             mandatory_skills,
             min_experience_years,
             reapdat_chat_link
-          `
-          : `
+          `;
+
+const FULL_COLUMNS = `
             id,
             reference_code,
             title,
@@ -70,7 +66,7 @@ export async function GET(req: NextRequest) {
             closing_date,
             created_at,
             updated_at,
-            screening_questions,
+            public_screening_questions,
             reapdat_enabled,
             reapdat_chat_link,
             recruitment_clients (
@@ -78,8 +74,62 @@ export async function GET(req: NextRequest) {
               location,
               industry
             )
-          `
-      )
+          `;
+
+/**
+ * Shape of a public requisition row.
+ *
+ * Declared here and applied with `.returns<>()` because `supabase.select()`
+ * infers its row type by parsing the select string at the type level, and these
+ * lists are long enough to exhaust that parser - it gives up partway and yields
+ * `ParserError<"Unexpected input: ...">`, so every property access below fails
+ * to compile. With type checking wired in as a build gate in next.config that
+ * failed `next build` outright. Naming the columns once restores real checking
+ * at the consumption sites instead of silencing it.
+ */
+interface PublicRequirementRow {
+  id: string;
+  reference_code: string | null;
+  title: string | null;
+  department: string | null;
+  employment_type: string | null;
+  experience_level: string | null;
+  location: string | null;
+  work_mode: string | null;
+  salary_min: number | null;
+  salary_max: number | null;
+  salary_currency: string | null;
+  openings: number | null;
+  status: string | null;
+  skills: string[] | null;
+  description: string | null;
+  min_experience_years: number | null;
+  max_experience_years: number | null;
+  mandatory_skills: string[] | null;
+  preferred_skills: string[] | null;
+  closing_date: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+  public_screening_questions: unknown[] | null;
+  reapdat_enabled: boolean | null;
+  reapdat_chat_link: string | null;
+  recruitment_clients:
+    | { name: string | null; location: string | null; industry: string | null }
+    | { name: string | null; location: string | null; industry: string | null }[]
+    | null;
+}
+
+export async function GET(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const codeParam = searchParams.get('code') || searchParams.get('reference_code') || searchParams.get('ref') || '';
+    const queryParam = (searchParams.get('q') || searchParams.get('query') || searchParams.get('search') || '').toLowerCase().trim();
+    const isSummary = searchParams.get('summary') === 'true' || searchParams.get('compact') === 'true';
+    const limitParam = parseInt(searchParams.get('limit') || '0', 10);
+
+    let query = supabase
+      .from('requirements')
+      .select(isSummary ? SUMMARY_COLUMNS : FULL_COLUMNS)
       .in('status', ['Active', 'Open'])
       .order('created_at', { ascending: false });
 
@@ -91,7 +141,7 @@ export async function GET(req: NextRequest) {
       query = query.limit(8);
     }
 
-    const { data: requirements, error } = await query;
+    const { data: requirements, error } = await query.returns<PublicRequirementRow[]>();
 
     if (error) {
       console.error('Error fetching jobs for public API:', error);
@@ -162,8 +212,11 @@ export async function GET(req: NextRequest) {
       return {
         ...base,
         description: req.description,
-        screening_questions: Array.isArray(req.screening_questions)
-          ? req.screening_questions
+        // Sourced from the sanitized column: the DB trigger has already stripped
+        // idealAnswer/numericThreshold, and `anon` can no longer read the raw
+        // one at all. The per-field mapping below stays as a second guard.
+        screening_questions: Array.isArray(req.public_screening_questions)
+          ? req.public_screening_questions
               .map((q: unknown) => {
                 if (typeof q === 'string') return q.trim();
                 if (typeof q === 'object' && q !== null) {

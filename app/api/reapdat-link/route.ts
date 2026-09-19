@@ -22,6 +22,17 @@ const ALLOWED_UPLOAD_EXTENSIONS = new Set(['pdf', 'docx', 'txt', 'csv', 'xlsx', 
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 
 /**
+ * Ceilings on the two ingest fields that had none. `description` is a free-text
+ * JD and `rawJson` is an arbitrary object, so between them the generated
+ * document was unbounded and caller-controlled - a 413 from REAPDAT at best,
+ * and at worst a knowledge base whose retrieval is drowned by one requisition.
+ * Both cut points are announced in the text so the model knows it is reading a
+ * truncation rather than the whole role.
+ */
+const MAX_DESCRIPTION_CHARS = 20_000;
+const MAX_RAW_JSON_CHARS = 20_000;
+
+/**
  * Origins allowed to call this proxy.
  */
 const DEFAULT_ALLOWED_ORIGINS = [
@@ -48,7 +59,11 @@ function isAllowedOrigin(origin: string): boolean {
   if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) return true;
   try {
     const parsed = new URL(origin);
-    if (parsed.hostname.endsWith('.vercel.app') || parsed.hostname === 'n2psystems.ca') {
+    // Only this project's own preview deployments. A bare `.vercel.app` suffix
+    // reflected every project on the platform - including an attacker's - and
+    // paired it with Allow-Credentials.
+    if (/^n2-p-operations[a-z0-9-]*\.vercel\.app$/.test(parsed.hostname)) return true;
+    if (parsed.hostname === 'n2psystems.ca' || parsed.hostname === 'www.n2psystems.ca') {
       return true;
     }
   } catch {
@@ -71,6 +86,42 @@ function corsHeaders(req: NextRequest): Record<string, string> {
   }
 
   return headers;
+}
+
+/**
+ * Caller authentication.
+ *
+ * Everything past this point spends the operator's REAPDAT account: minting
+ * links against a capped tenant quota, revoking them, and writing into a link's
+ * knowledge base - the text the screening agent then speaks to candidates. CORS
+ * is not a control for any of that. It is advisory, browser-only, and a request
+ * that simply omits `Origin` (curl, a script, any server) was never rejected by
+ * it at all.
+ *
+ * The bearer token is the Supabase session JWT the portal already holds, so
+ * this adds no new secret to distribute. `auth.getUser` validates the
+ * signature and expiry against the project rather than trusting the claims.
+ */
+async function isAuthenticatedCaller(req: NextRequest): Promise<boolean> {
+  const header = req.headers.get('authorization') || '';
+  if (!/^bearer\s/i.test(header)) return false;
+  const token = header.slice(header.indexOf(' ') + 1).trim();
+  if (!token) return false;
+
+  try {
+    const { data, error } = await supabase.auth.getUser(token);
+    return !error && Boolean(data?.user);
+  } catch {
+    // A transport failure reaching the auth server is not proof of identity.
+    return false;
+  }
+}
+
+function unauthorized(cors: Record<string, string>): NextResponse {
+  return NextResponse.json(
+    { ok: false, success: false, error: 'Authentication required.' },
+    { status: 401, headers: cors }
+  );
 }
 
 // In-memory token cache to prevent hitting Reapdat login rate limits
@@ -118,6 +169,10 @@ async function getReapdatToken(forceRefresh = false): Promise<string> {
   if (forceRefresh) {
     cachedToken = null;
     tokenExpiresAt = 0;
+    // Drop the shared promise too. Reusing it would hand the 401 retry the
+    // very token that just failed, which is the one thing a force-refresh
+    // exists to avoid. The abandoned login still settles harmlessly.
+    inflightLogin = null;
   }
 
   if (cachedToken && tokenExpiresAt > Date.now() + 5 * 60 * 1000) {
@@ -372,7 +427,11 @@ Your mission is to conduct a warm, professional, and efficient initial screening
 
   // 3. Full Job Description Body
   if (details?.description) {
-    sections.push(`## Job Description & Responsibilities:\n${details.description}`);
+    const desc =
+      details.description.length > MAX_DESCRIPTION_CHARS
+        ? `${details.description.slice(0, MAX_DESCRIPTION_CHARS)}\n\n[Job description truncated at ${MAX_DESCRIPTION_CHARS} characters. Refer the candidate to the recruiter for anything not covered above.]`
+        : details.description;
+    sections.push(`## Job Description & Responsibilities:\n${desc}`);
   }
 
   // 4. Pre-Screening Questions & Dealbreaker Evaluation Rubric
@@ -414,9 +473,17 @@ Your mission is to conduct a warm, professional, and efficient initial screening
 
   // 5. Full Structured Dataset (JSON) for semantic entity parsing
   if (details?.rawJson && Object.keys(details.rawJson).length > 0) {
-    sections.push(
-      `## Complete Requisition Data (Structured JSON):\n\`\`\`json\n${JSON.stringify(details.rawJson, null, 2)}\n\`\`\``
-    );
+    // Compact, not pretty-printed: the indentation was pure token cost to the
+    // retriever and bought nothing, since no human reads this section.
+    const serialized = JSON.stringify(details.rawJson);
+    if (serialized.length <= MAX_RAW_JSON_CHARS) {
+      sections.push(
+        `## Complete Requisition Data (Structured JSON):\n\`\`\`json\n${serialized}\n\`\`\``
+      );
+    }
+    // Over the ceiling the block is dropped entirely rather than truncated:
+    // half a JSON object is not parseable, and the prose sections above already
+    // carry every field the agent screens on.
   }
 
   const unifiedDoc = sections.join('\n\n');
@@ -478,6 +545,10 @@ export async function GET(req: NextRequest) {
     );
   }
 
+  // The bare probe above stays open for uptime checks; resolving a requisition
+  // to its live candidate link does not.
+  if (!(await isAuthenticatedCaller(req))) return unauthorized(cors);
+
   try {
     const authHeaders = await getAuthHeaders();
     const res = await fetch(`${REAPDAT_API}/chat-links`, {
@@ -522,6 +593,7 @@ export async function GET(req: NextRequest) {
  */
 export async function PATCH(req: NextRequest) {
   const cors = corsHeaders(req);
+  if (!(await isAuthenticatedCaller(req))) return unauthorized(cors);
 
   try {
     const body = await req.json().catch(() => ({}));
@@ -589,6 +661,8 @@ export async function PATCH(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const cors = corsHeaders(req);
   const contentType = req.headers.get('content-type') || '';
+
+  if (!(await isAuthenticatedCaller(req))) return unauthorized(cors);
 
   try {
     const authHeaders = await getAuthHeaders();
@@ -770,6 +844,10 @@ export async function POST(req: NextRequest) {
           {
             ok: false,
             success: false,
+            // Machine-readable so the portal does not have to pattern-match
+            // English prose to tell "this link is gone, mint a new one" from
+            // "REAPDAT is unreachable, change nothing and retry".
+            code: lookupFailed ? 'upstream_unreachable' : 'link_not_found',
             error: lookupFailed
               ? 'Could not reach Reapdat to locate this screening link. The candidate link is unchanged - please retry the sync in a moment.'
               : `No active Reapdat screening link exists for ${referenceCode}. Generate a link before syncing knowledge.`,
