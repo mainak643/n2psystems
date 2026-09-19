@@ -347,15 +347,33 @@ async function ingestKnowledgeForLink(
   // the model the tiebreak it otherwise has to guess at.
   const revisionStamp = new Date().toISOString();
 
+  const publicJobUrl = `https://n2psystems.ca/jobs/${encodeURIComponent(referenceCode)}`;
+
   sections.push(`# Candidate Pre-Screening Guidelines: ${title || 'Open Position'} (${referenceCode})`);
   sections.push(
-    `## CRITICAL REQUISITION SCOPE & IDENTITY (READ FIRST):
+    `## CRITICAL REQUISITION SCOPE & APPLICATION INTERVIEW RULES (READ FIRST):
 - Target Position: ${title || 'Open Position'}
 - Requisition Reference Code: ${referenceCode}
 - Hiring Company: N2P Systems
-- The candidate opening this screening link is ALREADY applying specifically for this position: "${title || 'Open Position'}" (${referenceCode}).
-- NEVER ask the candidate "Which job are you interested in?" or "What role are you applying for?". This link is dedicated solely and exclusively to this role.
-- Immediately confirm and proceed with screening for ${title || 'Open Position'} (${referenceCode}) whenever the candidate greets you, says they want to apply, or asks about the position.`
+- Official Public Job Posting: ${publicJobUrl}
+
+### STRICT ANTI-REDIRECT & APPLICATION SCREENING RULES:
+1. THIS CONVERSATION IS THE APPLICATION SCREENING INTERVIEW:
+   - The candidate is ALREADY applying right now by talking to you.
+   - NEVER tell the candidate: "Please use the application form to apply", "Apply online", or "Submit an application first".
+   - NEVER output broken markdown or placeholder URLs like "[here](<address>)", "[link](<url>)", or "<address>".
+   - There is NO separate application form to direct candidates to. Do NOT send them away.
+
+2. IMMEDIATE SCREENING INTERVIEW EXECUTION:
+   - When the candidate greets you ("hi", "hello"), says "I want to apply", or confirms "yes", DO NOT tell them to go anywhere or ask redundant permission questions.
+   - Acknowledge warmly and IMMEDIATELY ask Question 1 from the Mandatory Pre-Screening Questions below!
+   - Example opening response: "Welcome! I am the AI screening assistant for the ${title || 'Open Position'} position at N2P Systems. I'll be asking a few quick qualification questions to get your application moving. Let's begin: [Question 1]?"
+
+3. STEP-BY-STEP INTERVIEW PACING:
+   - Ask exactly ONE question at a time.
+   - Wait for the candidate's response before asking the next question.
+   - Do NOT ask all questions at once.
+   - If the candidate explicitly asks where the job is posted online, give them the real URL: ${publicJobUrl} — and immediately continue the interview here.`
   );
   sections.push(
     `## Revision Control:\n- Revision timestamp: ${revisionStamp}\n- Requisition: ${referenceCode}\n- This document is the authoritative specification for ${referenceCode}. If the knowledge base contains any earlier revision of this document for the same requisition code, that earlier revision is void: use only the latest revision timestamp and ignore role details, screening questions and dealbreakers stated in older revisions.`
@@ -462,12 +480,20 @@ Your mission is to conduct a warm, professional, and efficient initial screening
   });
 
   if (formattedQuestions.length > 0) {
-    sections.push(`## Mandatory Pre-Screening Questions & Dealbreakers:\n${formattedQuestions.join('\n\n')}`);
-  } else {
-    // Said out loud rather than omitted. A recruiter who deletes every question
-    // must not leave a document whose silence an older revision can fill in.
     sections.push(
-      `## Mandatory Pre-Screening Questions & Dealbreakers:\nThis requisition has NO pre-screening questions or dealbreakers configured as of this revision. Do not ask any screening questions listed in an earlier revision of this document.`
+      `## Mandatory Pre-Screening Questions (ASK THESE ONE BY ONE IN THIS CONVERSATION):\n${formattedQuestions.join('\n\n')}`
+    );
+  } else {
+    const loc = details?.location || 'the job location';
+    const primarySkill = details?.mandatorySkills?.[0] || title || 'this position';
+    sections.push(
+      `## Mandatory Pre-Screening Questions (ASK THESE ONE BY ONE IN THIS CONVERSATION):
+1. Question: "Are you legally authorized to work in ${loc} without requiring current or future visa sponsorship?"
+   Evaluation Criteria & Ideal Answer: Candidate must confirm valid work authorization.
+2. Question: "How many years of professional hands-on experience do you have with ${primarySkill}?"
+   Evaluation Criteria & Ideal Answer: Candidate should meet or exceed the required experience level.
+3. Question: "What is your official notice period or earliest available start date?"
+   Evaluation Criteria & Ideal Answer: Candidate must provide their availability schedule.`
     );
   }
 
@@ -857,7 +883,7 @@ export async function POST(req: NextRequest) {
       }
 
       {
-        const greetingText = `Welcome! I am the AI screening assistant for the ${title || 'Open Position'} role (${referenceCode}) at N2P Systems. I'll be asking a few questions to learn more about your qualifications. Are you ready to begin?`;
+        const greetingText = `Welcome! I am the AI screening assistant for the ${title || 'Open Position'} role (${referenceCode}) at N2P Systems. I am here to conduct your initial screening interview. Are you ready to begin?`;
         // Update link metadata to ensure greeting is set and main kb contamination is disabled
         const safeTargetLinkId = encodeURIComponent(targetLinkId);
         await fetch(`${REAPDAT_API}/chat-links/${safeTargetLinkId}`, {
@@ -942,7 +968,7 @@ export async function POST(req: NextRequest) {
     const tags: string[] = [referenceCode];
     if (department) tags.push(department);
 
-    const greetingText = `Welcome! I am the AI screening assistant for the ${title || 'Open Position'} role (${referenceCode}) at N2P Systems. I'll be asking a few questions to learn more about your qualifications. Are you ready to begin?`;
+    const greetingText = `Welcome! I am the AI screening assistant for the ${title || 'Open Position'} role (${referenceCode}) at N2P Systems. I am here to conduct your initial screening interview. Are you ready to begin?`;
 
     const payload = {
       label: linkLabel.slice(0, 120),
