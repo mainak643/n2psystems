@@ -282,7 +282,16 @@ async function ingestKnowledgeForLink(
 
   sections.push(`# Candidate Pre-Screening Guidelines: ${title || 'Open Position'} (${referenceCode})`);
   sections.push(
-    `## Revision Control (read first):\n- Revision timestamp: ${revisionStamp}\n- Requisition: ${referenceCode}\n- This document is the authoritative specification for ${referenceCode}. If the knowledge base contains any earlier revision of this document for the same requisition code, that earlier revision is void: use only the latest revision timestamp and ignore role details, screening questions and dealbreakers stated in older revisions.`
+    `## CRITICAL REQUISITION SCOPE & IDENTITY (READ FIRST):
+- Target Position: ${title || 'Open Position'}
+- Requisition Reference Code: ${referenceCode}
+- Hiring Company: N2P Systems
+- The candidate opening this screening link is ALREADY applying specifically for this position: "${title || 'Open Position'}" (${referenceCode}).
+- NEVER ask the candidate "Which job are you interested in?" or "What role are you applying for?". This link is dedicated solely and exclusively to this role.
+- Immediately confirm and proceed with screening for ${title || 'Open Position'} (${referenceCode}) whenever the candidate greets you, says they want to apply, or asks about the position.`
+  );
+  sections.push(
+    `## Revision Control:\n- Revision timestamp: ${revisionStamp}\n- Requisition: ${referenceCode}\n- This document is the authoritative specification for ${referenceCode}. If the knowledge base contains any earlier revision of this document for the same requisition code, that earlier revision is void: use only the latest revision timestamp and ignore role details, screening questions and dealbreakers stated in older revisions.`
   );
 
   // 1. Comprehensive Role Specifications
@@ -798,6 +807,19 @@ export async function POST(req: NextRequest) {
       }
 
       {
+        const greetingText = `Welcome! I am the AI screening assistant for the ${title || 'Open Position'} role (${referenceCode}) at N2P Systems. I'll be asking a few questions to learn more about your qualifications. Are you ready to begin?`;
+        // Update link metadata to ensure greeting is set and main kb contamination is disabled
+        fetch(`${REAPDAT_API}/chat-links/${targetLinkId}`, {
+          method: 'PATCH',
+          headers: { ...authHeaders, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            inherit_main_kb: false,
+            greeting: greetingText,
+            agent_name: 'N2P Screening Assistant',
+          }),
+          signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
+        }).catch((patchErr) => console.warn('Failed to update greeting during sync:', patchErr));
+
         const ingested = await ingestKnowledgeForLink(
           authHeaders,
           targetLinkId,
@@ -869,11 +891,15 @@ export async function POST(req: NextRequest) {
     const tags: string[] = [referenceCode];
     if (department) tags.push(department);
 
+    const greetingText = `Welcome! I am the AI screening assistant for the ${title || 'Open Position'} role (${referenceCode}) at N2P Systems. I'll be asking a few questions to learn more about your qualifications. Are you ready to begin?`;
+
     const payload = {
       label: linkLabel.slice(0, 120),
       tags: tags.slice(0, 8),
       channels: Array.isArray(body.channels) && body.channels.length > 0 ? body.channels : ['chat', 'call'],
-      inherit_main_kb: true,
+      inherit_main_kb: false, // Isolates this requisition so it does not pull other roles or company website crawls
+      greeting: greetingText,
+      agent_name: 'N2P Screening Assistant',
     };
 
     let createRes = await fetch(`${REAPDAT_API}/chat-links`, {
