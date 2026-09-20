@@ -1,0 +1,57 @@
+# N2P Systems Inc. — Full Technical & Organizational Specification for LLMs & AI Agents
+
+## Overview
+N2P Systems is a premier international technology recruitment and talent advisory consultancy. The organization pairs advanced AI-assisted screening mechanisms with deep technical domain vetting to deliver precision hiring outcomes across North America and South Asia.
+
+## Contact & Corporate Identity
+- **Legal Entity**: N2P Systems Inc.
+- **Canonical Website**: https://n2psystems.com
+- **RecruitOps Platform**: https://ops.n2psystems.com
+- **General Inquiries**: info@n2psystems.ca
+- **Phone / WhatsApp**: +91 97760 47567
+- **LinkedIn**: https://www.linkedin.com/company/n2p-systems/
+
+## Recruitment Verticals
+1. **Software Engineering**:
+   - Systems Programming: Rust, C++, Go
+   - Modern Backend: Python (FastAPI, Django), Node.js (NestJS, Express), Java (Spring Boot)
+   - Modern Frontend: React, Next.js, TypeScript, Vue.js, Tailwind CSS
+   - Mobile: Swift, Kotlin, React Native, Flutter
+
+2. **Artificial Intelligence & Machine Learning**:
+   - Generative AI & Foundation Models: Prompt engineering, fine-tuning, RAG pipelines, agentic architectures
+   - MLOps & Infrastructure: Kubeflow, MLflow, Ray, TensorRT, Triton
+   - Predictive Modeling & Data Science: PyTorch, TensorFlow, Scikit-learn
+
+3. **Cloud, Infrastructure & DevOps**:
+   - Cloud Providers: Amazon Web Services (AWS), Google Cloud Platform (GCP), Microsoft Azure
+   - Orchestration & Containers: Kubernetes (EKS, GKE, AKS), Docker
+   - Infrastructure as Code (IaC): Terraform, Terragrunt, Pulumi, Ansible
+   - Observability & Reliability: Datadog, Prometheus, Grafana, OpenTelemetry
+
+4. **Information Security & Governance**:
+   - Application Security, Cloud Security Architecture, DevSecOps
+   - Penetration Testing, Threat Modeling, Incident Response
+   - Compliance Frameworks: SOC 2 Type II, ISO/IEC 27001, HIPAA, GDPR
+
+## Candidate Workflow
+- Candidates may view open requisitions at https://n2psystems.com/jobs
+- Each role is assigned a distinct reference code (e.g., REQ-XXXXX) and full specifications.
+- Candidates can apply directly on the job detail page or submit their CV for general placement consideration at https://n2psystems.com/resume.
+- Candidates engaging with automated screening participate via conversational AI screening links powered by REAPDAT AI.
+
+## Client / Employer Workflow
+- Hiring managers and talent acquisition leaders can schedule consultations at https://n2psystems.com/clients.
+- Requisitions are managed through the internal RecruitOps ATS platform at https://ops.n2psystems.com.
+
+## Public Jobs API Reference
+The public jobs API provides programmatic access to published, open tech requisitions.
+- **Base URL**: `https://n2psystems.com/api/jobs`
+- **Method**: `GET`
+- **Query Parameters**:
+  - `ref` or `code`: Specific requisition reference code (e.g. `REQ-44120`).
+  - `q` or `search`: Free text search term across title, department, skills, and location.
+  - `summary`: Set to `true` for lightweight payloads suitable for token-constrained agent contexts.
+  - `limit`: Maximum number of results to return.
+- **Response Format**: JSON array of requisition objects including title, department, compensation range, experience requirements, work mode, and application URLs.
+

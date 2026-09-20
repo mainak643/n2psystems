@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { SITE_URL } from '@/lib/site';
 
 // Real-time freshness with fast edge caching
 export const revalidate = 30;
@@ -169,7 +170,7 @@ export async function GET(req: NextRequest) {
       items = items.slice(0, limitParam);
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://n2psystems.vercel.app';
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || SITE_URL || 'https://n2psystems.com';
     const formatted = items.map((req) => {
       const client = Array.isArray(req.recruitment_clients) ? req.recruitment_clients[0] : req.recruitment_clients;
       const base = {

@@ -6,11 +6,10 @@
  * Google rejects a JobPosting whose `url` does not resolve to the posting, so
  * this has to match wherever the app is actually served from.
  *
- * n2psystems.ca is the real domain — every contact point on the site
- * (email addresses, phone numbers) already points there. n2psystems.com
- * currently serves a separate WordPress site where /jobs returns 404, so it
- * must never be used as the fallback. Set NEXT_PUBLIC_SITE_URL to override
- * this (e.g. a Vercel preview URL) when the app isn't served from .ca.
+ * n2psystems.com is the permanent production domain for N2P Systems.
+ * Every canonical, sitemap, OpenGraph, and JobPosting JSON-LD URL resolves
+ * through this origin. Set NEXT_PUBLIC_SITE_URL to override this in staging
+ * or preview environments.
  *
  * Vercel injects VERCEL_PROJECT_PRODUCTION_URL on production builds, which is
  * a sane middle default: it is at least an origin that serves this app.
@@ -22,7 +21,7 @@ function resolveSiteUrl(): string {
   const vercel = process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL?.trim()
   if (vercel) return `https://${vercel.replace(/^https?:\/\//, '').replace(/\/+$/, '')}`
 
-  return 'https://n2psystems.ca'
+  return 'https://n2psystems.com'
 }
 
 export const SITE_URL = resolveSiteUrl()

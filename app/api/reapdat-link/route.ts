@@ -36,6 +36,9 @@ const MAX_RAW_JSON_CHARS = 20_000;
  * Origins allowed to call this proxy.
  */
 const DEFAULT_ALLOWED_ORIGINS = [
+  'https://ops.n2psystems.com',
+  'https://n2psystems.com',
+  'https://www.n2psystems.com',
   'https://n2-p-operations.vercel.app',
   'http://localhost:5173',
   'http://localhost:5174',
@@ -63,7 +66,13 @@ function isAllowedOrigin(origin: string): boolean {
     // reflected every project on the platform - including an attacker's - and
     // paired it with Allow-Credentials.
     if (/^n2-p-operations[a-z0-9-]*\.vercel\.app$/.test(parsed.hostname)) return true;
-    if (parsed.hostname === 'n2psystems.ca' || parsed.hostname === 'www.n2psystems.ca') {
+    if (
+      parsed.hostname === 'ops.n2psystems.com' ||
+      parsed.hostname === 'n2psystems.com' ||
+      parsed.hostname === 'www.n2psystems.com' ||
+      parsed.hostname === 'n2psystems.ca' ||
+      parsed.hostname === 'www.n2psystems.ca'
+    ) {
       return true;
     }
   } catch {
@@ -347,7 +356,7 @@ async function ingestKnowledgeForLink(
   // the model the tiebreak it otherwise has to guess at.
   const revisionStamp = new Date().toISOString();
 
-  const publicJobUrl = `https://n2psystems.vercel.app/jobs/${encodeURIComponent(referenceCode)}`;
+  const publicJobUrl = `https://n2psystems.com/jobs/${encodeURIComponent(referenceCode)}`;
 
   sections.push(`# Candidate Pre-Screening Guidelines: ${title || 'Open Position'} (${referenceCode})`);
   sections.push(

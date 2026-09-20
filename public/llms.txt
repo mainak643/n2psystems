@@ -1,0 +1,32 @@
+# N2P Systems — Global Technology Recruitment
+
+> N2P Systems is an elite global technology recruitment firm connecting top-tier engineering, AI/ML, data science, and tech leadership talent with high-growth enterprises across Canada, the United States, and India.
+
+## Core Services & Specializations
+- **Software Engineering**: Full-stack, backend (Go, Python, Java, Node.js), frontend (React, TypeScript), mobile (iOS, Android).
+- **AI & Machine Learning**: LLM engineers, MLOps, Computer Vision, NLP, deep learning researchers.
+- **Cloud & DevOps**: AWS, GCP, Azure, Kubernetes, Terraform, Site Reliability Engineering (SRE).
+- **Data & Analytics**: Data engineering (Spark, Snowflake, dbt), data science, BI, data governance.
+- **Cybersecurity**: SecOps, penetration testing, compliance (SOC 2, ISO 27001), cloud security.
+- **Executive & Technical Leadership**: CTO, VP of Engineering, Engineering Managers, Product Leaders.
+
+## Operating Regions
+- **Canada**: Toronto (ON), Vancouver (BC), Ottawa (ON), Montreal (QC), Calgary (AB)
+- **United States**: San Francisco (CA), New York (NY), Austin (TX), Seattle (WA), Boston (MA)
+- **India**: Mumbai, Navi Mumbai, Bengaluru, Hyderabad, Pune, Delhi NCR
+
+## Official URLs & Resources
+- **Public Corporate Website**: https://n2psystems.com
+- **Careers & Live Job Board**: https://n2psystems.com/jobs
+- **Direct Candidate Profile Submission**: https://n2psystems.com/resume
+- **Employer Consultation & Client Inquiries**: https://n2psystems.com/clients
+- **Internal ATS / Recruiter Operations**: https://ops.n2psystems.com
+- **Public Requisitions API**: https://n2psystems.com/api/jobs
+- **Full Machine-Readable LLM Specification**: https://n2psystems.com/llms-full.txt
+
+## Public Jobs API for AI Agents & Search Engines
+- **Endpoint**: `GET https://n2psystems.com/api/jobs`
+- **Summary Mode**: `GET https://n2psystems.com/api/jobs?summary=true`
+- **Single Requisition Lookup**: `GET https://n2psystems.com/api/jobs?ref=REQ-XXXXX`
+- **Keyword Filter**: `GET https://n2psystems.com/api/jobs?q=kubernetes`
+

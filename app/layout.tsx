@@ -67,6 +67,43 @@ export const viewport = {
   viewportFit: 'cover' as const,
 }
 
+const organizationSchema = {
+  '@context': 'https://schema.org',
+  '@type': ['Organization', 'EmploymentAgency'],
+  '@id': `${SITE_URL}/#organization`,
+  name: 'N2P Systems',
+  legalName: 'N2P Systems Inc.',
+  url: SITE_URL,
+  logo: `${SITE_URL}/images/n2p-logo-light.png`,
+  description:
+    'Connecting elite technology professionals with leading companies across Canada, USA, and India. Precision-driven hiring for Software Engineering, Data Science, DevOps, AI/ML, Cybersecurity, and Product Leadership.',
+  sameAs: [
+    'https://www.linkedin.com/company/n2p-systems/',
+    'https://ops.n2psystems.com',
+  ],
+  knowsAbout: [
+    'Software Engineering Recruitment',
+    'Data Science & AI/ML Talent',
+    'DevOps & Cloud Engineering',
+    'Cybersecurity Staffing',
+    'Executive & Technical Leadership Hiring',
+  ],
+  areaServed: [
+    { '@type': 'Country', name: 'Canada' },
+    { '@type': 'Country', name: 'United States' },
+    { '@type': 'Country', name: 'India' },
+  ],
+  contactPoint: [
+    {
+      '@type': 'ContactPoint',
+      contactType: 'recruitment',
+      email: 'info@n2psystems.ca',
+      telephone: '+91 97760 47567',
+      availableLanguage: ['English'],
+    },
+  ],
+}
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -75,6 +112,10 @@ export default function RootLayout({
   return (
     <html lang="en" className={inter.variable}>
       <body className="font-sans antialiased overflow-x-hidden min-h-screen bg-background">
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
+        />
         <a href="#main-content" className="skip-link">
           Skip to main content
         </a>

@@ -29,6 +29,7 @@ const companyLinks = [
   { name: "About Us", href: "/#about" },
   { name: "Contact Us", href: "/#contact" },
   { name: "Partner With Us", href: "/clients" },
+  { name: "RecruitOps Portal", href: "https://ops.n2psystems.com", external: true },
 ]
 
 const careerLinks = [
@@ -218,14 +219,27 @@ export function Footer() {
             <ul className="space-y-0.5">
               {companyLinks.map((link) => (
                 <li key={link.name}>
-                  <Link
-                    href={link.href}
-                    /* Taller touch target on mobile, tighter on desktop */
-                    className="group flex items-center gap-2 py-2.5 text-caption text-on-dark-muted outline-none transition-all duration-150 hover:text-on-dark focus-visible:text-on-dark md:py-0 md:mb-3"
-                  >
-                    <span className="inline-block h-px w-0 shrink-0 bg-gradient-to-r from-sky-400/80 to-blue-400/50 transition-all duration-200 group-hover:w-3" />
-                    {link.name}
-                  </Link>
+                  {'external' in link && link.external ? (
+                    <a
+                      href={link.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="group flex items-center gap-2 py-2.5 text-caption text-on-dark-muted outline-none transition-all duration-150 hover:text-on-dark focus-visible:text-on-dark md:py-0 md:mb-3"
+                    >
+                      <span className="inline-block h-px w-0 shrink-0 bg-gradient-to-r from-sky-400/80 to-blue-400/50 transition-all duration-200 group-hover:w-3" />
+                      <span>{link.name}</span>
+                      <ArrowUpRight className="h-3 w-3 opacity-50 transition-opacity group-hover:opacity-100" aria-hidden="true" />
+                    </a>
+                  ) : (
+                    <Link
+                      href={link.href}
+                      /* Taller touch target on mobile, tighter on desktop */
+                      className="group flex items-center gap-2 py-2.5 text-caption text-on-dark-muted outline-none transition-all duration-150 hover:text-on-dark focus-visible:text-on-dark md:py-0 md:mb-3"
+                    >
+                      <span className="inline-block h-px w-0 shrink-0 bg-gradient-to-r from-sky-400/80 to-blue-400/50 transition-all duration-200 group-hover:w-3" />
+                      {link.name}
+                    </Link>
+                  )}
                 </li>
               ))}
             </ul>
