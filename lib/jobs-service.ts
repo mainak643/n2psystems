@@ -196,7 +196,7 @@ const PUBLIC_JOB_COLUMNS =
   'id, reference_code, title, department, employment_type, experience_level, location, work_mode, ' +
   'salary_min, salary_max, salary_currency, openings, status, skills, description, ' +
   'min_experience_years, max_experience_years, mandatory_skills, preferred_skills, public_screening_questions, ' +
-  'closing_date, created_at, updated_at, recruitment_clients(name, location, industry)';
+  'closing_date, created_at, updated_at';
 
 export function mapRequirementToJob(req: any): Job {
   const extracted = extractBulletPoints(req.description);
@@ -225,7 +225,7 @@ export function mapRequirementToJob(req: any): Job {
   return {
     id: req.reference_code || req.id,
     title: req.title || 'Technology Consultant',
-    company: req.recruitment_clients?.name?.trim() || 'N2P Enterprise Client',
+    company: 'N2P Systems',
     location: req.location?.trim() || 'Toronto, Canada',
     type: normalizeEmploymentType(req.employment_type),
     mode: normalizeWorkMode(req.work_mode),

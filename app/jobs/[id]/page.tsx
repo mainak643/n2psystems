@@ -47,7 +47,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     description,
     alternates: { canonical },
     openGraph: {
-      title: `${job.title} at ${job.company}`,
+      title: `${job.title} | N2P Systems Careers`,
       description,
       url: canonical,
       type: "website",

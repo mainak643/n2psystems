@@ -69,12 +69,7 @@ const FULL_COLUMNS = `
             updated_at,
             public_screening_questions,
             reapdat_enabled,
-            reapdat_chat_link,
-            recruitment_clients (
-              name,
-              location,
-              industry
-            )
+            reapdat_chat_link
           `;
 
 /**
@@ -114,10 +109,6 @@ interface PublicRequirementRow {
   public_screening_questions: unknown[] | null;
   reapdat_enabled: boolean | null;
   reapdat_chat_link: string | null;
-  recruitment_clients:
-    | { name: string | null; location: string | null; industry: string | null }
-    | { name: string | null; location: string | null; industry: string | null }[]
-    | null;
 }
 
 export async function GET(req: NextRequest) {
@@ -172,7 +163,6 @@ export async function GET(req: NextRequest) {
 
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || SITE_URL || 'https://n2psystems.com';
     const formatted = items.map((req) => {
-      const client = Array.isArray(req.recruitment_clients) ? req.recruitment_clients[0] : req.recruitment_clients;
       const base = {
         id: req.id,
         reference_code: req.reference_code,
@@ -195,7 +185,6 @@ export async function GET(req: NextRequest) {
         mandatory_skills: req.mandatory_skills || [],
         preferred_skills: req.preferred_skills || [],
         skills: req.skills || [],
-        client_name: client?.name || undefined,
         job_url: `${baseUrl}/jobs/${req.reference_code}`,
         apply_url: `${baseUrl}/jobs/${req.reference_code}/apply`,
         screening_chat_link: req.reapdat_chat_link || undefined,
