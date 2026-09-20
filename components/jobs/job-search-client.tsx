@@ -109,13 +109,13 @@ export function JobSearchClient({ initialJobs }: JobSearchClientProps) {
               className="h-11 rounded-xl pl-10"
             />
           </div>
-          <div className="flex gap-3">
+          <div className="flex gap-3 w-full lg:w-auto">
             <Button
               type="button"
               variant="outline"
               size="lg"
               onClick={() => setShowFilters(!showFilters)}
-              className="lg:hidden"
+              className="w-full lg:w-auto lg:hidden"
             >
               <Filter className="size-4 text-muted-foreground" aria-hidden="true" />
               Filters
@@ -297,9 +297,11 @@ export function JobSearchClient({ initialJobs }: JobSearchClientProps) {
                 </div>
 
                 <div className="flex items-center justify-between gap-4 border-t border-border pt-3 lg:flex-col lg:items-end lg:justify-end lg:gap-3 lg:border-t-0 lg:pt-0">
-                  <div className="text-body font-bold text-foreground sm:text-subtitle">
-                    {job.salary}
-                  </div>
+                  {job.salary ? (
+                    <div className="text-body font-bold text-foreground sm:text-subtitle">
+                      {job.salary}
+                    </div>
+                  ) : null}
                   <span className="flex items-center gap-1 text-body font-semibold text-primary transition-transform group-hover:translate-x-1">
                     View Details
                     <ArrowRight className="size-4" aria-hidden="true" />

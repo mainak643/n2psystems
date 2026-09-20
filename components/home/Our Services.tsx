@@ -230,7 +230,7 @@ export function SpecializationSection() {
         }
       `}</style>
 
-      <div className="relative mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
+      <div className="container-page relative">
 
         {/* ── Section header ── */}
         <div className="mb-9 max-w-3xl sm:mb-16">
@@ -291,7 +291,7 @@ export function SpecializationSection() {
             role="group"
             aria-roledescription="carousel"
             aria-label="Our services"
-            className="flex snap-x snap-mandatory overflow-x-auto scroll-smooth gap-3 -mx-5 pl-5 pr-20 pb-1"
+            className="flex snap-x snap-mandatory overflow-x-auto scroll-smooth gap-3.5 -mx-[var(--gutter)] px-[var(--gutter)] pb-2"
             style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
           >
             {allCards.map((card, i) => {
@@ -305,7 +305,7 @@ export function SpecializationSection() {
                   aria-roledescription="slide"
                   aria-label={`${i + 1} of ${allCards.length}: ${card.title}`}
                   className={`
-                    surface flex w-[82vw] flex-shrink-0 snap-center flex-col p-6
+                    surface flex w-[min(84vw,340px)] flex-shrink-0 snap-center flex-col p-6
                     ${isActive
                       ? "border-signature-blue/25 shadow-e3"
                       : "opacity-70"
@@ -340,6 +340,8 @@ export function SpecializationSection() {
                 </article>
               )
             })}
+            {/* Trailing spacer ensures WebKit/Safari preserves right padding on scroll */}
+            <div className="w-1 shrink-0" aria-hidden="true" />
           </div>
 
           {/*
@@ -385,13 +387,13 @@ export function SpecializationSection() {
         </div>
 
         {/* ════════════════════════════════
-            DESKTOP — original grid
+            TABLET & DESKTOP — balanced grid
         ════════════════════════════════ */}
-        <div className="hidden gap-5 sm:grid sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+        <div className="hidden gap-5 sm:grid sm:grid-cols-2 lg:grid-cols-3">
           {services.map((service, i) => (
             <article
               key={service.title}
-              className="surface surface-interactive group relative flex h-full flex-col overflow-hidden p-7"
+              className="surface surface-interactive group relative flex h-full flex-col overflow-hidden p-6 sm:p-7"
             >
               {/* Index marker — quiet structure, visible on hover. */}
               <span className="absolute right-6 top-6 text-overline tabular-nums text-muted-foreground/25 transition-colors duration-300 group-hover:text-signature-blue/40">
@@ -419,7 +421,7 @@ export function SpecializationSection() {
             </article>
           ))}
 
-          <article className="surface surface-interactive group flex flex-col gap-6 p-7 sm:flex-row sm:items-center md:col-span-2 lg:col-span-3">
+          <article className="surface surface-interactive group flex flex-col gap-6 p-6 sm:p-7 sm:flex-row sm:items-center sm:col-span-2 lg:col-span-3">
             <div className="flex size-12 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-signature-blue to-indigo-600 shadow-e2 transition-transform duration-300 group-hover:scale-105">
               <Handshake className="size-5 text-white" aria-hidden="true" />
             </div>

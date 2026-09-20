@@ -267,7 +267,7 @@ export function ContactSection() {
       aria-labelledby="contact-heading"
       className="section-y relative overflow-hidden border-t border-border bg-background"
     >
-      <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
+      <div className="container-page relative">
 
         {/* Header */}
         <div className="mx-auto max-w-3xl text-center">

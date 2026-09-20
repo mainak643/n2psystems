@@ -33,7 +33,7 @@ export function AboutSection() {
       aria-labelledby="about-heading"
       className="section-y relative overflow-hidden bg-card"
     >
-      <div className="relative mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
+      <div className="container-page relative">
         <div className="grid grid-cols-1 gap-10 sm:gap-14 lg:grid-cols-2 lg:items-start">
 
           {/* ── Left / text side ── */}
@@ -47,7 +47,7 @@ export function AboutSection() {
               A Trusted Technology Partner for Modern Businesses
             </h2>
 
-            {/* Credibility strip — shared by both breakpoints. */}
+            {/* Credibility strip — shared by all viewports */}
             <div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-2 text-overline uppercase text-muted-foreground/70">
               <span>10+ Years</span>
               <span className="text-border" aria-hidden="true">/</span>
@@ -58,28 +58,21 @@ export function AboutSection() {
               <span>India</span>
             </div>
 
-            {/* MOBILE: condensed single paragraph */}
-            <p className="measure mt-5 text-body text-muted-foreground sm:hidden">
-              N2P Systems partners with organizations across North America to
-              modernize operations, integrate AI, and accelerate growth through
-              consulting, cloud, and managed services.
-            </p>
-
-            {/* DESKTOP: full narrative */}
-            <div className="measure mt-6 hidden space-y-4 text-pretty text-lead text-muted-foreground sm:block">
+            {/* Narrative text */}
+            <div className="measure mt-6 space-y-4 text-pretty text-lead text-muted-foreground">
               <p>
                 With over a decade of delivering technology solutions across
                 North America, N2P Systems has become a trusted partner for
                 organizations seeking innovation, operational efficiency, and
                 sustainable growth.
               </p>
-              <p>
+              <p className="hidden sm:block">
                 We help businesses leverage modern technologies to transform
                 operations, enhance customer experiences, and accelerate digital
                 initiatives through consulting, digital transformation, AI
                 integration, cloud solutions, and managed hosting services.
               </p>
-              <p>
+              <p className="hidden sm:block">
                 By combining industry expertise with a customer-centric approach,
                 we deliver tailored solutions designed to solve complex business
                 challenges and create measurable outcomes.
@@ -90,22 +83,22 @@ export function AboutSection() {
           {/* ── Right / cards side ── */}
           <div className="grid gap-4 sm:gap-5">
 
-            {/* Highlight cards — desktop only */}
-            <div className="hidden gap-5 sm:grid sm:grid-cols-2">
+            {/* Highlight cards — visible on all devices */}
+            <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 sm:gap-5">
               {highlights.map((item) => (
                 <article
                   key={item.title}
-                  className="surface surface-interactive group p-6"
+                  className="surface surface-interactive group p-5 sm:p-6"
                   style={{ background: "var(--background)" }}
                 >
-                  <div className="mb-5 flex size-12 items-center justify-center rounded-xl bg-navy/[0.04] ring-1 ring-navy/[0.06] transition-all duration-300 group-hover:bg-signature-blue/10 group-hover:ring-signature-blue/20">
+                  <div className="mb-4 sm:mb-5 flex size-11 sm:size-12 items-center justify-center rounded-xl bg-navy/[0.04] ring-1 ring-navy/[0.06] transition-all duration-300 group-hover:bg-signature-blue/10 group-hover:ring-signature-blue/20">
                     <item.icon
                       className="size-5 text-navy/70 transition-colors duration-300 group-hover:text-signature-blue"
                       aria-hidden="true"
                     />
                   </div>
                   <h3 className="text-subtitle text-foreground">{item.title}</h3>
-                  <p className="mt-2.5 text-body text-muted-foreground">
+                  <p className="mt-2 text-body text-muted-foreground">
                     {item.description}
                   </p>
                 </article>

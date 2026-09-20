@@ -77,11 +77,12 @@ export function buildJobPostingSchema(job: Job) {
       name: 'N2P Systems Requisition',
       value: job.id,
     },
-    employmentType: EMPLOYMENT_TYPE[job.type],
+    employmentType: EMPLOYMENT_TYPE[job.type] || 'FULL_TIME',
     hiringOrganization: {
       '@type': 'Organization',
-      name: job.company,
+      name: job.company || 'N2P Systems',
       sameAs: SITE_URL,
+      logo: `${SITE_URL}/images/n2p-logo-square.png`,
     },
     jobLocation: {
       '@type': 'Place',
@@ -95,18 +96,25 @@ export function buildJobPostingSchema(job: Job) {
     directApply: true,
   };
 
-  if (job.datePostedISO) schema.datePosted = job.datePostedISO;
-  if (job.validThroughISO) schema.validThrough = job.validThroughISO;
+  // datePosted is required by Google for Jobs; fall back to current time if missing.
+  const postedTimestamp = job.datePostedISO ? new Date(job.datePostedISO).getTime() : Date.now();
+  schema.datePosted = job.datePostedISO || new Date(postedTimestamp).toISOString();
+
+  // validThrough is strongly recommended by Google to define expiration window.
+  schema.validThrough =
+    job.validThroughISO || new Date(postedTimestamp + 90 * 24 * 60 * 60 * 1000).toISOString();
+
   if (job.techStack.length > 0) schema.skills = job.techStack.join(', ');
   if (job.domain) schema.occupationalCategory = job.domain;
 
   // TELECOMMUTE additionally requires applicantLocationRequirements, or Google
-  // rejects the posting outright.
-  if (job.mode === 'Remote') {
+  // rejects the posting outright. Both Remote and Hybrid roles allow telecommuting.
+  if (job.mode === 'Remote' || job.mode === 'Hybrid') {
     schema.jobLocationType = 'TELECOMMUTE';
-    if (country) {
-      schema.applicantLocationRequirements = { '@type': 'Country', name: country };
-    }
+    schema.applicantLocationRequirements = {
+      '@type': 'Country',
+      name: country || 'IN',
+    };
   }
 
   // Only emit a salary when the requisition actually carried numbers; the

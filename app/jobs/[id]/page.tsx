@@ -6,6 +6,7 @@ import {
   Briefcase,
   Clock,
   DollarSign,
+  IndianRupee,
   ArrowRight,
   CheckCircle2,
   Building2,
@@ -124,10 +125,16 @@ export default async function JobDetailPage({
                 <Briefcase className="size-4 text-on-dark-subtle" aria-hidden="true" />
                 {job.experience}
               </span>
-              <span className="flex items-center gap-1.5">
-                <DollarSign className="size-4 text-on-dark-subtle" aria-hidden="true" />
-                {job.salary}
-              </span>
+              {job.salary ? (
+                <span className="flex items-center gap-1.5">
+                  {job.salary.includes('₹') ? (
+                    <IndianRupee className="size-4 text-on-dark-subtle" aria-hidden="true" />
+                  ) : (
+                    <DollarSign className="size-4 text-on-dark-subtle" aria-hidden="true" />
+                  )}
+                  {job.salary}
+                </span>
+              ) : null}
               <span className="flex items-center gap-1.5">
                 <Clock className="size-4 text-on-dark-subtle" aria-hidden="true" />
                 Posted {job.postedDate}
@@ -227,13 +234,13 @@ export default async function JobDetailPage({
                   { label: "Employment Type", value: job.type },
                   { label: "Work Arrangement", value: job.mode },
                   { label: "Experience Level", value: job.experience },
-                  { label: "Compensation", value: job.salary },
+                  ...(job.salary ? [{ label: "Compensation", value: job.salary }] : []),
                   { label: "Domain Focus", value: job.domain },
                   { label: "Requisition Ref", value: job.id },
-                ].map((fact, idx) => (
+                ].map((fact, idx, arr) => (
                   <div
                     key={fact.label}
-                    className={`flex items-center justify-between ${idx > 0 ? "pt-3.5" : ""} ${idx < 6 ? "pb-3.5" : ""}`}
+                    className={`flex items-center justify-between ${idx > 0 ? "pt-3.5" : ""} ${idx < arr.length - 1 ? "pb-3.5" : ""}`}
                   >
                     <dt className="text-caption text-muted-foreground">{fact.label}</dt>
                     <dd className="text-right text-body font-semibold text-foreground">{fact.value}</dd>

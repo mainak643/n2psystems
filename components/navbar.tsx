@@ -439,10 +439,9 @@ function MobileMenu({
           <button
             onClick={onClose}
             aria-label="Close menu"
-            className="flex items-center justify-center rounded-lg border border-white/[0.08] bg-white/5 outline-none transition-colors duration-200 hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-sky-400/50"
-            style={{ width: 32, height: 32 }}
+            className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.12] bg-white/[0.06] outline-none transition-all duration-200 hover:bg-white/15 active:scale-95 focus-visible:ring-2 focus-visible:ring-sky-400/50"
           >
-            <X style={{ width: 14, height: 14, color: "rgba(255,255,255,0.55)" }} />
+            <X className="size-4 text-white/80" />
           </button>
         </div>
 
@@ -595,7 +594,7 @@ function MobileMenu({
         {/* Mobile CTAs */}
         <div
           className={cn("mob-ctas shrink-0", visible && "vis")}
-          style={{ padding: "16px 20px 40px", borderTop: "1px solid rgba(255,255,255,0.05)" }}
+          style={{ padding: "16px 20px calc(24px + env(safe-area-inset-bottom, 0px))", borderTop: "1px solid rgba(255,255,255,0.05)" }}
         >
           <Link
             href="/jobs"
@@ -752,13 +751,9 @@ export function Navbar() {
 
         <nav
           aria-label="Main navigation"
-          // h-[var(--navbar-h)]: the one source of truth for the header's
-          // real height, also consumed by .page-hero's top padding and by
-          // html { scroll-padding-top } in globals.css. Hardcoding 62px/72px
-          // here again would let those three drift out of sync exactly the
-          // way they had before this pass.
-          className="relative mx-auto flex h-[var(--navbar-h)] w-full items-center justify-between px-4 sm:px-6 lg:px-6 xl:px-10"
-          style={{ maxWidth: "1280px" }}
+          // container-page aligns this navbar perfectly with the hero, content sections, and footer
+          // across desktop monitors, laptops, ultra-wide screens, and mobile devices.
+          className="container-page relative flex h-[var(--navbar-h)] w-full items-center justify-between"
         >
           {/* ── Logo ── */}
           <Link
@@ -858,9 +853,9 @@ export function Navbar() {
               <ArrowUpRight style={{ width: 12, height: 12, color: "rgba(255,255,255,0.45)" }} className="xl:size-[13px]" />
             </Link>
 
-            {/* ── Hamburger (FIX: symmetric bar widths for clean X) ── */}
+            {/* ── Hamburger (accessible 44px touch target) ── */}
             <button
-              className="flex flex-col items-end justify-center gap-[5px] rounded-lg p-2 transition-all duration-200 active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-sky-400/50 lg:hidden"
+              className="flex h-11 w-11 flex-col items-center justify-center gap-[5px] rounded-xl border border-white/10 bg-white/[0.04] transition-all duration-200 active:scale-95 outline-none hover:bg-white/[0.08] focus-visible:ring-2 focus-visible:ring-sky-400/50 lg:hidden"
               onClick={() => setMobileOpen((prev) => !prev)}
               aria-expanded={mobileOpen}
               aria-controls="mobile-nav-menu"

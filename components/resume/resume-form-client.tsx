@@ -247,20 +247,20 @@ function ResumeFormInner() {
                   </div>
                 )}
 
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+                <div className="flex flex-col gap-2.5 sm:flex-row sm:items-start sm:gap-3.5">
                   <div
                     className={cn(
-                      "flex size-9 sm:size-11 shrink-0 items-center justify-center rounded-full transition-transform duration-300 group-hover:scale-105",
+                      "flex size-9 sm:size-10 shrink-0 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-105",
                       accent
                     )}
                   >
                     <Icon className="size-4 sm:size-5" />
                   </div>
-                  <div className="min-w-0 pr-5">
-                    <h3 className="text-[13px] sm:text-[15px] font-bold leading-snug text-slate-950">
+                  <div className="min-w-0 pr-6 sm:pr-0">
+                    <h3 className="text-[13.5px] sm:text-[15px] font-bold leading-snug text-slate-950">
                       {name}
                     </h3>
-                    <p className="mt-0.5 sm:mt-1 text-[11px] sm:text-[12px] leading-4 text-slate-500">
+                    <p className="mt-1 text-[11.5px] sm:text-[12px] leading-relaxed text-slate-500 line-clamp-2 sm:line-clamp-none">
                       {description}
                     </p>
                   </div>

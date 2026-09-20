@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { SITE_URL } from '@/lib/site';
+import { inferCurrency, formatSalary } from '@/lib/jobs-service';
 
 // Real-time freshness with fast edge caching
 export const revalidate = 30;
@@ -174,12 +175,10 @@ export async function GET(req: NextRequest) {
         max_experience_years: req.max_experience_years,
         location: req.location,
         work_mode: req.work_mode,
-        salary_min: req.salary_min,
-        salary_max: req.salary_max,
-        salary_currency: req.salary_currency,
-        salary_range: req.salary_min || req.salary_max
-          ? `${req.salary_currency || 'USD'} ${Number(req.salary_min || 0).toLocaleString()} - ${Number(req.salary_max || 0).toLocaleString()}`
-          : 'Competitive / Negotiable',
+        salary_min: req.salary_min && Number(req.salary_min) > 0 ? Number(req.salary_min) : null,
+        salary_max: req.salary_max && Number(req.salary_max) > 0 ? Number(req.salary_max) : null,
+        salary_currency: inferCurrency(req.salary_currency, req.location),
+        salary_range: formatSalary(req.salary_min, req.salary_max, req.salary_currency, req.location) || null,
         openings: req.openings,
         status: req.status,
         mandatory_skills: req.mandatory_skills || [],

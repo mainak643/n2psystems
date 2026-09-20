@@ -52,18 +52,18 @@ export function HeroSection() {
         </div>
 
         {/* Directional atmospheric gradient: deep space on left, glowing Earth on right */}
-        <div className="absolute inset-0 bg-gradient-to-r from-[#050C16] via-[#050C16]/85 sm:via-[#050C16]/60 md:via-[#050C16]/30 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#050C16]/90 via-[#050C16]/65 to-[#050C16] sm:bg-gradient-to-r sm:from-[#050C16] sm:from-20% sm:via-[#050C16]/85 sm:via-50% lg:via-[#050C16]/40 lg:via-60% sm:to-transparent" />
         
-        {/* Atmospheric depth mask for typography contrast */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_70%_at_18%_45%,#050C16_0%,transparent_85%)] opacity-80" />
+        {/* Extra deep atmospheric field behind typography to preserve contrast on ultrawide and curved screens */}
+        <div className="absolute inset-y-0 left-0 w-full sm:w-[65%] lg:w-[55%] bg-gradient-to-r from-[#050C16] via-[#050C16]/95 to-transparent" />
         
         {/* Top/bottom edge fades */}
-        <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-[#050C16]/85 via-[#050C16]/30 to-transparent" />
-        <div className="absolute inset-x-0 bottom-0 h-28 sm:h-36 bg-gradient-to-t from-[#050C16] via-[#050C16]/50 to-transparent" />
+        <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-[#050C16]/90 via-[#050C16]/40 to-transparent" />
+        <div className="absolute inset-x-0 bottom-0 h-28 sm:h-36 bg-gradient-to-t from-[#050C16] via-[#050C16]/60 to-transparent" />
       </div>
 
-      {/* ── Main Hero Content (42–46% Left Content Field) ── */}
-      <div className="relative z-10 mx-auto w-full max-w-7xl px-6 sm:px-10 lg:px-12 xl:px-16">
+      {/* ── Main Hero Content (Aligned with container-page) ── */}
+      <div className="container-page relative z-10">
         <div className="w-full max-w-[39rem] sm:max-w-[43rem] lg:max-w-[46rem]">
           {/* Eyebrow Pre-Heading (Directly Introducing Headline) */}
           <div className="mb-3.5 sm:mb-4 flex items-center gap-2 text-[11.5px] sm:text-[12.5px] font-semibold uppercase tracking-[0.24em] text-slate-400">
@@ -71,8 +71,8 @@ export function HeroSection() {
             <span>Where Innovation Drives Success</span>
           </div>
 
-          {/* Headline (Focal Anchor: 3-line statement, tight leading) */}
-          <h1 className="text-[clamp(3.125rem,2.5rem+3.8vw,5.25rem)] font-extrabold tracking-[-0.038em] leading-[0.98] text-white">
+          {/* Headline (Focal Anchor: fluidly responsive from compact mobile to curved/4K screens) */}
+          <h1 className="text-[clamp(2.35rem,1.75rem+3.2vw,5.25rem)] font-extrabold tracking-[-0.038em] leading-[0.98] text-white">
             Innovate.
             <br />
             Integrate.
@@ -102,7 +102,7 @@ export function HeroSection() {
           <div className="mt-8 sm:mt-9 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3.5">
             <Link
               href="/#services"
-              className="inline-flex min-h-[48px] items-center justify-center gap-2.5 rounded-xl bg-primary px-7 text-[14.5px] font-semibold text-white shadow-[0_4px_16px_-4px_rgba(30,99,181,0.5)] transition-all duration-200 hover:bg-[#164e93] hover:shadow-[0_8px_24px_-4px_rgba(30,99,181,0.65)] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] sm:w-auto"
+              className="inline-flex min-h-[48px] w-full items-center justify-center gap-2.5 rounded-xl bg-primary px-7 text-[14.5px] font-semibold text-white shadow-[0_4px_16px_-4px_rgba(30,99,181,0.5)] transition-all duration-200 hover:bg-[#164e93] hover:shadow-[0_8px_24px_-4px_rgba(30,99,181,0.65)] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] sm:w-auto"
             >
               <span>Explore Services</span>
               <ArrowIcon />
@@ -110,7 +110,7 @@ export function HeroSection() {
 
             <Link
               href="/#contact"
-              className="inline-flex min-h-[48px] items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/[0.04] px-7 text-[14.5px] font-semibold text-slate-200 transition-all duration-200 hover:border-white/25 hover:bg-white/[0.08] hover:text-white active:scale-[0.99] sm:w-auto"
+              className="inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/[0.04] px-7 text-[14.5px] font-semibold text-slate-200 transition-all duration-200 hover:border-white/25 hover:bg-white/[0.08] hover:text-white active:scale-[0.99] sm:w-auto"
             >
               <span>Contact Us</span>
             </Link>

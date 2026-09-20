@@ -172,8 +172,8 @@ export function ConsultationFormClient() {
         </div>
       </div>
 
-      {/* ↓ Mobile: 2-col with tighter gap (short labels fit fine side-by-side). sm+ unchanged. */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-6">
+      {/* Email & Phone: 1-col on mobile for roomy input without truncation, 2-col on sm+ */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
         <div className="space-y-2">
           <label htmlFor="email" className="text-sm font-medium text-foreground">
             Work Email *
@@ -244,8 +244,8 @@ export function ConsultationFormClient() {
         )}
       </div>
 
-      {/* ↓ Mobile: 2-col with tighter gap (short labels fit fine side-by-side). sm+ unchanged. */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-6">
+      {/* Budget & Timeline: 1-col on mobile so select labels never truncate, 2-col on sm+ */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
         <div className="space-y-2">
           <label htmlFor="budget" className="text-sm font-medium text-foreground">
             Estimated Budget

@@ -27,7 +27,7 @@ function formatRelativeTime(dateString?: string): string {
 function toNumber(value: unknown): number | undefined {
   if (value === null || value === undefined || value === '') return undefined;
   const n = Number(value);
-  return Number.isFinite(n) ? n : undefined;
+  return Number.isFinite(n) && n > 0 ? n : undefined;
 }
 
 /**
@@ -44,12 +44,66 @@ const LOCALE_BY_CURRENCY: Record<string, string> = {
   EUR: 'en-IE',
 };
 
-function formatSalary(min?: number | null, max?: number | null, currency?: string | null): string {
+export function inferCurrency(currency?: string | null, location?: string | null): string {
+  const code = (currency || '').toUpperCase();
+  if (code && code !== 'USD') return code;
+  if (!location) return code || 'USD';
+  const loc = location.toLowerCase();
+  if (
+    loc.includes('canada') ||
+    loc.includes('toronto') ||
+    loc.includes('ontario') ||
+    loc.includes('vancouver') ||
+    loc.includes('montreal') ||
+    loc.includes('ottawa') ||
+    loc.includes('calgary') ||
+    loc.includes('edmonton') ||
+    loc.includes(', on') ||
+    loc.includes(', bc') ||
+    loc.includes(', ab') ||
+    loc.includes(', qc')
+  ) {
+    return 'CAD';
+  }
+  if (
+    loc.includes('india') ||
+    loc.includes('bangalore') ||
+    loc.includes('bengaluru') ||
+    loc.includes('mumbai') ||
+    loc.includes('delhi') ||
+    loc.includes('hyderabad') ||
+    loc.includes('chennai') ||
+    loc.includes('pune') ||
+    loc.includes('noida') ||
+    loc.includes('coimbatore') ||
+    loc.includes('gurgaon') ||
+    loc.includes('gurugram') ||
+    loc.includes('kolkata') ||
+    loc.includes('ahmedabad') ||
+    loc.includes('karnataka') ||
+    loc.includes('maharashtra') ||
+    loc.includes('telangana') ||
+    loc.includes('tamil nadu')
+  ) {
+    return 'INR';
+  }
+  if (
+    loc.includes('uk') ||
+    loc.includes('united kingdom') ||
+    loc.includes('london') ||
+    loc.includes('england')
+  ) {
+    return 'GBP';
+  }
+  return code || 'USD';
+}
+
+export function formatSalary(min?: number | null, max?: number | null, currency?: string | null, location?: string | null): string {
   const lo = toNumber(min);
   const hi = toNumber(max);
-  if (lo === undefined && hi === undefined) return 'Competitive';
+  if (lo === undefined && hi === undefined) return '';
 
-  const code = (currency || 'USD').toUpperCase();
+  const code = inferCurrency(currency, location);
   const locale = LOCALE_BY_CURRENCY[code] || 'en-US';
 
   const formatNum = (num: number) => {
@@ -69,6 +123,13 @@ function formatSalary(min?: number | null, max?: number | null, currency?: strin
       return `${code} ${Math.round(num).toLocaleString('en-US')}`;
     }
   };
+
+  if (code === 'INR') {
+    // For India: use the Rupees symbol (₹) directly without appending currency code
+    if (lo !== undefined && hi !== undefined) return `${formatNum(lo)} - ${formatNum(hi)}`;
+    if (lo !== undefined) return `From ${formatNum(lo)}`;
+    return `Up to ${formatNum(hi as number)}`;
+  }
 
   if (lo !== undefined && hi !== undefined) return `${formatNum(lo)} - ${formatNum(hi)} ${code}`;
   if (lo !== undefined) return `From ${formatNum(lo)} ${code}`;
@@ -230,7 +291,7 @@ export function mapRequirementToJob(req: any): Job {
     type: normalizeEmploymentType(req.employment_type),
     mode: normalizeWorkMode(req.work_mode),
     experience: req.experience_level?.trim() || (minYears !== undefined ? `${minYears}+ years` : '3+ years'),
-    salary: formatSalary(req.salary_min, req.salary_max, req.salary_currency),
+    salary: formatSalary(req.salary_min, req.salary_max, req.salary_currency, req.location),
     techStack,
     domain: req.department?.trim() || 'Software Engineering',
     postedDate: formatRelativeTime(req.created_at),
@@ -253,7 +314,7 @@ export function mapRequirementToJob(req: any): Job {
     validThroughISO: req.closing_date || undefined,
     salaryMin: toNumber(req.salary_min),
     salaryMax: toNumber(req.salary_max),
-    salaryCurrency: req.salary_currency || undefined,
+    salaryCurrency: inferCurrency(req.salary_currency, req.location),
   };
 }
 
