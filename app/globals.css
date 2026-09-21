@@ -613,6 +613,11 @@ html {
   Temporarily hide the floating widget only when the mobile navigation drawer
   is open so it does not overlap navigation menus.
 */
+#ai-agent-widget {
+  --primary: #1E63B5;
+  --secondary: #1E63B5;
+}
+
 body:has(#mobile-nav-menu) #ai-agent-widget {
   display: none !important;
 }
