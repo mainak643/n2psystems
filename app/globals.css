@@ -618,6 +618,20 @@ body:has(#mobile-nav-menu) #ai-agent-widget {
   display: none !important;
 }
 
+/* Prevent background page scrolling when the mobile chat modal is open */
+html.reapdat-modal-open,
+html.reapdat-modal-open body {
+  overflow: hidden !important;
+}
+
+@media (max-width: 639px) {
+  #ai-agent-widget[data-open="true"] {
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 2147483647 !important;
+  }
+}
+
 /* ═══════════════════════════════════════════════════════
    REDUCED MOTION
    Site-wide honouring of the OS "reduce motion" setting.
