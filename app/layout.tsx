@@ -130,7 +130,7 @@ export default function RootLayout({
           data-key="pk_live_97kJ26nJjkBq3kj1zlKb1TiLDtKNnY8I"
           data-theme="dark"
           data-accent-color="#1E63B5"
-          strategy="lazyOnload"
+          strategy="afterInteractive"
         />
         <Analytics />
       </body>

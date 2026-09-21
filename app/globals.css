@@ -609,16 +609,12 @@ html {
 }
 
 /*
-  Reapdat widget: hidden on mobile to avoid overlapping the bottom nav.
-  This used to also add 80px of footer padding "to clear the widget" —
-  but the widget is display:none in the same breakpoint, so it occupies
-  no space and that padding was pure dead air under the footer on every
-  phone. Removed; keeping the widget hidden.
+  Reapdat widget: displayed on all screen sizes including mobile.
+  Temporarily hide the floating widget only when the mobile navigation drawer
+  is open so it does not overlap navigation menus.
 */
-@media (max-width: 639px) {
-  #ai-agent-widget {
-    display: none !important;
-  }
+body:has(#mobile-nav-menu) #ai-agent-widget {
+  display: none !important;
 }
 
 /* ═══════════════════════════════════════════════════════
