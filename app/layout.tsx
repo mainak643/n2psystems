@@ -128,7 +128,6 @@ export default function RootLayout({
           src="https://api.reapdat.com/static/widget.js"
           data-tenant-id="01d65500-be64-4909-b7d5-598d460c97e4"
           data-key="pk_live_97kJ26nJjkBq3kj1zlKb1TiLDtKNnY8I"
-          data-color="#1E63B5"
           data-avatar-url={`${SITE_URL}/images/n2p-logo-light.png`}
           data-company-name="N2P Systems"
           strategy="afterInteractive"
