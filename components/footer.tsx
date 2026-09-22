@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import Image from "next/image"
+import { usePathname } from "next/navigation"
 import { Linkedin, MessageCircle, Mail, Phone, ArrowUpRight, ChevronDown } from "lucide-react"
 
 /*
@@ -30,8 +31,15 @@ const companyLinks = [
   { name: "About Us", href: "/#about" },
   { name: "Contact Us", href: "/#contact" },
   { name: "Partner With Us", href: "/clients" },
-  { name: "RecruitOps Portal", href: "https://ops.n2psystems.com", external: true },
 ]
+
+/** Matches the navbar's own candidate-facing check — /resume and /jobs
+ *  (including job detail/apply sub-pages) are for applicants, not
+ *  employers, so the employer-facing "Partner With Us" link is dropped
+ *  there too. */
+function isCandidateFacing(pathname: string): boolean {
+  return pathname.startsWith("/resume") || pathname.startsWith("/jobs")
+}
 
 const careerLinks = [
   { name: "Browse Opportunities", href: "/jobs" },
@@ -124,6 +132,10 @@ function AccordionSection({
 
 export function Footer() {
   const [openSection, setOpenSection] = useState<string | null>(null)
+  const pathname = usePathname()
+  const visibleCompanyLinks = isCandidateFacing(pathname)
+    ? companyLinks.filter((link) => link.name !== "Partner With Us")
+    : companyLinks
 
   const toggleSection = (id: string) =>
     setOpenSection((prev) => (prev === id ? null : id))
@@ -218,7 +230,7 @@ export function Footer() {
           {/* ── Company — accordion on mobile ── */}
           <AccordionSection id="company" label="Company" openSection={openSection} onToggle={toggleSection}>
             <ul className="space-y-0.5">
-              {companyLinks.map((link) => (
+              {visibleCompanyLinks.map((link) => (
                 <li key={link.name}>
                   {'external' in link && link.external ? (
                     <a

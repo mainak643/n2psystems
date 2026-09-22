@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import type { Job } from "@/lib/jobs-data"
-import { fetchPublishedJobs, getDynamicFilterOptions } from "@/lib/jobs-service"
+import { fetchPublishedJobs, getDynamicFilterOptions, inferCountry, extractCity } from "@/lib/jobs-service"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 
 interface JobSearchClientProps {
@@ -30,7 +30,8 @@ const PAGE_SIZE = 10
 export function JobSearchClient({ initialJobs }: JobSearchClientProps) {
   const [jobsList, setJobsList] = useState<Job[]>(initialJobs ?? [])
   const [searchQuery, setSearchQuery] = useState("")
-  const [location, setLocation] = useState("All Locations")
+  const [country, setCountry] = useState("All Countries")
+  const [city, setCity] = useState("All Cities")
   const [domain, setDomain] = useState("All Domains")
   const [experience, setExperience] = useState("All Levels")
   const [mode, setMode] = useState("All Modes")
@@ -62,9 +63,25 @@ export function JobSearchClient({ initialJobs }: JobSearchClientProps) {
   }, [])
 
   // Dynamic filter options based on available live jobs
-  const { locations, domains, experiences, modes } = useMemo(() => {
+  const { countries, cities: allCities, domains, experiences, modes } = useMemo(() => {
     return getDynamicFilterOptions(jobsList)
   }, [jobsList])
+
+  // When country changes, reset city filter (cities change by country)
+  const citiesForCountry = useMemo(() => {
+    if (country === "All Countries") return allCities
+    const filtered = jobsList
+      .filter((j) => inferCountry(j.location) === country)
+      .map((j) => extractCity(j.location))
+      .filter((c): c is string => Boolean(c && c.trim()))
+    const uniq = Array.from(new Set(filtered)).sort((a, b) => a.localeCompare(b))
+    return ['All Cities', ...uniq]
+  }, [country, jobsList, allCities])
+
+  // Reset city when country changes
+  useEffect(() => {
+    setCity("All Cities")
+  }, [country])
 
   const filteredJobs = useMemo(() => {
     // Normalised once for the whole pass, not once per job per keystroke.
@@ -81,28 +98,32 @@ export function JobSearchClient({ initialJobs }: JobSearchClientProps) {
         job.description.toLowerCase().includes(q) ||
         job.techStack.some((t) => t.toLowerCase().includes(q))
 
-      const matchesLocation = location === "All Locations" || job.location === location
+      const matchesCountry = country === "All Countries" || inferCountry(job.location) === country
+      const matchesCity = city === "All Cities" || extractCity(job.location) === city
       const matchesDomain = domain === "All Domains" || job.domain === domain
       const matchesExperience = experience === "All Levels" || job.experience === experience
       const matchesMode = mode === "All Modes" || job.mode.toLowerCase() === modeLower
 
-      return matchesSearch && matchesLocation && matchesDomain && matchesExperience && matchesMode
+      return matchesSearch && matchesCountry && matchesCity && matchesDomain && matchesExperience && matchesMode
     })
-  }, [jobsList, searchQuery, location, domain, experience, mode])
+  }, [jobsList, searchQuery, country, city, domain, experience, mode])
 
   // A new search/filter is a new result set — start back at page one rather
   // than leaving visibleCount wherever it was for the previous query.
   useEffect(() => {
     setVisibleCount(PAGE_SIZE)
-  }, [searchQuery, location, domain, experience, mode])
+  }, [searchQuery, country, city, domain, experience, mode])
 
   const visibleJobs = filteredJobs.slice(0, visibleCount)
   const hasMore = filteredJobs.length > visibleCount
 
-  const activeFilters = [location, domain, experience, mode].filter((f) => !f.startsWith("All"))
+  const activeFilters = [country, city, domain, experience, mode].filter(
+    (f) => !f.startsWith("All")
+  )
 
   const clearFilters = () => {
-    setLocation("All Locations")
+    setCountry("All Countries")
+    setCity("All Cities")
     setDomain("All Domains")
     setExperience("All Levels")
     setMode("All Modes")
@@ -146,18 +167,33 @@ export function JobSearchClient({ initialJobs }: JobSearchClientProps) {
 
         {/* Filter dropdowns row */}
         <div
-          className={`mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 ${
+          className={`mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5 ${
             showFilters ? "block" : "hidden lg:grid"
           }`}
         >
-          <Select value={location} onValueChange={setLocation}>
+          {/* Country filter — fixed to India / Canada / USA */}
+          <Select value={country} onValueChange={setCountry}>
             <SelectTrigger size="lg" className="w-full rounded-xl">
-              <SelectValue placeholder="Location" />
+              <SelectValue placeholder="Country" />
             </SelectTrigger>
             <SelectContent>
-              {locations.map((loc) => (
-                <SelectItem key={loc} value={loc}>
-                  {loc}
+              {countries.map((c) => (
+                <SelectItem key={c} value={c}>
+                  {c}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* City filter — derived from jobs, scoped to selected country */}
+          <Select value={city} onValueChange={setCity}>
+            <SelectTrigger size="lg" className="w-full rounded-xl">
+              <SelectValue placeholder="City" />
+            </SelectTrigger>
+            <SelectContent>
+              {citiesForCountry.map((c) => (
+                <SelectItem key={c} value={c}>
+                  {c}
                 </SelectItem>
               ))}
             </SelectContent>

@@ -497,14 +497,60 @@ export async function fetchJobById(id: string): Promise<Job | null> {
   return null;
 }
 
+/** Maps keywords found in a job's location string to one of the three fixed countries. */
+export function inferCountry(location?: string): 'India' | 'Canada' | 'USA' | null {
+  if (!location) return null;
+  const loc = location.toLowerCase();
+  if (
+    loc.includes('india') ||
+    loc.includes('bangalore') || loc.includes('bengaluru') ||
+    loc.includes('mumbai') || loc.includes('delhi') ||
+    loc.includes('hyderabad') || loc.includes('chennai') ||
+    loc.includes('pune') || loc.includes('noida') ||
+    loc.includes('coimbatore') || loc.includes('gurgaon') ||
+    loc.includes('gurugram') || loc.includes('kolkata') ||
+    loc.includes('ahmedabad') || loc.includes('karnataka') ||
+    loc.includes('maharashtra') || loc.includes('telangana') ||
+    loc.includes('tamil nadu')
+  ) return 'India';
+  if (
+    loc.includes('canada') ||
+    loc.includes('toronto') || loc.includes('ontario') ||
+    loc.includes('vancouver') || loc.includes('montreal') ||
+    loc.includes('ottawa') || loc.includes('calgary') ||
+    loc.includes('edmonton') || loc.includes(', on') ||
+    loc.includes(', bc') || loc.includes(', ab') || loc.includes(', qc')
+  ) return 'Canada';
+  if (
+    loc.includes('usa') || loc.includes('united states') ||
+    loc.includes('new york') || loc.includes('san francisco') ||
+    loc.includes('seattle') || loc.includes('austin') ||
+    loc.includes('chicago') || loc.includes('boston') ||
+    loc.includes('los angeles') || loc.includes('dallas') ||
+    loc.includes(', ny') || loc.includes(', ca') ||
+    loc.includes(', tx') || loc.includes(', wa') ||
+    loc.includes(', il') || loc.includes(', ma')
+  ) return 'USA';
+  return null;
+}
+
+/** Extracts the city portion from a location string (text before the first comma). */
+export function extractCity(location?: string): string | null {
+  if (!location) return null;
+  const city = location.split(',')[0].trim();
+  return city.length > 1 ? city : null;
+}
+
 export function getDynamicFilterOptions(jobs: Job[]) {
-  const uniq = (values: (string | undefined)[]) =>
+  const uniq = (values: (string | undefined | null)[]) =>
     Array.from(new Set(values.filter((v): v is string => Boolean(v && v.trim())))).sort((a, b) =>
       a.localeCompare(b)
     );
 
   return {
-    locations: ['All Locations', ...uniq(jobs.map((j) => j.location))],
+    // Fixed country options — only the three regions N2P operates in.
+    countries: ['All Countries', 'India', 'Canada', 'USA'] as const,
+    cities: ['All Cities', ...uniq(jobs.map((j) => extractCity(j.location)))],
     domains: ['All Domains', ...uniq(jobs.map((j) => j.domain))],
     experiences: ['All Levels', ...uniq(jobs.map((j) => j.experience))],
     modes: ['All Modes', 'Remote', 'Hybrid', 'Onsite'],
