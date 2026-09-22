@@ -11,6 +11,17 @@ export interface Job {
   domain: string
   postedDate: string
   description: string
+  /**
+   * The genuinely unique intro prose from the raw JD — everything *before*
+   * the first recognized "Responsibilities"/"Requirements"-style heading.
+   * `description` is the full raw text (kept for JSON-LD, which wants the
+   * complete posting); this is what the human-facing page renders, so a
+   * candidate isn't shown the same bullets three times. Empty when the raw
+   * text has no real intro (e.g. it opens straight into a heading) — the
+   * page skips the "Role Overview" card entirely in that case rather than
+   * render nothing under a heading.
+   */
+  overview: string
   responsibilities: string[]
   requirements: string[]
   /**

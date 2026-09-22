@@ -66,13 +66,23 @@ export function AboutSection() {
                 organizations seeking innovation, operational efficiency, and
                 sustainable growth.
               </p>
-              <p className="hidden sm:block">
+              {/*
+                Previously `hidden sm:block` on both paragraphs below, which
+                removed them from mobile — visually and from the a11y tree,
+                since `hidden` is `display:none`. That dropped the one
+                paragraph that actually names N2P's services (consulting,
+                digital transformation, AI, cloud, hosting) for every phone
+                visitor and every mobile screen-reader user. Shown on all
+                breakpoints now; `space-y-4` above already gives each
+                paragraph room, so no extra spacing/typography change needed.
+              */}
+              <p>
                 We help businesses leverage modern technologies to transform
                 operations, enhance customer experiences, and accelerate digital
                 initiatives through consulting, digital transformation, AI
                 integration, cloud solutions, and managed hosting services.
               </p>
-              <p className="hidden sm:block">
+              <p>
                 By combining industry expertise with a customer-centric approach,
                 we deliver tailored solutions designed to solve complex business
                 challenges and create measurable outcomes.

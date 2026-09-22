@@ -26,6 +26,7 @@ function useIsDesktop() {
 
 const companyLinks = [
   { name: "Our Services", href: "/#services" },
+  { name: "Hiring Solutions", href: "/hiring-solutions" },
   { name: "About Us", href: "/#about" },
   { name: "Contact Us", href: "/#contact" },
   { name: "Partner With Us", href: "/clients" },

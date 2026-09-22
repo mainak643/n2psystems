@@ -1,6 +1,7 @@
 "use client"
 
 import { useRef, useState, useCallback, useEffect } from "react"
+import Link from "next/link"
 import {
   Lightbulb,
   ClipboardCheck,
@@ -10,6 +11,7 @@ import {
   BookOpenCheck,
   Handshake,
   ArrowRight,
+  ArrowUpRight,
   Pause,
   Play,
 } from "lucide-react"
@@ -432,6 +434,22 @@ export function SpecializationSection() {
               </p>
             </div>
           </article>
+        </div>
+
+        {/*
+          Employer-facing bridge to Hiring Solutions. That page (contract
+          staffing, permanent placement, executive search) previously had no
+          link anywhere on the homepage — this is the natural spot for it,
+          right after the reader has just seen the full services list.
+        */}
+        <div className="mt-9 flex justify-center sm:mt-12 sm:justify-start">
+          <Link
+            href="/hiring-solutions"
+            className="group inline-flex items-center gap-1.5 text-caption font-semibold text-primary outline-none hover:underline focus-visible:underline"
+          >
+            Looking to hire technology talent? Explore our Hiring Solutions
+            <ArrowUpRight className="size-3.5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" aria-hidden="true" />
+          </Link>
         </div>
 
       </div>

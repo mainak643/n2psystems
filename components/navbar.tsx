@@ -51,6 +51,10 @@ type NavItem = NavAnchorItem | NavLinkItem | NavDropdownItem
 
 const navigation: NavItem[] = [
   { name: "Our Services", anchor: "services" },
+  // The one page that actually explains N2P's staffing/hiring model to
+  // employers — previously reachable only by direct URL or search, since it
+  // had no link anywhere in the nav, homepage, or footer.
+  { name: "Hiring Solutions", href: "/hiring-solutions" },
   {
     name: "Careers",
     children: [
@@ -219,7 +223,7 @@ function DesktopDropdown({
         {/* Invisible gap bridge so hover doesn't drop between trigger and menu */}
         <div className="absolute -top-3 left-0 right-0 h-3" aria-hidden="true" />
 
-        <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#0B1D36] shadow-[0_16px_50px_rgba(0,0,0,0.5)]">
+        <div className="overflow-hidden rounded-2xl border border-white/10 bg-[var(--surface-dark)] shadow-[0_16px_50px_var(--on-dark-shadow)]">
           <div className="h-px bg-gradient-to-r from-blue-500/50 via-sky-400/40 to-transparent" />
           <div className="p-2">
             {item.children.map((child) => {
@@ -400,25 +404,22 @@ function MobileMenu({
           visible && "vis",
         )}
         style={{
-          background: "#0B1D36",
-          borderLeft: "1px solid rgba(255,255,255,0.10)",
-          boxShadow: "-12px 0 40px rgba(0,0,0,0.5)",
+          background: "var(--surface-dark)",
+          borderLeft: "1px solid var(--nav-line)",
+          boxShadow: "-12px 0 40px var(--on-dark-shadow)",
         }}
       >
         {/* Top accent line */}
         <div
           className="absolute top-0 left-0 right-0 h-px pointer-events-none"
           aria-hidden="true"
-          style={{
-            background:
-              "linear-gradient(90deg, transparent, rgba(56,189,248,0.5) 50%, rgba(29,111,219,0.3) 100%)",
-          }}
+          style={{ background: "var(--nav-drawer-accent-line)" }}
         />
 
         {/* Header */}
         <div
           className="relative flex shrink-0 items-center justify-between"
-          style={{ padding: "20px 24px 18px", borderBottom: "1px solid rgba(255,255,255,0.05)" }}
+          style={{ padding: "20px 24px 18px", borderBottom: "1px solid var(--on-dark-fill)" }}
         >
           <Link href="/" onClick={onClose} className="flex items-center gap-2.5">
             <div className="flex h-[34px] w-[34px] shrink-0 items-center justify-center overflow-hidden rounded-lg border border-white/[0.08] bg-white/5">
@@ -430,9 +431,9 @@ function MobileMenu({
                 className="h-full w-full object-contain"
               />
             </div>
-            <span style={{ fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,0.9)", letterSpacing: "-0.01em" }}>
+            <span style={{ fontSize: 14, fontWeight: 600, color: "var(--nav-wordmark)", letterSpacing: "-0.01em" }}>
               N2P{" "}
-              <span style={{ color: "rgba(255,255,255,0.5)", fontWeight: 400 }}>Systems</span>
+              <span style={{ color: "var(--nav-wordmark-muted)", fontWeight: 400 }}>Systems</span>
             </span>
           </Link>
 
@@ -478,15 +479,15 @@ function MobileMenu({
                         style={{
                           width: 2, height: 16, borderRadius: 1, marginRight: 14, flexShrink: 0,
                           background: isExpanded || isChildActive
-                            ? "linear-gradient(to bottom, #38bdf8, #1d6fdb)"
-                            : "rgba(255,255,255,0.15)",
+                            ? "var(--nav-indicator-active)"
+                            : "var(--nav-indicator-idle)",
                           transition: "background 0.2s",
                         }}
                       />
                       <span
                         style={{
                           flex: 1, fontSize: 15, fontWeight: 500, letterSpacing: "-0.01em",
-                          color: isExpanded || isChildActive ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.70)",
+                          color: isExpanded || isChildActive ? "var(--nav-label-active)" : "var(--nav-label-idle)",
                           transition: "color 0.2s",
                         }}
                       >
@@ -495,7 +496,7 @@ function MobileMenu({
                       <ChevronRight
                         style={{
                           width: 14, height: 14,
-                          color: isExpanded || isChildActive ? "rgba(56,189,248,0.7)" : "rgba(255,255,255,0.3)",
+                          color: isExpanded || isChildActive ? "var(--nav-chevron-active)" : "var(--nav-chevron-idle)",
                           transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)",
                           transition: "transform 0.25s ease, color 0.2s",
                         }}
@@ -519,26 +520,26 @@ function MobileMenu({
                                 className="flex items-center outline-none transition-colors duration-150 hover:bg-white/[0.03] focus-visible:bg-white/[0.05] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sky-400/40"
                                 style={{
                                   padding: "10px 24px 10px 40px",
-                                  background: isChildCurrent ? "rgba(56,189,248,0.08)" : undefined,
+                                  background: isChildCurrent ? "var(--nav-accent-soft)" : undefined,
                                 }}
                               >
                                 <div className="flex-1 min-w-0">
                                   <div
                                     style={{
                                       fontSize: 13, fontWeight: 500,
-                                      color: isChildCurrent ? "rgba(56,189,248,0.9)" : "rgba(255,255,255,0.60)",
+                                      color: isChildCurrent ? "var(--nav-accent-strong)" : "var(--nav-label-faint)",
                                     }}
                                   >
                                     {child.name}
                                   </div>
                                   {child.description && (
-                                    <div style={{ marginTop: 2, fontSize: 11, color: "rgba(255,255,255,0.28)", letterSpacing: "0.01em" }}>
+                                    <div style={{ marginTop: 2, fontSize: 11, color: "var(--nav-label-caption)", letterSpacing: "0.01em" }}>
                                       {child.description}
                                     </div>
                                   )}
                                 </div>
                                 {isChildCurrent && (
-                                  <span style={{ display: "inline-block", width: 4, height: 4, borderRadius: "50%", background: "rgba(56,189,248,0.8)", flexShrink: 0 }} />
+                                  <span style={{ display: "inline-block", width: 4, height: 4, borderRadius: "50%", background: "var(--nav-accent-bright)", flexShrink: 0 }} />
                                 )}
                               </Link>
                             )
@@ -553,8 +554,8 @@ function MobileMenu({
                     className="flex w-full items-center text-left outline-none transition-colors duration-150 hover:bg-white/[0.02] focus-visible:bg-white/[0.05] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sky-400/40"
                     style={{ padding: "14px 24px" }}
                   >
-                    <div style={{ width: 2, height: 16, borderRadius: 1, marginRight: 14, flexShrink: 0, background: "rgba(255,255,255,0.15)" }} />
-                    <span style={{ fontSize: 15, fontWeight: 500, letterSpacing: "-0.01em", color: "rgba(255,255,255,0.70)" }}>
+                    <div style={{ width: 2, height: 16, borderRadius: 1, marginRight: 14, flexShrink: 0, background: "var(--nav-indicator-idle)" }} />
+                    <span style={{ fontSize: 15, fontWeight: 500, letterSpacing: "-0.01em", color: "var(--nav-label-idle)" }}>
                       {item.name}
                     </span>
                   </button>
@@ -564,18 +565,18 @@ function MobileMenu({
                     onClick={onClose}
                     aria-current={isActive ? "page" : undefined}
                     className="flex items-center outline-none transition-colors duration-150 hover:bg-white/[0.02] focus-visible:bg-white/[0.05] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sky-400/40"
-                    style={{ padding: "14px 24px", background: isActive ? "rgba(56,189,248,0.06)" : undefined }}
+                    style={{ padding: "14px 24px", background: isActive ? "var(--nav-accent-mid)" : undefined }}
                   >
                     <div
                       style={{
                         width: 2, height: 16, borderRadius: 1, marginRight: 14, flexShrink: 0,
-                        background: isActive ? "linear-gradient(to bottom, #38bdf8, #1d6fdb)" : "rgba(255,255,255,0.15)",
+                        background: isActive ? "var(--nav-indicator-active)" : "var(--nav-indicator-idle)",
                       }}
                     />
                     <span
                       style={{
                         fontSize: 15, fontWeight: 500, letterSpacing: "-0.01em",
-                        color: isActive ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.70)",
+                        color: isActive ? "var(--nav-label-active)" : "var(--nav-label-idle)",
                       }}
                     >
                       {item.name}
@@ -584,7 +585,7 @@ function MobileMenu({
                 ) : null}
 
                 {i < navigation.length - 1 && (
-                  <div style={{ margin: "0 24px", height: 1, background: "rgba(255,255,255,0.05)" }} />
+                  <div style={{ margin: "0 24px", height: 1, background: "var(--on-dark-fill)" }} />
                 )}
               </div>
             )
@@ -594,7 +595,7 @@ function MobileMenu({
         {/* Mobile CTAs */}
         <div
           className={cn("mob-ctas shrink-0", visible && "vis")}
-          style={{ padding: "16px 20px calc(24px + env(safe-area-inset-bottom, 0px))", borderTop: "1px solid rgba(255,255,255,0.05)" }}
+          style={{ padding: "16px 20px calc(24px + env(safe-area-inset-bottom, 0px))", borderTop: "1px solid var(--on-dark-fill)" }}
         >
           <Link
             href="/jobs"
@@ -608,13 +609,13 @@ function MobileMenu({
                 // Was a sky→blue→indigo gradient unrelated to the brand
                 // palette; now the same two-stop blue every other primary
                 // CTA on the site uses (hero, jobs board, apply forms).
-                background: "linear-gradient(90deg, #1E63B5 0%, #164e93 100%)",
+                background: "linear-gradient(90deg, var(--primary) 0%, var(--nav-cta-gradient-end) 100%)",
               }}
             >
-              <span style={{ fontSize: 14, fontWeight: 600, color: "#fff", letterSpacing: "-0.01em" }}>
+              <span style={{ fontSize: 14, fontWeight: 600, color: "var(--primary-foreground)", letterSpacing: "-0.01em" }}>
                 Browse Opportunities
               </span>
-              <ArrowUpRight style={{ width: 14, height: 14, color: "rgba(255,255,255,0.65)" }} />
+              <ArrowUpRight style={{ width: 14, height: 14, color: "var(--nav-cta-icon)" }} />
             </div>
           </Link>
 
@@ -625,12 +626,12 @@ function MobileMenu({
           >
             <div
               className="flex items-center justify-center gap-2 transition-all duration-200 hover:bg-white/[0.05] active:scale-[0.98]"
-              style={{ padding: "11px 20px", borderRadius: 10, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.02)" }}
+              style={{ padding: "11px 20px", borderRadius: 10, border: "1px solid var(--nav-fill-soft)", background: "var(--nav-fill-faint)" }}
             >
-              <span style={{ fontSize: 13, fontWeight: 500, color: "rgba(255,255,255,0.55)" }}>
+              <span style={{ fontSize: 13, fontWeight: 500, color: "var(--nav-cta-secondary-label)" }}>
                 Contact Us
               </span>
-              <ArrowRight style={{ width: 13, height: 13, color: "rgba(255,255,255,0.28)" }} />
+              <ArrowRight style={{ width: 13, height: 13, color: "var(--nav-cta-secondary-icon)" }} />
             </div>
           </Link>
         </div>
@@ -734,9 +735,9 @@ export function Navbar() {
               boxShadow: "none",
             }
             : {
-              backgroundColor: "#0B1D36",
-              borderBottom: "1px solid rgba(255, 255, 255, 0.10)",
-              boxShadow: "0 1px 0 rgba(56, 189, 248, 0.15), 0 4px 20px rgba(0, 0, 0, 0.35)",
+              backgroundColor: "var(--surface-dark)",
+              borderBottom: "1px solid var(--nav-line)",
+              boxShadow: "var(--nav-scroll-shadow)",
             }
         }
       >
@@ -745,7 +746,7 @@ export function Navbar() {
           <div
             className="pointer-events-none absolute bottom-0 left-0 right-0 h-px"
             aria-hidden="true"
-            style={{ background: "linear-gradient(90deg, transparent, rgba(56,189,248,0.35) 50%, transparent)" }}
+            style={{ background: "linear-gradient(90deg, transparent, var(--nav-accent-dim) 50%, transparent)" }}
           />
         )}
 
@@ -764,7 +765,7 @@ export function Navbar() {
           >
             <div
               className="relative flex h-[34px] w-[34px] sm:h-[38px] sm:w-[38px] items-center justify-center overflow-hidden rounded-lg sm:rounded-xl border border-white/[0.16] transition-all duration-300 group-hover:border-sky-400/30 group-hover:ring-1 group-hover:ring-sky-400/25"
-              style={{ background: "linear-gradient(135deg, rgba(29,111,219,0.3) 0%, rgba(56,189,248,0.15) 100%)" }}
+              style={{ background: "var(--nav-logo-glow)" }}
             >
               <Image
                 src="/images/n2p-logo-light.png"
@@ -841,7 +842,7 @@ export function Navbar() {
               style={{
                 width: 1,
                 height: 20,
-                background: "rgba(255, 255, 255, 0.12)",
+                background: "var(--nav-divider)",
               }}
             />
 
@@ -850,7 +851,7 @@ export function Navbar() {
               className="hidden items-center gap-1.5 rounded-lg border border-white/15 bg-white/[0.05] px-3.5 py-2 text-[12px] xl:text-[13px] font-semibold text-slate-200 transition-all duration-150 hover:border-white/25 hover:bg-white/[0.09] hover:text-white active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-white/30 lg:flex"
             >
               Partner With Us
-              <ArrowUpRight style={{ width: 12, height: 12, color: "rgba(255,255,255,0.45)" }} className="xl:size-[13px]" />
+              <ArrowUpRight style={{ width: 12, height: 12, color: "var(--nav-partner-icon)" }} className="xl:size-[13px]" />
             </Link>
 
             {/* ── Hamburger (accessible 44px touch target) ── */}
@@ -867,7 +868,7 @@ export function Navbar() {
                 style={{
                   width: 20,
                   height: 1.5,
-                  background: mobileOpen ? "rgba(56,189,248,0.9)" : "rgba(255,255,255,0.85)",
+                  background: mobileOpen ? "var(--nav-accent-strong)" : "var(--nav-hamburger-idle)",
                   transform: mobileOpen ? "translateY(6.5px) rotate(45deg)" : "none",
                   transition: "transform 0.28s ease, background 0.2s ease",
                   transformOrigin: "center",
@@ -880,7 +881,7 @@ export function Navbar() {
                 style={{
                   width: 14,
                   height: 1.5,
-                  background: "rgba(255,255,255,0.5)",
+                  background: "var(--nav-hamburger-mid)",
                   opacity: mobileOpen ? 0 : 1,
                   transform: mobileOpen ? "scaleX(0)" : "scaleX(1)",
                   transition: "opacity 0.18s ease, transform 0.18s ease",
@@ -894,7 +895,7 @@ export function Navbar() {
                 style={{
                   width: 20,
                   height: 1.5,
-                  background: mobileOpen ? "rgba(56,189,248,0.9)" : "rgba(255,255,255,0.65)",
+                  background: mobileOpen ? "var(--nav-accent-strong)" : "var(--nav-hamburger-bottom-idle)",
                   transform: mobileOpen ? "translateY(-6.5px) rotate(-45deg)" : "none",
                   transition: "transform 0.28s ease, background 0.2s ease",
                   transformOrigin: "center",

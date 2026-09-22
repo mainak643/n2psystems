@@ -54,6 +54,48 @@
   --on-dark-line-strong: rgba(255, 255, 255, 0.16);
   --on-dark-fill: rgba(255, 255, 255, 0.05);
   --on-dark-fill-hover: rgba(56, 189, 248, 0.10);
+  /* Dropdown/drawer drop-shadow on --surface-dark panels (navbar menu,
+     mobile drawer). Same value used at both call sites previously as a
+     literal rgba() rather than a shared token. */
+  --on-dark-shadow: rgba(0, 0, 0, 0.5);
+
+  /* ── Navbar-only tokens ──────────────────────────────────────
+     Scoped to components/navbar.tsx's mobile drawer, scrolled header,
+     and hamburger icon — kept here rather than co-located in the
+     component because the header and hamburger render unconditionally,
+     before the drawer's own markup would ever mount. Every value below
+     is unchanged from what was previously a literal rgba()/hex string
+     typed directly at its call site. */
+  --nav-line: rgba(255, 255, 255, 0.10);
+  --nav-divider: rgba(255, 255, 255, 0.12);
+  --nav-fill-faint: rgba(255, 255, 255, 0.02);
+  --nav-fill-soft: rgba(255, 255, 255, 0.08);
+  --nav-label-idle: rgba(255, 255, 255, 0.70);
+  --nav-label-active: rgba(255, 255, 255, 0.95);
+  --nav-label-faint: rgba(255, 255, 255, 0.60);
+  --nav-label-caption: rgba(255, 255, 255, 0.28);
+  --nav-indicator-idle: rgba(255, 255, 255, 0.15);
+  --nav-indicator-active: linear-gradient(to bottom, #38bdf8, #1d6fdb);
+  --nav-chevron-idle: rgba(255, 255, 255, 0.3);
+  --nav-chevron-active: rgba(56, 189, 248, 0.7);
+  --nav-accent-bright: rgba(56, 189, 248, 0.8);
+  --nav-wordmark: rgba(255, 255, 255, 0.9);
+  --nav-wordmark-muted: rgba(255, 255, 255, 0.5);
+  --nav-cta-icon: rgba(255, 255, 255, 0.65);
+  --nav-cta-secondary-label: rgba(255, 255, 255, 0.55);
+  --nav-cta-secondary-icon: rgba(255, 255, 255, 0.28);
+  --nav-accent-strong: rgba(56, 189, 248, 0.9);
+  --nav-accent-mid: rgba(56, 189, 248, 0.06);
+  --nav-accent-soft: rgba(56, 189, 248, 0.08);
+  --nav-accent-dim: rgba(56, 189, 248, 0.35);
+  --nav-drawer-accent-line: linear-gradient(90deg, transparent, rgba(56, 189, 248, 0.5) 50%, rgba(29, 111, 219, 0.3) 100%);
+  --nav-logo-glow: linear-gradient(135deg, rgba(29, 111, 219, 0.3) 0%, rgba(56, 189, 248, 0.15) 100%);
+  --nav-scroll-shadow: 0 1px 0 rgba(56, 189, 248, 0.15), 0 4px 20px rgba(0, 0, 0, 0.35);
+  --nav-cta-gradient-end: #164e93;
+  --nav-hamburger-idle: rgba(255, 255, 255, 0.85);
+  --nav-hamburger-mid: rgba(255, 255, 255, 0.5);
+  --nav-hamburger-bottom-idle: rgba(255, 255, 255, 0.65);
+  --nav-partner-icon: rgba(255, 255, 255, 0.45);
   /* signature-blue is only 3.2:1 on navy (fails AA) — eyebrows on a
      dark band use tech-green (9.5:1) instead. */
   --on-dark-accent: var(--tech-green);

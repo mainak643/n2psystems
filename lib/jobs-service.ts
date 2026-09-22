@@ -154,10 +154,34 @@ function normalizeWorkMode(mode?: string): "Remote" | "Onsite" | "Hybrid" {
 
 const BULLET_RE = /^\s*(?:[•▪◦*\-–—]|\d+[.)])\s+/;
 
-/** A heading is a short line that introduces a list — never a list item itself. */
-function sectionOf(line: string): 'responsibilities' | 'requirements' | null {
-  if (line.length > 64 || BULLET_RE.test(line)) return null;
-  const lower = line.toLowerCase();
+/**
+ * A heading is a short line that introduces a section — never a list item
+ * itself. `'overview'` is a heading too (a JD that opens with a literal
+ * "## Role Overview" line before its actual summary), but it introduces no
+ * list — it's matched purely so the loop below can consume and discard the
+ * heading text itself instead of treating it as the summary's first line.
+ */
+function sectionOf(line: string): 'responsibilities' | 'requirements' | 'overview' | null {
+  if (BULLET_RE.test(line)) return null;
+  // Raw JDs write headings as "## Role Overview" — the substring checks
+  // below (`.includes('responsibilit')`, etc.) match right through a "##"
+  // prefix, but an exact-equality check like `lower === 'overview'` would
+  // not, so strip the markdown marker once, up front, for every check here.
+  const normalized = line.replace(/^#{1,6}\s+/, '').trim();
+  if (normalized.length > 64) return null;
+  const lower = normalized.toLowerCase();
+  if (
+    lower === 'overview' ||
+    lower === 'role overview' ||
+    lower === 'summary' ||
+    lower === 'role summary' ||
+    lower === 'job summary' ||
+    lower === 'position summary' ||
+    lower.includes('about the role') ||
+    lower.includes('about this role')
+  ) {
+    return 'overview';
+  }
   if (
     lower.includes('responsibilit') ||
     lower.includes('what you will do') ||
@@ -172,7 +196,15 @@ function sectionOf(line: string): 'responsibilities' | 'requirements' | null {
     lower.includes('what you bring') ||
     lower.includes("what you'll need") ||
     lower.includes('must have') ||
-    lower.includes('skills')
+    lower.includes('skills') ||
+    // "What We Are/Were Looking For", "Preferred & Bonus Experience", "Nice
+    // to Have" — these headings used to fall through unrecognized, which
+    // left `current` stuck on whatever section came before and silently
+    // filed candidate-facing "what we want" bullets under Responsibilities.
+    lower.includes('looking for') ||
+    lower.includes('preferred') ||
+    lower.includes('bonus') ||
+    lower.includes('nice to have')
   ) {
     return 'requirements';
   }
@@ -194,11 +226,15 @@ function sectionOf(line: string): 'responsibilities' | 'requirements' | null {
  *    the generic placeholder copy. Once a heading establishes the section,
  *    plain lines count too.
  */
-function extractBulletPoints(text?: string): { responsibilities: string[]; requirements: string[] } {
-  if (!text) return { responsibilities: [], requirements: [] };
+function extractBulletPoints(text?: string): { responsibilities: string[]; requirements: string[]; overview: string } {
+  if (!text) return { responsibilities: [], requirements: [], overview: '' };
 
   const responsibilities: string[] = [];
   const requirements: string[] = [];
+  // Prose lines seen before any recognized heading — the genuinely unique
+  // part of the JD, as opposed to the bullet lists that get re-rendered
+  // structurally below. See the `overview` field on `Job`.
+  const overviewLines: string[] = [];
   let current: 'overview' | 'responsibilities' | 'requirements' = 'overview';
 
   for (const raw of text.split('\n')) {
@@ -212,6 +248,15 @@ function extractBulletPoints(text?: string): { responsibilities: string[]; requi
     }
 
     const isBullet = BULLET_RE.test(line);
+
+    // Prose ahead of the first heading is the overview; bullets ahead of
+    // the first heading keep the existing heuristic below instead (a JD
+    // that opens straight into a bare bullet list, no intro paragraph).
+    if (current === 'overview' && !isBullet) {
+      if (line.length >= 6) overviewLines.push(line);
+      continue;
+    }
+
     const cleaned = line.replace(BULLET_RE, '').trim();
     // Under 6 chars is noise; over 300 is a prose paragraph, not a bullet.
     if (cleaned.length < 6 || cleaned.length > 300) continue;
@@ -226,7 +271,7 @@ function extractBulletPoints(text?: string): { responsibilities: string[]; requi
     }
   }
 
-  return { responsibilities, requirements };
+  return { responsibilities, requirements, overview: overviewLines.join('\n\n') };
 }
 
 /**
@@ -296,6 +341,12 @@ export function mapRequirementToJob(req: any): Job {
     domain: req.department?.trim() || 'Software Engineering',
     postedDate: formatRelativeTime(req.created_at),
     description: req.description || `Exciting opportunity for a ${req.title} with N2P Systems.`,
+    // Falls back to the same generic line `description` uses only when there
+    // was no raw description at all. When there *was* a description but it
+    // opens straight into a heading (no real intro), this is deliberately
+    // empty — the page hides the Role Overview card rather than show it
+    // empty or duplicate the lists below.
+    overview: extracted.overview || (req.description ? '' : `Exciting opportunity for a ${req.title} with N2P Systems.`),
     responsibilities:
       extracted.responsibilities.length > 0
         ? extracted.responsibilities

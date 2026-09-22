@@ -84,9 +84,17 @@ const trustPoints = [
 export default function RequestConsultationPage() {
   return (
     <main>
+      {/*
+        The nav (desktop pill, Contact dropdown, footer) all call this
+        destination "Partner With Us" — this page's own H1 used to say
+        "Request a Quote" instead, so a visitor saw a third label right as
+        they arrived. "Partner With Us" is now the H1 everywhere links to
+        it; "Request a Quote" moves to the eyebrow, so the quote-request
+        function stays visible without being the headline.
+      */}
       <PageHero
-        eyebrow="Partner With Us"
-        title="Request a Quote"
+        eyebrow="Request a Quote"
+        title="Partner With Us"
         description="Tell us about your goals and challenges. Our team will prepare a tailored proposal covering scope, timeline, and investment — so you can make informed decisions."
       />
 

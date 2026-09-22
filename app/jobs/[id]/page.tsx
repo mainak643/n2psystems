@@ -40,7 +40,11 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const job = await getJob(id)
   if (!job) return { title: "Job Not Found | N2P Systems" }
 
-  const description = job.description.replace(/\s+/g, " ").trim().slice(0, 160)
+  // Prefer the clean overview so a stray "##"/"-" from the raw JD never
+  // leaks into a search snippet or social preview; fall back through the
+  // structured lists rather than the raw, markdown-ish description.
+  const summarySource = job.overview || job.responsibilities?.[0] || job.description
+  const description = summarySource.replace(/^#+\s*/gm, "").replace(/\s+/g, " ").trim().slice(0, 160)
   const canonical = `/jobs/${encodeURIComponent(job.id)}`
 
   return {
@@ -149,12 +153,24 @@ export default async function JobDetailPage({
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
           {/* Main content */}
           <div className="flex flex-col gap-8 lg:col-span-2">
-            <div className="surface p-6 sm:p-8">
-              <h2 className="text-title text-foreground">Role Overview</h2>
-              <div className="mt-4 whitespace-pre-line text-body text-muted-foreground">
-                {job.description}
+            {/*
+              Only the genuinely unique intro prose renders here now — the
+              raw `description` used to be dumped verbatim, which meant every
+              job page showed literal "## Key Responsibilities" / "- " markdown
+              syntax as text, and repeated the same content again in the
+              structured cards below. `job.overview` is that same raw text
+              minus everything the Key Responsibilities / Required Skills
+              cards already cover; it's empty (and this card hidden) when the
+              JD has no real intro to show.
+            */}
+            {job.overview && job.overview.trim() && (
+              <div className="surface p-6 sm:p-8">
+                <h2 className="text-title text-foreground">Role Overview</h2>
+                <div className="mt-4 whitespace-pre-line text-body text-muted-foreground">
+                  {job.overview}
+                </div>
               </div>
-            </div>
+            )}
 
             {job.responsibilities && job.responsibilities.length > 0 && (
               <div className="surface p-6 sm:p-8">

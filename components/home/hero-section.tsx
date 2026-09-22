@@ -83,19 +83,27 @@ export function HeroSection() {
           </h1>
 
           {/* Static Capability Bridge */}
-          <p className="mt-5 sm:mt-6 flex items-baseline gap-2 text-[15.5px] sm:text-[17px] text-slate-300">
+          <p className="mt-5 sm:mt-6 flex flex-wrap items-baseline gap-x-2 gap-y-1 text-[15.5px] sm:text-[17px] text-slate-300">
             <span className="font-normal text-slate-400">Specializing in</span>
-            <span className="font-semibold text-slate-100">Digital Growth</span>
+            <span className="font-semibold text-slate-100">Technology Solutions &amp; Talent</span>
           </p>
 
-          {/* Body Paragraph (Generous 560–580px width) */}
+          {/*
+            Body Paragraph (Generous 560–580px width).
+            Previously named only consulting/AI/cloud, which read as a
+            generic IT consultancy — the page's own <title> metadata says
+            "Global Technology Recruitment", but nothing in the hero did.
+            This names both halves of what N2P does without narrowing the
+            company to staffing alone.
+          */}
           <p
             id="hero-description"
             className="mt-4 max-w-[560px] lg:max-w-[580px] text-[15.5px] sm:text-[16.5px] leading-[1.7] text-slate-300/90"
           >
-            We help organizations accelerate digital transformation, modernize
-            operations, and create intelligent experiences through consulting,
-            AI, cloud, and strategic partnerships.
+            We help organizations accelerate digital transformation and
+            modernize operations — pairing technology consulting, AI, and
+            cloud delivery with the specialized talent and staffing
+            partnerships that bring it to life.
           </p>
 
           {/* CTA Group */}

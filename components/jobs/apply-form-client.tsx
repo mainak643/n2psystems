@@ -66,6 +66,31 @@ function resolveContentType(file: File): string {
   return MIME_BY_EXTENSION[extensionOf(file)] ?? (file.type || "application/pdf")
 }
 
+/**
+ * Screening questions come from `job.screeningQuestions` as plain strings —
+ * there's no stored "answer type" to render against, so this reads the
+ * question text itself. Two shapes cover what recruiters actually write:
+ *
+ *  - A "years" threshold ("Do you have 5+ years...", "How many years...")
+ *    gets a number input. Even when phrased as "do you have X+", what a
+ *    recruiter screens on is the actual number, not a boundary yes/no.
+ *  - Everything else that opens with a yes/no auxiliary verb ("Are you...",
+ *    "Can you...", "Have you...") gets a Yes/No control instead of a free
+ *    text field that collects "yes"/"Yes"/"y"/a full sentence for the same
+ *    answer.
+ *
+ * Anything that doesn't match either pattern keeps the original free-text
+ * input — open-ended questions still need one.
+ */
+type QuestionKind = "boolean" | "numeric" | "text"
+
+function classifyScreeningQuestion(question: string): QuestionKind {
+  const q = question.trim().toLowerCase()
+  if (/\d+\+?\s*years?\b/.test(q) || /\bhow many\b/.test(q)) return "numeric"
+  if (/^(are|is|do|does|did|have|has|had|can|could|will|would|should|were|was)\b/.test(q)) return "boolean"
+  return "text"
+}
+
 function validate(values: Record<Field, string>, file: File | null) {
   const errors: Partial<Record<Field | "resume", string>> = {}
 
@@ -461,6 +486,68 @@ export function ApplyFormClient({ job }: { job: Job }) {
               const qFieldId = fieldId(`screening_${idx}`)
               const qErrorId = errorId(`screening_${idx}`)
               const hasError = Boolean(screeningErrors[idx])
+              const kind = classifyScreeningQuestion(question)
+
+              // Yes/No questions ("Are you authorized to...") get a real
+              // two-option control instead of a free-text field, so the
+              // stored answer is always exactly "Yes" or "No" — not "yes",
+              // "Yep", or a sentence a recruiter then has to interpret.
+              if (kind === "boolean") {
+                return (
+                  <fieldset key={idx} className="flex flex-col gap-2">
+                    <legend className="text-sm font-medium text-foreground leading-snug">
+                      <span className="font-mono text-xs text-primary font-semibold mr-1.5">Q{idx + 1}.</span>
+                      {question} <span className="text-rose-600">*</span>
+                    </legend>
+                    <div
+                      role="radiogroup"
+                      aria-invalid={hasError}
+                      aria-describedby={hasError ? qErrorId : undefined}
+                      className="flex gap-2.5"
+                    >
+                      {(["Yes", "No"] as const).map((option) => {
+                        const optionId = `${qFieldId}-${option.toLowerCase()}`
+                        const checked = screeningAnswers[idx] === option
+                        return (
+                          <label
+                            key={option}
+                            htmlFor={optionId}
+                            className={`flex h-11 flex-1 cursor-pointer items-center justify-center rounded-xl border text-sm font-semibold outline-none transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-primary/30 sm:flex-none sm:px-10 ${
+                              checked
+                                ? "border-primary bg-primary/10 text-primary"
+                                : hasError
+                                  ? "border-rose-300 text-muted-foreground"
+                                  : "border-border text-muted-foreground hover:border-primary/40"
+                            }`}
+                          >
+                            <input
+                              type="radio"
+                              id={optionId}
+                              name={qFieldId}
+                              value={option}
+                              checked={checked}
+                              required
+                              onChange={() => handleScreeningChange(idx, option)}
+                              className="sr-only"
+                            />
+                            {option}
+                          </label>
+                        )
+                      })}
+                    </div>
+                    {hasError && (
+                      <p id={qErrorId} className="text-xs font-medium text-rose-600">
+                        {screeningErrors[idx]}
+                      </p>
+                    )}
+                  </fieldset>
+                )
+              }
+
+              // "5+ years", "How many years..." — what a recruiter actually
+              // screens on is the number, so this gets a numeric input
+              // rather than forcing a yes/no on a threshold question.
+              const isNumeric = kind === "numeric"
 
               return (
                 <div key={idx} className="flex flex-col gap-1.5">
@@ -470,12 +557,16 @@ export function ApplyFormClient({ job }: { job: Job }) {
                   </label>
                   <input
                     id={qFieldId}
+                    type={isNumeric ? "number" : "text"}
+                    inputMode={isNumeric ? "decimal" : undefined}
+                    min={isNumeric ? 0 : undefined}
+                    step={isNumeric ? 0.5 : undefined}
                     required
                     aria-invalid={hasError}
                     aria-describedby={hasError ? qErrorId : undefined}
                     value={screeningAnswers[idx] || ""}
                     onChange={(e) => handleScreeningChange(idx, e.target.value)}
-                    placeholder="Enter your answer…"
+                    placeholder={isNumeric ? "Enter number of years…" : "Enter your answer…"}
                     className={`h-11 w-full rounded-xl border bg-background px-3.5 text-base text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 sm:text-[0.9375rem] ${
                       hasError ? "border-rose-300" : "border-border"
                     }`}

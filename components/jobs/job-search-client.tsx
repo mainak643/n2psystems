@@ -21,6 +21,12 @@ interface JobSearchClientProps {
   initialJobs?: Job[]
 }
 
+// Rendering 25+ full job cards in one unbroken list was the whole board's
+// worth of scroll before a candidate reached the roles further down —
+// worse on mobile than desktop. Paginate client-side rather than change how
+// jobs are fetched.
+const PAGE_SIZE = 10
+
 export function JobSearchClient({ initialJobs }: JobSearchClientProps) {
   const [jobsList, setJobsList] = useState<Job[]>(initialJobs ?? [])
   const [searchQuery, setSearchQuery] = useState("")
@@ -29,6 +35,7 @@ export function JobSearchClient({ initialJobs }: JobSearchClientProps) {
   const [experience, setExperience] = useState("All Levels")
   const [mode, setMode] = useState("All Modes")
   const [showFilters, setShowFilters] = useState(false)
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
 
   // Realtime Supabase updates when recruiter creates or updates requirements
   useEffect(() => {
@@ -82,6 +89,15 @@ export function JobSearchClient({ initialJobs }: JobSearchClientProps) {
       return matchesSearch && matchesLocation && matchesDomain && matchesExperience && matchesMode
     })
   }, [jobsList, searchQuery, location, domain, experience, mode])
+
+  // A new search/filter is a new result set — start back at page one rather
+  // than leaving visibleCount wherever it was for the previous query.
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE)
+  }, [searchQuery, location, domain, experience, mode])
+
+  const visibleJobs = filteredJobs.slice(0, visibleCount)
+  const hasMore = filteredJobs.length > visibleCount
 
   const activeFilters = [location, domain, experience, mode].filter((f) => !f.startsWith("All"))
 
@@ -217,8 +233,17 @@ export function JobSearchClient({ initialJobs }: JobSearchClientProps) {
       {/* Results count & match indicator */}
       <div className="flex items-center justify-between px-1">
         <p aria-live="polite" className="text-body text-muted-foreground">
-          Showing <span className="font-semibold text-foreground">{filteredJobs.length}</span>{" "}
-          active {filteredJobs.length === 1 ? "opening" : "openings"}
+          {hasMore ? (
+            <>
+              Showing <span className="font-semibold text-foreground">{visibleJobs.length}</span> of{" "}
+              <span className="font-semibold text-foreground">{filteredJobs.length}</span> active openings
+            </>
+          ) : (
+            <>
+              Showing <span className="font-semibold text-foreground">{filteredJobs.length}</span>{" "}
+              active {filteredJobs.length === 1 ? "opening" : "openings"}
+            </>
+          )}
         </p>
         <Link
           href="/resume"
@@ -232,7 +257,7 @@ export function JobSearchClient({ initialJobs }: JobSearchClientProps) {
       {/* Job listings */}
       <div className="flex flex-col gap-4">
         {filteredJobs.length > 0 ? (
-          filteredJobs.map((job) => (
+          visibleJobs.map((job) => (
             <Link
               key={job.id}
               // Reference codes are recruiter-entered free text, so a code with
@@ -327,6 +352,19 @@ export function JobSearchClient({ initialJobs }: JobSearchClientProps) {
           </div>
         )}
       </div>
+
+      {hasMore && (
+        <div className="flex justify-center pt-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="lg"
+            onClick={() => setVisibleCount((n) => n + PAGE_SIZE)}
+          >
+            Load {Math.min(PAGE_SIZE, filteredJobs.length - visibleCount)} More Roles
+          </Button>
+        </div>
+      )}
     </div>
   )
 }
