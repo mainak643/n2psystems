@@ -549,7 +549,7 @@ export function getDynamicFilterOptions(jobs: Job[]) {
 
   return {
     // Fixed country options — only the three regions N2P operates in.
-    countries: ['All Countries', 'India', 'Canada', 'USA'] as const,
+    countries: ['All Countries', 'India', 'Canada', 'USA'],
     cities: ['All Cities', ...uniq(jobs.map((j) => extractCity(j.location)))],
     domains: ['All Domains', ...uniq(jobs.map((j) => j.domain))],
     experiences: ['All Levels', ...uniq(jobs.map((j) => j.experience))],

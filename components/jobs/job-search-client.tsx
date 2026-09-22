@@ -167,8 +167,8 @@ export function JobSearchClient({ initialJobs }: JobSearchClientProps) {
 
         {/* Filter dropdowns row */}
         <div
-          className={`mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5 ${
-            showFilters ? "block" : "hidden lg:grid"
+          className={`mt-4 gap-3 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 ${
+            showFilters ? "grid" : "hidden lg:grid"
           }`}
         >
           {/* Country filter — fixed to India / Canada / USA */}
