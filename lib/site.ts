@@ -30,3 +30,16 @@ export const SITE_URL = resolveSiteUrl()
 export function absoluteUrl(path: string): string {
   return `${SITE_URL}${path.startsWith('/') ? path : `/${path}`}`
 }
+
+/**
+ * Is this route for someone applying for a job, rather than for an employer?
+ *
+ * /resume and /jobs (including the job detail and apply sub-pages) are
+ * candidate-facing, so the employer-facing "Partner With Us" call to action is
+ * dropped from the navbar, the mobile drawer and the footer on those paths.
+ * Shared from here because the navbar and footer both need it and had drifted
+ * into keeping their own verbatim copies.
+ */
+export function isCandidateFacing(pathname: string): boolean {
+  return pathname.startsWith('/resume') || pathname.startsWith('/jobs')
+}

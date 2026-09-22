@@ -171,6 +171,10 @@ function toast({ ...props }: Toast) {
 function useToast() {
   const [state, setState] = React.useState<State>(memoryState)
 
+  // Subscribe once. This depended on [state], so every dispatch tore the
+  // listener down and re-added it — re-running the effect on each toast change
+  // for no reason. `setState` has a stable identity, so there is nothing to
+  // react to.
   React.useEffect(() => {
     listeners.push(setState)
     return () => {
@@ -179,7 +183,7 @@ function useToast() {
         listeners.splice(index, 1)
       }
     }
-  }, [state])
+  }, [])
 
   return {
     ...state,

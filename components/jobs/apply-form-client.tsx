@@ -40,7 +40,21 @@ const EMPTY: Record<Field, string> = {
  */
 function storagePath(referenceCode: string, file: File): string {
   const safeRef = referenceCode.replace(/[^A-Za-z0-9._-]/g, "_").slice(0, 20)
-  return `${safeRef}/${crypto.randomUUID()}.${extensionOf(file)}`
+  return `${safeRef}/${randomId()}.${extensionOf(file)}`
+}
+
+/**
+ * `crypto.randomUUID` only exists in a secure context, and this call sits
+ * inside the submit handler's `try` — so over plain HTTP (the LAN dev origin
+ * in next.config.mjs, or any non-TLS deployment) every application died after
+ * passing validation with "crypto.randomUUID is not a function" shown to the
+ * candidate. The fallback only needs to be unique within a requisition folder.
+ */
+function randomId(): string {
+  return (
+    globalThis.crypto?.randomUUID?.() ??
+    `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`
+  )
 }
 
 function extensionOf(file: File): string {

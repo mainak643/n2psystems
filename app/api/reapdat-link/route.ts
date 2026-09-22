@@ -33,6 +33,15 @@ const MAX_DESCRIPTION_CHARS = 20_000;
 const MAX_RAW_JSON_CHARS = 20_000;
 
 /**
+ * `screeningQuestions` was the one caller-controlled field with no ceiling at
+ * all, which defeated the two above: a body carrying thousands of long
+ * questions built an arbitrarily large ingest document in memory and posted it
+ * upstream. A real screening round is a handful of questions.
+ */
+const MAX_SCREENING_QUESTIONS = 50;
+const MAX_QUESTION_CHARS = 2_000;
+
+/**
  * Origins allowed to call this proxy.
  */
 const DEFAULT_ALLOWED_ORIGINS = [
@@ -40,6 +49,10 @@ const DEFAULT_ALLOWED_ORIGINS = [
   'https://n2psystems.com',
   'https://www.n2psystems.com',
   'https://n2-p-operations.vercel.app',
+];
+
+/** The portal's Vite dev server, off production only — see isAllowedOrigin. */
+const DEV_ALLOWED_ORIGINS = [
   'http://localhost:5173',
   'http://localhost:5174',
   'http://localhost:5175',
@@ -49,6 +62,7 @@ const DEFAULT_ALLOWED_ORIGINS = [
 const allowedOrigins = new Set(
   [
     ...DEFAULT_ALLOWED_ORIGINS,
+    ...(process.env.NODE_ENV !== 'production' ? DEV_ALLOWED_ORIGINS : []),
     ...(process.env.REAPDAT_ALLOWED_ORIGINS || '')
       .split(',')
       .map((o) => o.trim())
@@ -58,14 +72,28 @@ const allowedOrigins = new Set(
 
 function isAllowedOrigin(origin: string): boolean {
   if (allowedOrigins.has(origin)) return true;
-  // Match any localhost or 127.0.0.1 (any port, http or https)
-  if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) return true;
+  // Any localhost or 127.0.0.1 (any port, http or https) — but only off
+  // production. This branch used to run everywhere, so anything a victim was
+  // running on their own machine could reach the live provisioning API with
+  // credentials attached.
+  if (
+    process.env.NODE_ENV !== 'production' &&
+    /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)
+  ) {
+    return true;
+  }
   try {
     const parsed = new URL(origin);
     // Only this project's own preview deployments. A bare `.vercel.app` suffix
     // reflected every project on the platform - including an attacker's - and
     // paired it with Allow-Credentials.
-    if (/^n2-p-operations[a-z0-9-]*\.vercel\.app$/.test(parsed.hostname)) return true;
+    //
+    // The prefix form of this check had the same hole one level down: it
+    // matched `n2-p-operations-anything.vercel.app`, and project names are
+    // first-come on Vercel, so anyone could claim one. Vercel preview hosts
+    // are `<project>-<hash>-<scope>.vercel.app`, so require those two
+    // trailing segments rather than an open-ended suffix.
+    if (/^n2-p-operations-[a-z0-9]+-[a-z0-9-]+\.vercel\.app$/.test(parsed.hostname)) return true;
     if (
       parsed.hostname === 'ops.n2psystems.com' ||
       parsed.hostname === 'n2psystems.com' ||
@@ -243,8 +271,18 @@ function matchesReferenceCode(link: ReapdatLink, wantedCode: string): boolean {
 
 /**
  * Reclaims the slot a superseded link is holding.
+ *
+ * `keepLinkId` is the replacement that has just been created. It is tagged
+ * with the same reference code, so without excluding it this sweep would
+ * delete the link it was called to make room for — cleanup now runs *after*
+ * the create, not before, precisely so a failed create can no longer leave a
+ * requisition with no link at all.
  */
-async function revokeSupersededLinks(authHeaders: Record<string, string>, referenceCode: string): Promise<void> {
+async function revokeSupersededLinks(
+  authHeaders: Record<string, string>,
+  referenceCode: string,
+  keepLinkId?: string
+): Promise<void> {
   const listRes = await fetch(`${REAPDAT_API}/chat-links`, {
     headers: authHeaders,
     signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
@@ -257,7 +295,9 @@ async function revokeSupersededLinks(authHeaders: Record<string, string>, refere
 
   const data = await listRes.json();
   const links: ReapdatLink[] = Array.isArray(data.links) ? data.links : [];
-  const superseded = links.filter((link) => matchesReferenceCode(link, referenceCode));
+  const superseded = links.filter(
+    (link) => matchesReferenceCode(link, referenceCode) && String(link.id) !== keepLinkId
+  );
 
   for (const link of superseded) {
     const safeId = encodeURIComponent(link.id);
@@ -469,12 +509,13 @@ Your mission is to conduct a warm, professional, and efficient initial screening
     let typeText = '';
 
     if (typeof q === 'string') {
-      questionText = q.trim();
+      questionText = q.trim().slice(0, MAX_QUESTION_CHARS);
     } else if (typeof q === 'object' && q !== null) {
       const item = q as QuestionItem;
-      questionText = String(item.question ?? '').trim();
+      questionText = String(item.question ?? '').trim().slice(0, MAX_QUESTION_CHARS);
       if (item.idealAnswer || item.answer) {
-        targetText = `Target / Ideal response: ${String(item.idealAnswer || item.answer).trim()}`;
+        const ideal = String(item.idealAnswer || item.answer).trim().slice(0, MAX_QUESTION_CHARS);
+        targetText = `Target / Ideal response: ${ideal}`;
       }
       if (item.responseType) {
         typeText = ` [Type: ${item.responseType}]`;
@@ -700,7 +741,16 @@ export async function POST(req: NextRequest) {
   if (!(await isAuthenticatedCaller(req))) return unauthorized(cors);
 
   try {
-    const authHeaders = await getAuthHeaders();
+    /*
+      Mutable on purpose. The create call below retries once on a 401 with a
+      freshly-minted token; that token used to be captured in a local, so every
+      later call in this request — the knowledge ingest above all — carried on
+      using the credential that had just been rejected. The link got created
+      and the ingest then failed, so the recruiter was told indexing was
+      rejected while a real link existed with an empty knowledge base, and the
+      screening agent interviewed candidates knowing nothing about the role.
+    */
+    let authHeaders = await getAuthHeaders();
 
     // 1. Handle File Upload (Multipart Form Data)
     if (contentType.includes('multipart/form-data')) {
@@ -827,7 +877,7 @@ export async function POST(req: NextRequest) {
     const employmentType = typeof body.employmentType === 'string' ? body.employmentType.trim() : undefined;
     const rawJson = typeof body.rawJson === 'object' && body.rawJson !== null ? body.rawJson : undefined;
     const screeningQuestions = Array.isArray(body.screeningQuestions)
-      ? body.screeningQuestions
+      ? body.screeningQuestions.slice(0, MAX_SCREENING_QUESTIONS)
       : [];
 
     if (!referenceCode) {
@@ -966,13 +1016,6 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Best-effort cleanup of previous superseded link for this reference code
-    try {
-      await revokeSupersededLinks(authHeaders, referenceCode);
-    } catch (cleanupErr) {
-      console.warn('Reapdat link cleanup skipped:', cleanupErr);
-    }
-
     const linkLabel = title ? `${title} (${referenceCode})` : `Requisition ${referenceCode}`;
     const tags: string[] = [referenceCode];
     if (department) tags.push(department);
@@ -1000,11 +1043,12 @@ export async function POST(req: NextRequest) {
 
     if (createRes.status === 401) {
       console.warn('Reapdat rejected cached token; re-authenticating once.');
-      const freshHeaders = await getAuthHeaders(true);
+      // Reassigned, not shadowed — the ingest below must use the new token too.
+      authHeaders = await getAuthHeaders(true);
       createRes = await fetch(`${REAPDAT_API}/chat-links`, {
         method: 'POST',
         headers: {
-          ...freshHeaders,
+          ...authHeaders,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(payload),
@@ -1027,6 +1071,20 @@ export async function POST(req: NextRequest) {
     const linkData = await createRes.json();
     const linkUrl = linkData.url;
     const linkId = String(linkData.id ?? '');
+
+    /*
+      Best-effort cleanup of the previous link for this reference code, and
+      deliberately *after* the replacement exists. Revoking first meant a
+      create that failed for any reason — the tenant link cap, a 500, a
+      timeout — left the requisition with no working link at all: every
+      candidate URL and printed QR code already handed out went dead, while
+      the database still pointed at the link that had just been deleted.
+    */
+    try {
+      await revokeSupersededLinks(authHeaders, referenceCode, linkId);
+    } catch (cleanupErr) {
+      console.warn('Reapdat link cleanup skipped:', cleanupErr);
+    }
 
     let ingestedItems = 0;
     let ingestWarning: string | undefined;

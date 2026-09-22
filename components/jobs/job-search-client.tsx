@@ -48,10 +48,16 @@ export function JobSearchClient({ initialJobs }: JobSearchClientProps) {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'requirements' },
         () => {
-          fetchPublishedJobs().then((updated) => {
-            if (updated && updated.length > 0) {
-              setJobsList(updated)
-            }
+          /*
+            `force` skips the 60s module cache, which lives in this bundle too:
+            a second change within a minute used to read straight back out of
+            it and re-apply the pre-change list, so the update never appeared
+            until a manual reload. The result is applied whether or not it is
+            empty — the old `length > 0` guard meant closing the last open role
+            left it on screen indefinitely.
+          */
+          fetchPublishedJobs(true).then((updated) => {
+            if (updated) setJobsList(updated)
           })
         }
       )
@@ -117,9 +123,22 @@ export function JobSearchClient({ initialJobs }: JobSearchClientProps) {
   const visibleJobs = filteredJobs.slice(0, visibleCount)
   const hasMore = filteredJobs.length > visibleCount
 
-  const activeFilters = [country, city, domain, experience, mode].filter(
-    (f) => !f.startsWith("All")
-  )
+  /*
+    Compared against each filter's own "unset" sentinel, not the prefix "All".
+    The prefix test misread any real option starting with those letters as
+    unset — pick the city "Allentown" and the Active-filters row, the mobile
+    filter count and the "Clear all" button all vanished, leaving a visitor
+    looking at one result with nothing on screen to say why. Keyed by filter
+    name too, since two filters can legitimately hold the same value (country
+    "India" and city "India" both exist) and keying on the value collided.
+  */
+  const activeFilters = [
+    { name: "country", value: country, unset: "All Countries" },
+    { name: "city", value: city, unset: "All Cities" },
+    { name: "domain", value: domain, unset: "All Domains" },
+    { name: "experience", value: experience, unset: "All Levels" },
+    { name: "mode", value: mode, unset: "All Modes" },
+  ].filter((f) => f.value !== f.unset)
 
   const clearFilters = () => {
     setCountry("All Countries")
@@ -247,11 +266,11 @@ export function JobSearchClient({ initialJobs }: JobSearchClientProps) {
             </span>
             {activeFilters.map((filter) => (
               <Badge
-                key={filter}
+                key={filter.name}
                 variant="secondary"
                 className="rounded-lg border-none bg-primary/10 px-2.5 py-1 text-xs text-primary"
               >
-                {filter}
+                {filter.value}
               </Badge>
             ))}
             <button
@@ -389,15 +408,25 @@ export function JobSearchClient({ initialJobs }: JobSearchClientProps) {
         )}
       </div>
 
-      {hasMore && (
+      {/*
+        Rendered whenever there is more than one page, and disabled rather than
+        unmounted once everything is shown. Removing it on the final click
+        destroyed the element that had focus, so a keyboard user was dropped
+        back to the top of the document and had to tab past the whole header
+        again to reach the roles they had just loaded.
+      */}
+      {filteredJobs.length > PAGE_SIZE && (
         <div className="flex justify-center pt-2">
           <Button
             type="button"
             variant="outline"
             size="lg"
+            disabled={!hasMore}
             onClick={() => setVisibleCount((n) => n + PAGE_SIZE)}
           >
-            Load {Math.min(PAGE_SIZE, filteredJobs.length - visibleCount)} More Roles
+            {hasMore
+              ? `Load ${Math.min(PAGE_SIZE, filteredJobs.length - visibleCount)} More Roles`
+              : "All Roles Shown"}
           </Button>
         </div>
       )}

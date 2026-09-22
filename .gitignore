@@ -12,3 +12,8 @@ uploads/
 # Build artifacts
 tsconfig.tsbuildinfo
 next-env.d.ts
+
+# Local agent artifacts
+.claude/
+.agents/
+skills-lock.json

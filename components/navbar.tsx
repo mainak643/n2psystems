@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { usePathname, useRouter } from "next/navigation"
@@ -12,9 +12,7 @@ import {
   X,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
-
-const useIsomorphicLayoutEffect =
-  typeof window === "undefined" ? useEffect : useLayoutEffect
+import { isCandidateFacing } from "@/lib/site"
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -49,44 +47,61 @@ type NavItem = NavAnchorItem | NavLinkItem | NavDropdownItem
 
 // ─── Navigation config ───────────────────────────────────────────────────────
 
-const navigation: NavItem[] = [
-  { name: "Our Services", anchor: "services" },
-  // The one page that actually explains N2P's staffing/hiring model to
-  // employers — previously reachable only by direct URL or search, since it
-  // had no link anywhere in the nav, homepage, or footer.
-  { name: "Hiring Solutions", href: "/hiring-solutions" },
-  {
-    name: "Careers",
-    children: [
-      {
-        name: "Browse Opportunities",
-        href: "/jobs",
-        description: "Explore open roles",
-      },
-      {
-        name: "Submit Profile",
-        href: "/resume",
-        description: "Choose the right application path",
-      },
-    ],
-  },
-  { name: "About Us", anchor: "about" },
-  {
-    name: "Contact",
-    children: [
-      {
-        name: "Contact Us",
-        href: "/#contact",
-        description: "Reach our team directly",
-      },
-      {
-        name: "Partner With Us",
-        href: "/clients",
-        description: "Explore collaboration",
-      },
-    ],
-  },
-]
+/*
+  `isCandidateFacing` lives in lib/site.ts — the footer needs the same rule,
+  and the two files had drifted into keeping identical private copies.
+  "Partner With Us" is an employer pitch, so on /resume and /jobs it is dropped
+  from the Contact dropdown (see getNavigation), the standalone header button,
+  and the footer's Company list.
+*/
+function getNavigation(pathname: string): NavItem[] {
+  const candidateFacing = isCandidateFacing(pathname)
+
+  return [
+    { name: "Our Services", anchor: "services" },
+    // The one page that actually explains N2P's staffing/hiring model to
+    // employers — previously reachable only by direct URL or search, since it
+    // had no link anywhere in the nav, homepage, or footer.
+    { name: "Hiring Solutions", href: "/hiring-solutions" },
+    {
+      name: "Careers",
+      children: [
+        {
+          name: "Browse Opportunities",
+          href: "/jobs",
+          description: "Explore open roles",
+        },
+        {
+          name: "Submit Profile",
+          href: "/resume",
+          description: "Choose the right application path",
+        },
+      ],
+    },
+    { name: "About Us", anchor: "about" },
+    // A lone "Contact Us" child reads as a pointless one-item dropdown, so
+    // candidate-facing pages get a plain anchor button instead — same
+    // destination, same useAnchorNav cross-page handling, just no
+    // "Partner With Us" sibling.
+    candidateFacing
+      ? { name: "Contact", anchor: "contact" }
+      : {
+          name: "Contact",
+          children: [
+            {
+              name: "Contact Us",
+              href: "/#contact",
+              description: "Reach our team directly",
+            },
+            {
+              name: "Partner With Us",
+              href: "/clients",
+              description: "Explore collaboration",
+            },
+          ],
+        },
+  ]
+}
 
 // ─── Anchor scroll hook ───────────────────────────────────────────────────────
 
@@ -211,6 +226,15 @@ function DesktopDropdown({
         ref={menuRef}
         role="menu"
         aria-label={item.name}
+        /*
+          opacity-0 + pointer-events-none hides the panel visually but leaves
+          it in the accessibility tree, so browse-mode screen reader users read
+          every closed dropdown's contents straight through the header — eight
+          phantom items, while aria-expanded on the trigger said nothing was
+          open. tabIndex={-1} on the links below already handled tab order;
+          this handles the rest.
+        */
+        aria-hidden={!isOpen}
         onKeyDown={handleMenuKeyDown}
         className={cn(
           "absolute left-1/2 top-full z-50 -translate-x-1/2 pt-3 transition-all duration-200 origin-top",
@@ -250,8 +274,10 @@ function DesktopDropdown({
                         <span className="inline-block h-1 w-1 rounded-full bg-sky-400" />
                       )}
                     </div>
+                    {/* /40 composited to 3.7:1 on --surface-dark; AA wants
+                        4.5:1 for 12px text. /60 clears it. */}
                     {child.description && (
-                      <div className="mt-1.5 text-xs leading-snug text-white/40">
+                      <div className="mt-1.5 text-xs leading-snug text-white/60">
                         {child.description}
                       </div>
                     )}
@@ -340,7 +366,10 @@ function MobileMenu({
   const [mounted, setMounted] = useState(false)
   const [visible, setVisible] = useState(false)
   const pathname = usePathname()
+  const navigation = getNavigation(pathname)
   const scrollTo = useAnchorNav()
+  const drawerRef = useRef<HTMLDivElement>(null)
+  const closeButtonRef = useRef<HTMLButtonElement>(null)
 
   // Close on route change
   useEffect(() => {
@@ -363,18 +392,77 @@ function MobileMenu({
     return () => clearTimeout(t)
   }, [isOpen])
 
-  // Escape key
+  /*
+    Escape, plus the focus trap `aria-modal="true"` has always promised.
+
+    The drawer declared itself a modal dialog but never moved, trapped or
+    restored focus, and left the page behind it fully reachable. So a keyboard
+    user opened the drawer and tabbed straight past it into the hero CTAs and
+    footer links underneath — invisibly, behind an opaque panel, while
+    aria-modal told their screen reader that content was not there. On close,
+    focus was lost to <body> rather than returning to the hamburger.
+  */
   useEffect(() => {
     if (!isOpen) return
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose() }
+
+    const previouslyFocused = document.activeElement as HTMLElement | null
+    // The drawer animates in; focus once it is actually on screen.
+    const focusTimer = requestAnimationFrame(() => closeButtonRef.current?.focus())
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose()
+        return
+      }
+      if (e.key !== "Tab" || !drawerRef.current) return
+
+      const focusable = Array.from(
+        drawerRef.current.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        )
+      ).filter((el) => el.offsetParent !== null)
+      if (focusable.length === 0) return
+
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      const active = document.activeElement
+
+      // Wrap at both ends, and pull focus back in if it escaped the drawer.
+      if (e.shiftKey && (active === first || !drawerRef.current.contains(active))) {
+        e.preventDefault()
+        last.focus()
+      } else if (!e.shiftKey && (active === last || !drawerRef.current.contains(active))) {
+        e.preventDefault()
+        first.focus()
+      }
+    }
+
     window.addEventListener("keydown", onKey)
-    return () => window.removeEventListener("keydown", onKey)
+    return () => {
+      cancelAnimationFrame(focusTimer)
+      window.removeEventListener("keydown", onKey)
+      // Back to whatever opened the drawer — the hamburger, in practice.
+      previouslyFocused?.focus?.()
+    }
   }, [isOpen, onClose])
 
-  // Body scroll lock
+  /*
+    Body scroll lock, applied as a class on <html> rather than
+    `document.body.style.overflow`.
+
+    At ≤768px globals.css sets `html { overflow-x: clip }`. Per CSS Overflow 3,
+    the body's overflow only propagates to the viewport when the root element's
+    overflow is `visible` in both axes — so under that media query the inline
+    `body { overflow: hidden }` locked nothing at all, and swiping the backdrop
+    scrolled the page underneath the open drawer. On exactly the widths that
+    use the drawer. The class targets both elements, matching the mechanism
+    already proven for the chat widget's modal in globals.css.
+  */
   useEffect(() => {
-    document.body.style.overflow = isOpen ? "hidden" : ""
-    return () => { document.body.style.overflow = "" }
+    const root = document.documentElement
+    if (isOpen) root.classList.add("nav-drawer-open")
+    else root.classList.remove("nav-drawer-open")
+    return () => root.classList.remove("nav-drawer-open")
   }, [isOpen])
 
   if (!mounted) return null
@@ -395,6 +483,7 @@ function MobileMenu({
 
       {/* Drawer */}
       <div
+        ref={drawerRef}
         id="mobile-nav-menu"
         role="dialog"
         aria-modal="true"
@@ -438,6 +527,7 @@ function MobileMenu({
           </Link>
 
           <button
+            ref={closeButtonRef}
             onClick={onClose}
             aria-label="Close menu"
             className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.12] bg-white/[0.06] outline-none transition-all duration-200 hover:bg-white/15 active:scale-95 focus-visible:ring-2 focus-visible:ring-sky-400/50"
@@ -644,12 +734,12 @@ function MobileMenu({
 
 export function Navbar() {
   const [scrolled, setScrolled] = useState(false)
-  const [navReady, setNavReady] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [openDropdown, setOpenDropdown] = useState<string | null>(null)
 
   const leaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pathname = usePathname()
+  const navigation = getNavigation(pathname)
   const scrollTo = useAnchorNav()
 
   const handleEnter = useCallback((name: string) => {
@@ -700,8 +790,6 @@ export function Navbar() {
     window.addEventListener("scroll", handleScroll, { passive: true })
     window.addEventListener("resize", handleScroll, { passive: true })
     window.addEventListener("pageshow", handleScroll)
-
-    setNavReady(true)
 
     return () => {
       window.removeEventListener("scroll", handleScroll)
@@ -835,31 +923,46 @@ export function Navbar() {
 
           {/* ── Desktop right side ── */}
           <div className="flex shrink-0 items-center gap-4">
-            {/* Divider */}
-            <div
-              className="hidden lg:block"
-              aria-hidden="true"
-              style={{
-                width: 1,
-                height: 20,
-                background: "var(--nav-divider)",
-              }}
-            />
+            {/* Partner With Us is an employer pitch — hidden on candidate-facing
+                pages (/resume, /jobs) along with its divider, so nothing on
+                these pages nudges an applicant toward the employer flow. */}
+            {!isCandidateFacing(pathname) && (
+              <>
+                {/* Divider */}
+                <div
+                  className="hidden lg:block"
+                  aria-hidden="true"
+                  style={{
+                    width: 1,
+                    height: 20,
+                    background: "var(--nav-divider)",
+                  }}
+                />
 
-            <Link
-              href="/clients"
-              className="hidden items-center gap-1.5 rounded-lg border border-white/15 bg-white/[0.05] px-3.5 py-2 text-[12px] xl:text-[13px] font-semibold text-slate-200 transition-all duration-150 hover:border-white/25 hover:bg-white/[0.09] hover:text-white active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-white/30 lg:flex"
-            >
-              Partner With Us
-              <ArrowUpRight style={{ width: 12, height: 12, color: "var(--nav-partner-icon)" }} className="xl:size-[13px]" />
-            </Link>
+                <Link
+                  href="/clients"
+                  className="hidden items-center gap-1.5 rounded-lg border border-white/15 bg-white/[0.05] px-3.5 py-2 text-[12px] xl:text-[13px] font-semibold text-slate-200 transition-all duration-150 hover:border-white/25 hover:bg-white/[0.09] hover:text-white active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-white/30 lg:flex"
+                >
+                  Partner With Us
+                  <ArrowUpRight style={{ width: 12, height: 12, color: "var(--nav-partner-icon)" }} className="xl:size-[13px]" />
+                </Link>
+              </>
+            )}
 
             {/* ── Hamburger (accessible 44px touch target) ── */}
             <button
               className="flex h-11 w-11 flex-col items-center justify-center gap-[5px] rounded-xl border border-white/10 bg-white/[0.04] transition-all duration-200 active:scale-95 outline-none hover:bg-white/[0.08] focus-visible:ring-2 focus-visible:ring-sky-400/50 lg:hidden"
               onClick={() => setMobileOpen((prev) => !prev)}
               aria-expanded={mobileOpen}
-              aria-controls="mobile-nav-menu"
+              /*
+                Only referenced while the drawer exists. MobileMenu returns null
+                until it mounts, so an unconditional aria-controls pointed at a
+                missing id on every page load — a broken ARIA reference that
+                axe and Lighthouse flag and that some screen readers respond to
+                by dropping the relationship entirely. aria-expanded carries
+                the state either way.
+              */
+              aria-controls={mobileOpen ? "mobile-nav-menu" : undefined}
               aria-label={mobileOpen ? "Close menu" : "Open menu"}
             >
               {/* Top bar */}

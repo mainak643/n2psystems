@@ -25,6 +25,13 @@ export async function OPTIONS() {
  * in that position collapses to `ParserError<"Unexpected input: ">` - which is
  * what put 42 errors on this file and, with type checking wired in as a build
  * gate in next.config, broke `next build` outright.
+ *
+ * Keep every column the handler reads in BOTH lists. `.returns<...>()` asserts
+ * the row shape rather than deriving it, so a column missing here is invisible
+ * to the type checker and only shows up as a silently absent field: the
+ * summary branch built `summary` from `description` and filtered on `skills`
+ * while selecting neither, so `?summary=true` returned no summary at all and
+ * reported `skills: []` for every role.
  */
 const SUMMARY_COLUMNS = `
             id,
@@ -42,7 +49,10 @@ const SUMMARY_COLUMNS = `
             status,
             mandatory_skills,
             min_experience_years,
-            reapdat_chat_link
+            reapdat_chat_link,
+            description,
+            skills,
+            preferred_skills
           `;
 
 const FULL_COLUMNS = `
@@ -112,6 +122,16 @@ interface PublicRequirementRow {
   reapdat_chat_link: string | null;
 }
 
+/**
+ * PostgREST's `ilike` reads `%` and `_` as wildcards, so an unescaped
+ * `?code=%` matched every active row — and because the empty-result guard
+ * further down never fired, the caller got an arbitrary job back with a 200
+ * instead of the 404 the lookup should have produced.
+ */
+function escapeLikePattern(value: string): string {
+  return value.replace(/[\\%_]/g, '\\$&');
+}
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
@@ -127,11 +147,18 @@ export async function GET(req: NextRequest) {
       .order('created_at', { ascending: false });
 
     if (codeParam.trim()) {
-      query = query.ilike('reference_code', codeParam.trim());
-    } else if (limitParam > 0) {
-      query = query.limit(limitParam);
-    } else if (isSummary) {
-      query = query.limit(8);
+      query = query.ilike('reference_code', escapeLikePattern(codeParam.trim())).limit(1);
+    } else if (!queryParam) {
+      /*
+        The keyword filter below runs in memory, because it also searches the
+        `skills` / `mandatory_skills` arrays. A database LIMIT here would
+        therefore cut the rows *before* they are searched: `?q=react&limit=5`
+        only ever looked at the five newest roles, and `?summary=true&q=…` at
+        the newest eight, reporting a live job as not found. When a query is
+        present, fetch the active set and apply the limit after filtering.
+      */
+      if (limitParam > 0) query = query.limit(limitParam);
+      else if (isSummary) query = query.limit(8);
     }
 
     const { data: requirements, error } = await query.returns<PublicRequirementRow[]>();
@@ -158,8 +185,11 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    if (limitParam > 0) {
-      items = items.slice(0, limitParam);
+    // Applied here rather than only in the query, so a searched request still
+    // honours its limit (and a summary request still stays under its 8).
+    const effectiveLimit = limitParam > 0 ? limitParam : isSummary ? 8 : 0;
+    if (effectiveLimit > 0) {
+      items = items.slice(0, effectiveLimit);
     }
 
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || SITE_URL || 'https://n2psystems.com';
@@ -184,8 +214,12 @@ export async function GET(req: NextRequest) {
         mandatory_skills: req.mandatory_skills || [],
         preferred_skills: req.preferred_skills || [],
         skills: req.skills || [],
-        job_url: `${baseUrl}/jobs/${req.reference_code}`,
-        apply_url: `${baseUrl}/jobs/${req.reference_code}/apply`,
+        // Same slug rule the site itself uses (lib/jobs-service.ts maps a job's
+        // id as `reference_code || id`). Without the fallback a requisition
+        // with no reference code published the URL ".../jobs/null", and
+        // without encoding a code containing a space or slash broke the path.
+        job_url: `${baseUrl}/jobs/${encodeURIComponent(req.reference_code || req.id)}`,
+        apply_url: `${baseUrl}/jobs/${encodeURIComponent(req.reference_code || req.id)}/apply`,
         screening_chat_link: req.reapdat_chat_link || undefined,
       };
 

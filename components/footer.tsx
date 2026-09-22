@@ -6,6 +6,8 @@ import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { Linkedin, MessageCircle, Mail, Phone, ArrowUpRight, ChevronDown } from "lucide-react"
 
+import { isCandidateFacing } from "@/lib/site"
+
 /*
   Matches the `md:` breakpoint the footer grid uses. Starts as `true` so
   the server render and the first client render agree — the accordion is
@@ -32,14 +34,6 @@ const companyLinks = [
   { name: "Contact Us", href: "/#contact" },
   { name: "Partner With Us", href: "/clients" },
 ]
-
-/** Matches the navbar's own candidate-facing check — /resume and /jobs
- *  (including job detail/apply sub-pages) are for applicants, not
- *  employers, so the employer-facing "Partner With Us" link is dropped
- *  there too. */
-function isCandidateFacing(pathname: string): boolean {
-  return pathname.startsWith("/resume") || pathname.startsWith("/jobs")
-}
 
 const careerLinks = [
   { name: "Browse Opportunities", href: "/jobs" },
@@ -229,30 +223,20 @@ export function Footer() {
 
           {/* ── Company — accordion on mobile ── */}
           <AccordionSection id="company" label="Company" openSection={openSection} onToggle={toggleSection}>
+            {/* Every Company link is internal. This list used to branch on an
+                `external` flag no entry carries, so the <a> arm was dead code
+                that read as a supported feature. */}
             <ul className="space-y-0.5">
               {visibleCompanyLinks.map((link) => (
                 <li key={link.name}>
-                  {'external' in link && link.external ? (
-                    <a
-                      href={link.href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="group flex items-center gap-2 py-2.5 text-caption text-on-dark-muted outline-none transition-all duration-150 hover:text-on-dark focus-visible:text-on-dark md:py-0 md:mb-3"
-                    >
-                      <span className="inline-block h-px w-0 shrink-0 bg-gradient-to-r from-sky-400/80 to-blue-400/50 transition-all duration-200 group-hover:w-3" />
-                      <span>{link.name}</span>
-                      <ArrowUpRight className="h-3 w-3 opacity-50 transition-opacity group-hover:opacity-100" aria-hidden="true" />
-                    </a>
-                  ) : (
-                    <Link
-                      href={link.href}
-                      /* Taller touch target on mobile, tighter on desktop */
-                      className="group flex items-center gap-2 py-2.5 text-caption text-on-dark-muted outline-none transition-all duration-150 hover:text-on-dark focus-visible:text-on-dark md:py-0 md:mb-3"
-                    >
-                      <span className="inline-block h-px w-0 shrink-0 bg-gradient-to-r from-sky-400/80 to-blue-400/50 transition-all duration-200 group-hover:w-3" />
-                      {link.name}
-                    </Link>
-                  )}
+                  <Link
+                    href={link.href}
+                    /* Taller touch target on mobile, tighter on desktop */
+                    className="group flex items-center gap-2 py-2.5 text-caption text-on-dark-muted outline-none transition-all duration-150 hover:text-on-dark focus-visible:text-on-dark md:py-0 md:mb-3"
+                  >
+                    <span className="inline-block h-px w-0 shrink-0 bg-gradient-to-r from-sky-400/80 to-blue-400/50 transition-all duration-200 group-hover:w-3" />
+                    {link.name}
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -358,10 +342,12 @@ export function Footer() {
         <div className="flex flex-col gap-3 py-6 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] md:flex-row md:items-center md:justify-between md:pb-6">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
             <span className="text-caption text-on-dark-subtle">
-              © 2026 N2P Systems. All rights reserved.
+              © {new Date().getFullYear()} N2P Systems. All rights reserved.
             </span>
             <span className="hidden h-3 w-px bg-on-dark-line-strong md:inline-block" aria-hidden="true" />
-            <span className="hidden text-caption italic tracking-wide text-on-dark-faint md:inline">
+            {/* on-dark-faint is 3.4:1 — the token block in globals.css reserves
+                it for decorative separators, never body text. This is prose. */}
+            <span className="hidden text-caption italic tracking-wide text-on-dark-subtle md:inline">
               Innovate. Integrate. Elevate.
             </span>
           </div>

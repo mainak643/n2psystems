@@ -1,3 +1,4 @@
+import { timingSafeEqual } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import {
   notifyJobUpdated,
@@ -22,10 +23,25 @@ function verifySecret(req: NextRequest): boolean {
   const authHeader = req.headers.get('authorization');
   const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.substring(7).trim() : null;
   const apiKeyHeader = req.headers.get('x-api-key')?.trim();
-  const querySecret = req.nextUrl.searchParams.get('secret')?.trim();
 
-  const candidate = bearerToken || apiKeyHeader || querySecret;
-  return candidate === configuredSecret;
+  // Headers only. `?secret=` used to be accepted as well, which wrote the
+  // secret into access logs, browser history and the Referer of anything the
+  // page linked to — the one place a shared secret must never appear.
+  const candidate = bearerToken || apiKeyHeader;
+  return !!candidate && timingSafeEquals(candidate, configuredSecret);
+}
+
+/**
+ * Constant-time string comparison. `===` short-circuits on the first differing
+ * byte, which lets a remote caller recover the secret one character at a time
+ * by timing the responses.
+ */
+function timingSafeEquals(a: string, b: string): boolean {
+  const aBuf = Buffer.from(a, 'utf8');
+  const bBuf = Buffer.from(b, 'utf8');
+  // timingSafeEqual throws on a length mismatch, and length is not the secret.
+  if (aBuf.length !== bBuf.length) return false;
+  return timingSafeEqual(aBuf, bBuf);
 }
 
 /**

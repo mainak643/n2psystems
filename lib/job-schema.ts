@@ -18,7 +18,12 @@ const EMPLOYMENT_TYPE: Record<Job['type'], string> = {
  */
 const COUNTRY_HINTS: [RegExp, string][] = [
   [/\b(india|bangalore|bengaluru|mumbai|pune|hyderabad|chennai|kolkata|delhi|noida|gurgaon|navi mumbai)\b/i, 'IN'],
-  [/\b(canada|toronto|vancouver|montreal|calgary|ottawa|ontario|quebec|alberta|\bon\b|\bbc\b|\bqc\b|\bab\b)\b/i, 'CA'],
+  // The province abbreviations are anchored to a comma on purpose. A bare
+  // `\bon\b` in this alternation matched the "On-site" in every recruiter
+  // suffix — "Austin, TX (On-site)" resolved to CA, emitting a Texas locality
+  // with addressCountry "CA" and flipping applicantLocationRequirements to
+  // Canada on US postings.
+  [/\b(canada|toronto|vancouver|montreal|calgary|ottawa|ontario|quebec|alberta)\b|,\s*(ON|BC|QC|AB)(?![-\w])/i, 'CA'],
   [/\b(usa|united states|u\.s\.|new york|san francisco|seattle|austin|boston|chicago|texas|california)\b/i, 'US'],
   [/\b(united kingdom|\buk\b|london|manchester)\b/i, 'GB'],
 ];
@@ -46,7 +51,10 @@ function cleanLocality(location: string): string {
  */
 export function buildJobPostingSchema(job: Job) {
   const locality = cleanLocality(job.location);
-  const country = inferCountry(job.location);
+  // Infer from the cleaned locality, not the raw string: the raw one still
+  // carries the recruiter's "(On-site)" / "(Hybrid)" suffix, which is mode
+  // information, not geography, and used to steer the country guess.
+  const country = inferCountry(locality);
 
   // Google wants the full posting here — responsibilities and qualifications
   // included — but these lists are usually *parsed out of* job.description, and
@@ -100,20 +108,31 @@ export function buildJobPostingSchema(job: Job) {
   const postedTimestamp = job.datePostedISO ? new Date(job.datePostedISO).getTime() : Date.now();
   schema.datePosted = job.datePostedISO || new Date(postedTimestamp).toISOString();
 
-  // validThrough is strongly recommended by Google to define expiration window.
-  schema.validThrough =
-    job.validThroughISO || new Date(postedTimestamp + 90 * 24 * 60 * 60 * 1000).toISOString();
+  // validThrough is strongly recommended, but only ever emitted from a real
+  // closing date. The old fallback was datePosted + 90 days, which is in the
+  // *past* for any role open longer than a quarter — Google reads that as an
+  // expired posting and drops it from the jobs carousel while the site is
+  // still accepting applications. A missing recommended field costs far less.
+  if (job.validThroughISO) schema.validThrough = job.validThroughISO;
 
   if (job.techStack.length > 0) schema.skills = job.techStack.join(', ');
   if (job.domain) schema.occupationalCategory = job.domain;
 
-  // TELECOMMUTE additionally requires applicantLocationRequirements, or Google
-  // rejects the posting outright. Both Remote and Hybrid roles allow telecommuting.
-  if (job.mode === 'Remote' || job.mode === 'Hybrid') {
+  // TELECOMMUTE means the role is performed *entirely* remotely, so it cannot
+  // cover Hybrid — and `normalizeWorkMode` defaults a null work_mode to
+  // "Hybrid", so including it here made every requisition with no mode set
+  // claim full remote while the page rendered a "Hybrid" badge.
+  //
+  // Google requires applicantLocationRequirements alongside TELECOMMUTE. When
+  // the location gives us nothing to go on we drop the telecommute marker
+  // rather than assert a country: the old `country || 'IN'` fallback silently
+  // restricted a Remote role with an unrecognised location to applicants in
+  // India.
+  if (job.mode === 'Remote' && country) {
     schema.jobLocationType = 'TELECOMMUTE';
     schema.applicantLocationRequirements = {
       '@type': 'Country',
-      name: country || 'IN',
+      name: country,
     };
   }
 

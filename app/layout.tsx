@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { Navbar } from '@/components/navbar'
 import { Footer } from '@/components/footer'
+import { Toaster } from '@/components/ui/toaster'
 import Script from 'next/script'
 import { SITE_URL } from '@/lib/site'
 import './globals.css'
@@ -124,6 +125,14 @@ export default function RootLayout({
           {children}
         </div>
         <Footer />
+        {/*
+          The toast system existed but was never mounted, so `toast()` rendered
+          nothing and reported no error — a trap for the next person to reach
+          for it. `components/ui/use-toast.ts` was also a byte-identical copy of
+          `hooks/use-toast.ts` with no importers; it has been deleted, and this
+          is the single Toaster that makes the remaining path work.
+        */}
+        <Toaster />
         <script
           id="reapdat-mobile-viewport-enhancer"
           dangerouslySetInnerHTML={{

@@ -48,6 +48,16 @@ function ContactForm() {
         <p className="mt-2 max-w-sm text-sm text-muted-foreground leading-relaxed">
           Thank you for reaching out. We'll get back to you within one business day.
         </p>
+        {/* Success used to be terminal: the form unmounted with no way back,
+            so remembering one more thing meant reloading the page. The form's
+            inputs are uncontrolled, so remounting is all the reset needed. */}
+        <button
+          type="button"
+          onClick={() => setStatus("idle")}
+          className="mt-6 min-h-11 rounded-xl border border-border px-5 text-sm font-semibold text-foreground outline-none transition-colors duration-200 hover:border-signature-blue hover:text-signature-blue focus-visible:ring-4 focus-visible:ring-signature-blue/10"
+        >
+          Send another message
+        </button>
       </div>
     )
   }
@@ -247,6 +257,18 @@ const TABS = [
 
 export function ContactSection() {
   const [activeTab, setActiveTab] = useState<"info" | "message">("info")
+  /* Matches the `lg:` breakpoint the tab switcher is hidden at. Starts false so
+     the server render and the first client render agree; the effect corrects it
+     after hydration. */
+  const [isWide, setIsWide] = useState(false)
+
+  useEffect(() => {
+    const query = window.matchMedia("(min-width: 1024px)")
+    const sync = () => setIsWide(query.matches)
+    sync()
+    query.addEventListener("change", sync)
+    return () => query.removeEventListener("change", sync)
+  }, [])
   const uid = useId()
 
   const tabId = (id: string) => `${uid}-tab-${id}`
@@ -339,11 +361,19 @@ export function ContactSection() {
           Toggling with `hidden` rather than unmounting also means a
           half-filled message survives a trip to the Contact Info tab.
         */}
+        {/*
+          The tab roles are dropped at lg+, where the tablist that owns them is
+          `lg:hidden`. Keeping them meant two orphan tabpanels with no tablist
+          and an aria-labelledby resolving to display:none buttons, so both
+          panels had an empty accessible name. Above lg they are plain labelled
+          regions, which is what they actually are: two things side by side.
+        */}
         <div className="mt-3 grid gap-8 lg:mt-12 lg:grid-cols-2 lg:items-start">
           <div
             id={panelId("info")}
-            role="tabpanel"
-            aria-labelledby={tabId("info")}
+            role={isWide ? "region" : "tabpanel"}
+            aria-label={isWide ? "Contact information" : undefined}
+            aria-labelledby={isWide ? undefined : tabId("info")}
             className={activeTab === "info" ? "" : "hidden lg:block"}
           >
             <ContactInfoPanel />
@@ -351,8 +381,9 @@ export function ContactSection() {
 
           <div
             id={panelId("message")}
-            role="tabpanel"
-            aria-labelledby={tabId("message")}
+            role={isWide ? "region" : "tabpanel"}
+            aria-label={isWide ? "Send a message" : undefined}
+            aria-labelledby={isWide ? undefined : tabId("message")}
             className={activeTab === "message" ? "" : "hidden lg:block"}
           >
             <ContactFormPanel />

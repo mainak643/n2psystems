@@ -13,6 +13,20 @@ import {
 } from "@/components/ui/select"
 import { CheckCircle2, Loader2, AlertCircle } from "lucide-react"
 
+/**
+ * The per-field message, styled to match the Select's hand-rolled error below
+ * so a browser-generated string ("Please fill out this field.") and our own
+ * copy read as one system.
+ */
+function FieldError({ id, message }: { id: string; message?: string }) {
+  if (!message) return null
+  return (
+    <p id={id} role="alert" className="text-xs font-medium text-red-600">
+      {message}
+    </p>
+  )
+}
+
 export function ConsultationFormClient() {
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle")
   const [serviceInterest, setServiceInterest] = useState("")
@@ -24,12 +38,61 @@ export function ConsultationFormClient() {
     on first render.
   */
   const [serviceInterestTouched, setServiceInterestTouched] = useState(false)
+  /*
+    Native constraint validation is switched off at the form level (see
+    `noValidate` below) so the browser's bubbles don't fight the Select's
+    custom error. It was never replaced for the *other* fields, though, so
+    every `required` and the email `type` check was unenforced: pick a
+    service, fill nothing, submit, and the form reported "Quote Request
+    Received" having captured no contact details at all. `validate()` runs
+    those same checks by hand and records the browser's own message per field.
+  */
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const formRef = useRef<HTMLFormElement>(null)
   const successRef = useRef<HTMLDivElement>(null)
   const serviceTriggerRef = useRef<HTMLButtonElement>(null)
 
   const serviceInterestInvalid = serviceInterestTouched && serviceInterest === ""
   const serviceInterestErrorId = "serviceInterest-error"
+
+  const errorId = (name: string) => `${name}-error`
+
+  /* Clear a field's error the moment it becomes valid, rather than leaving a
+     stale message sitting under a corrected field until the next submit. */
+  const handleInput = (e: React.FormEvent<HTMLFormElement>) => {
+    const el = e.target
+    const isFormField =
+      el instanceof HTMLInputElement ||
+      el instanceof HTMLTextAreaElement ||
+      el instanceof HTMLSelectElement
+    if (!isFormField || !el.name || !el.validity.valid) return
+    setFieldErrors((prev) => {
+      if (!prev[el.name]) return prev
+      const next = { ...prev }
+      delete next[el.name]
+      return next
+    })
+  }
+
+  /**
+   * Back to a blank form after a successful submit. The form is unmounted in
+   * the success state, so the uncontrolled inputs come back empty on their
+   * own — only the controlled Selects and the status need clearing here.
+   */
+  const resetForm = () => {
+    setServiceInterest("")
+    setBudget("")
+    setTimeline("")
+    setServiceInterestTouched(false)
+    setFieldErrors({})
+    setStatus("idle")
+  }
+
+  /** Wires a control to its error message for assistive tech. */
+  const invalidProps = (name: string) =>
+    fieldErrors[name]
+      ? ({ "aria-invalid": true, "aria-describedby": errorId(name) } as const)
+      : {}
 
   // Move focus to the confirmation so screen reader users are told the
   // request actually went through, instead of being left on a removed button.
@@ -54,6 +117,11 @@ export function ConsultationFormClient() {
           Thank you for your interest. A member of our team will review your
           requirements and respond within one business day with a tailored proposal.
         </p>
+        {/* Success used to be terminal: the form unmounted with no way back,
+            so anyone with a second enquiry had to reload the page. */}
+        <Button type="button" variant="outline" className="mt-8" onClick={resetForm}>
+          Submit another request
+        </Button>
       </div>
     )
   }
@@ -63,6 +131,23 @@ export function ConsultationFormClient() {
     if (!formRef.current) return
 
     /*
+      Every native control first, in DOM order — all of them sit above the
+      Select, so the first one reported here is also the first one on screen.
+    */
+    const errors: Record<string, string> = {}
+    let firstInvalid: HTMLElement | null = null
+    for (const el of Array.from(formRef.current.elements)) {
+      const isFormField =
+        el instanceof HTMLInputElement ||
+        el instanceof HTMLTextAreaElement ||
+        el instanceof HTMLSelectElement
+      if (!isFormField || !el.name || el.validity.valid) continue
+      errors[el.name] = el.validationMessage
+      if (!firstInvalid) firstInvalid = el
+    }
+    setFieldErrors(errors)
+
+    /*
       The Select's Radix Root used to carry `required`, which renders a
       visually-hidden native <select> mirror inside the <form> and lets the
       browser's own constraint validation block the submit — showing a
@@ -70,8 +155,14 @@ export function ConsultationFormClient() {
       could see. The button looked dead. Validating explicitly here, with a
       visible + announced error, replaces that invisible block.
     */
-    if (serviceInterest === "") {
-      setServiceInterestTouched(true)
+    const serviceMissing = serviceInterest === ""
+    if (serviceMissing) setServiceInterestTouched(true)
+
+    if (firstInvalid) {
+      firstInvalid.focus()
+      return
+    }
+    if (serviceMissing) {
       serviceTriggerRef.current?.focus()
       return
     }
@@ -98,6 +189,7 @@ export function ConsultationFormClient() {
     <form
       ref={formRef}
       onSubmit={handleSubmit}
+      onInput={handleInput}
       noValidate
       // ↓ Mobile: tighter vertical rhythm. sm+ unchanged.
       className="space-y-4 sm:space-y-6"
@@ -129,7 +221,9 @@ export function ConsultationFormClient() {
             required
             autoComplete="given-name"
             placeholder="Jane"
+            {...invalidProps("firstName")}
           />
+          <FieldError id={errorId("firstName")} message={fieldErrors.firstName} />
         </div>
         <div className="space-y-2">
           <label htmlFor="lastName" className="text-sm font-medium text-foreground">
@@ -141,7 +235,9 @@ export function ConsultationFormClient() {
             required
             autoComplete="family-name"
             placeholder="Smith"
+            {...invalidProps("lastName")}
           />
+          <FieldError id={errorId("lastName")} message={fieldErrors.lastName} />
         </div>
       </div>
 
@@ -157,7 +253,9 @@ export function ConsultationFormClient() {
             required
             autoComplete="organization"
             placeholder="Acme Corporation"
+            {...invalidProps("companyName")}
           />
+          <FieldError id={errorId("companyName")} message={fieldErrors.companyName} />
         </div>
         <div className="space-y-2">
           <label htmlFor="jobTitle" className="text-sm font-medium text-foreground">
@@ -189,7 +287,9 @@ export function ConsultationFormClient() {
             autoCorrect="off"
             spellCheck={false}
             placeholder="jane@acme.com"
+            {...invalidProps("email")}
           />
+          <FieldError id={errorId("email")} message={fieldErrors.email} />
         </div>
         <div className="space-y-2">
           <label htmlFor="phone" className="text-sm font-medium text-foreground">

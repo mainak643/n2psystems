@@ -73,7 +73,10 @@
   --nav-label-idle: rgba(255, 255, 255, 0.70);
   --nav-label-active: rgba(255, 255, 255, 0.95);
   --nav-label-faint: rgba(255, 255, 255, 0.60);
-  --nav-label-caption: rgba(255, 255, 255, 0.28);
+  /* Drawer sub-labels ("Explore open roles"). Was 0.28, which composites to
+     #4F5C6E on --surface-dark — 2.5:1, well under the 4.5:1 AA needs for 11px
+     text, and this is real content, not decoration. 0.62 clears it. */
+  --nav-label-caption: rgba(255, 255, 255, 0.62);
   --nav-indicator-idle: rgba(255, 255, 255, 0.15);
   --nav-indicator-active: linear-gradient(to bottom, #38bdf8, #1d6fdb);
   --nav-chevron-idle: rgba(255, 255, 255, 0.3);
@@ -663,6 +666,19 @@ body:has(#mobile-nav-menu) #ai-agent-widget {
 /* Prevent background page scrolling when the mobile chat modal is open */
 html.reapdat-modal-open,
 html.reapdat-modal-open body {
+  overflow: hidden !important;
+}
+
+/*
+  Same lock for the mobile navigation drawer, and it has to reach <html> for
+  the same reason: the ≤768px block above gives the root `overflow-x: clip`,
+  which stops the body's overflow propagating to the viewport. Setting
+  `overflow: hidden` on the body alone — which is what the navbar used to do
+  inline — therefore locked nothing on precisely the widths that open the
+  drawer, and the page scrolled behind it.
+*/
+html.nav-drawer-open,
+html.nav-drawer-open body {
   overflow: hidden !important;
 }
 

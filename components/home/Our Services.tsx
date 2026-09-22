@@ -78,10 +78,23 @@ export function SpecializationSection() {
   const [isPaused, setIsPaused] = useState(false)
   const [isTabVisible, setIsTabVisible] = useState(true)
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false)
+  /* Matches the `sm:hidden` wrapper the carousel lives in. Starts false so the
+     server render and first client render agree and no interval is scheduled
+     before the viewport has been measured. */
+  const [isCarouselVisible, setIsCarouselVisible] = useState(false)
 
   /* Autoplay only runs when nothing says otherwise. */
+  /*
+    `isCarouselVisible` gates autoplay on the breakpoint that actually renders
+    the carousel. The carousel and every control that can stop it — the
+    Pause button, the touch/pointer handlers that set `hasInteracted` — live
+    inside a `sm:hidden` block, so at ≥640px nothing could ever flip
+    `hasInteracted` or `isPaused` and the interval ran forever: a tick every
+    4s calling scrollTo on a display:none node and re-rendering this whole
+    section, for the life of the page, with nothing visible to show for it.
+  */
   const autoplayActive =
-    !hasInteracted && !isPaused && isTabVisible && !prefersReducedMotion
+    isCarouselVisible && !hasInteracted && !isPaused && isTabVisible && !prefersReducedMotion
 
   const setActive = useCallback((index: number) => {
     activeIndexRef.current = index
@@ -140,6 +153,15 @@ export function SpecializationSection() {
   useEffect(() => {
     const query = window.matchMedia("(prefers-reduced-motion: reduce)")
     const sync = () => setPrefersReducedMotion(query.matches)
+    sync()
+    query.addEventListener("change", sync)
+    return () => query.removeEventListener("change", sync)
+  }, [])
+
+  /* ── only autoplay at the widths that actually render the carousel ── */
+  useEffect(() => {
+    const query = window.matchMedia("(max-width: 639px)")
+    const sync = () => setIsCarouselVisible(query.matches)
     sync()
     query.addEventListener("change", sync)
     return () => query.removeEventListener("change", sync)

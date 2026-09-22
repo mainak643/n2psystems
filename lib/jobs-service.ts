@@ -46,8 +46,13 @@ const LOCALE_BY_CURRENCY: Record<string, string> = {
 
 export function inferCurrency(currency?: string | null, location?: string | null): string {
   const code = (currency || '').toUpperCase();
-  if (code && code !== 'USD') return code;
-  if (!location) return code || 'USD';
+  // An explicit code from the requisition wins outright, USD included. This
+  // used to read `code !== 'USD'`, which discarded a deliberate USD and let the
+  // location guess below overwrite it — a USD-denominated Toronto role rendered
+  // as "$150K - $190K CAD", understating the offer by roughly a third. Location
+  // inference is a fallback for a blank column, never a correction.
+  if (code) return code;
+  if (!location) return 'USD';
   const loc = location.toLowerCase();
   if (
     loc.includes('canada') ||
@@ -95,7 +100,7 @@ export function inferCurrency(currency?: string | null, location?: string | null
   ) {
     return 'GBP';
   }
-  return code || 'USD';
+  return 'USD';
 }
 
 export function formatSalary(min?: number | null, max?: number | null, currency?: string | null, location?: string | null): string {
@@ -155,6 +160,47 @@ function normalizeWorkMode(mode?: string): "Remote" | "Onsite" | "Hybrid" {
 const BULLET_RE = /^\s*(?:[•▪◦*\-–—]|\d+[.)])\s+/;
 
 /**
+ * Words that stay lowercase in title case, so they don't disqualify a heading.
+ * "What We Are Looking For", "Nice to Have".
+ */
+const TITLE_CASE_MINOR_WORDS = new Set([
+  'a', 'an', 'and', 'the', 'to', 'of', 'for', 'in', 'on', 'or', 'with', 'at', 'by',
+]);
+
+function isTitleCase(text: string): boolean {
+  const words = text.split(/\s+/).filter((w) => /[a-z]/i.test(w));
+  if (words.length === 0) return false;
+  return words.every((w) => !/^[a-z]/.test(w) || TITLE_CASE_MINOR_WORDS.has(w.toLowerCase()));
+}
+
+/**
+ * Does this line have the *shape* of a heading, independent of its wording?
+ *
+ * Without this gate the keyword checks in `sectionOf` fire on ordinary prose.
+ * A JD opening "We are looking for a Senior Data Engineer." contains
+ * "looking for" and sits under the length cap, so it was consumed as a
+ * Required-Skills heading: the Role Overview card vanished (the detail page
+ * hides it when empty) and the intro sentences that followed rendered as
+ * green-checkmarked skill bullets, in the JSON-LD description too.
+ *
+ * Three shapes count, in the order real JDs use them.
+ */
+function looksLikeHeading(raw: string, normalized: string): boolean {
+  // "## Key Responsibilities" — an explicit markdown heading, always.
+  if (/^\s*#{1,6}\s+/.test(raw)) return true;
+  // "Requirements:" — a label introducing the list that follows.
+  if (normalized.endsWith(':')) return true;
+  // Sentence-ending punctuation means prose, whatever the wording.
+  if (/[.!?]$/.test(normalized)) return false;
+  // A bare title is short enough that it cannot be a sentence. Title case
+  // buys a few more words, which is what separates the heading "What We Are
+  // Looking For In A Candidate" from the sentence "We are looking for a
+  // Senior Data Engineer" — same length, same keyword, different case.
+  const words = normalized.split(/\s+/).filter(Boolean).length;
+  return words <= 6 || (words <= 10 && isTitleCase(normalized));
+}
+
+/**
  * A heading is a short line that introduces a section — never a list item
  * itself. `'overview'` is a heading too (a JD that opens with a literal
  * "## Role Overview" line before its actual summary), but it introduces no
@@ -169,6 +215,7 @@ function sectionOf(line: string): 'responsibilities' | 'requirements' | 'overvie
   // not, so strip the markdown marker once, up front, for every check here.
   const normalized = line.replace(/^#{1,6}\s+/, '').trim();
   if (normalized.length > 64) return null;
+  if (!looksLikeHeading(line, normalized)) return null;
   const lower = normalized.toLowerCase();
   if (
     lower === 'overview' ||
@@ -328,9 +375,16 @@ export function mapRequirementToJob(req: any): Job {
         .filter((text: string) => text.length > 0)
     : [];
 
+  // Guarded once, up front: the fallback copy below used to interpolate the
+  // raw `req.title`, so a requisition with a null title — the case the guard
+  // on the `title` field itself anticipates — rendered the literal sentence
+  // "Exciting opportunity for a undefined with N2P Systems." on the page and
+  // in the JobPosting JSON-LD.
+  const title = req.title || 'Technology Consultant';
+
   return {
     id: req.reference_code || req.id,
-    title: req.title || 'Technology Consultant',
+    title,
     company: 'N2P Systems',
     location: req.location?.trim() || 'Toronto, Canada',
     type: normalizeEmploymentType(req.employment_type),
@@ -340,17 +394,17 @@ export function mapRequirementToJob(req: any): Job {
     techStack,
     domain: req.department?.trim() || 'Software Engineering',
     postedDate: formatRelativeTime(req.created_at),
-    description: req.description || `Exciting opportunity for a ${req.title} with N2P Systems.`,
+    description: req.description || `Exciting opportunity for a ${title} with N2P Systems.`,
     // Falls back to the same generic line `description` uses only when there
     // was no raw description at all. When there *was* a description but it
     // opens straight into a heading (no real intro), this is deliberately
     // empty — the page hides the Role Overview card rather than show it
     // empty or duplicate the lists below.
-    overview: extracted.overview || (req.description ? '' : `Exciting opportunity for a ${req.title} with N2P Systems.`),
+    overview: extracted.overview || (req.description ? '' : `Exciting opportunity for a ${title} with N2P Systems.`),
     responsibilities:
       extracted.responsibilities.length > 0
         ? extracted.responsibilities
-        : genericResponsibilities(req.title),
+        : genericResponsibilities(title),
     // Prefer what the JD actually said, then the recruiter's mandatory-skills
     // list, and only then boilerplate.
     requirements:
@@ -371,6 +425,24 @@ export function mapRequirementToJob(req: any): Job {
 
 let memoryCachedJobs: { data: Job[]; timestamp: number } | null = null;
 const jobCache = new Map<string, { data: Job | null; timestamp: number }>();
+
+/**
+ * The job cache is keyed by a path segment a visitor controls, and it stores
+ * misses too — so a crawler walking /jobs/aaa1, /jobs/aaa2, … used to add one
+ * permanent entry per distinct URL for the life of the process. Entries were
+ * only ever ignored once expired, never removed. Capping it keeps the hit rate
+ * that matters (a handful of live roles) while bounding the worst case.
+ */
+const JOB_CACHE_MAX_ENTRIES = 500;
+
+function cacheJob(key: string, data: Job | null): void {
+  // Map iterates in insertion order, so the first key is the oldest.
+  if (jobCache.size >= JOB_CACHE_MAX_ENTRIES) {
+    const oldest = jobCache.keys().next();
+    if (!oldest.done) jobCache.delete(oldest.value);
+  }
+  jobCache.set(key, { data, timestamp: Date.now() });
+}
 const CACHE_TTL_MS = 60 * 1000; // 60 seconds memory cache
 
 /**
@@ -395,9 +467,15 @@ async function withTimeout<T>(promise: PromiseLike<T>, timeoutMs = QUERY_TIMEOUT
   ]);
 }
 
-export async function fetchPublishedJobs(): Promise<Job[]> {
+/**
+ * @param force Skip the 60s memory cache and re-query. The realtime subscriber
+ *   on the jobs board passes this: it is reacting to a change it has just been
+ *   told about, so the cache is by definition stale, and reading through it
+ *   re-applied the pre-change list and threw the update away.
+ */
+export async function fetchPublishedJobs(force = false): Promise<Job[]> {
   const now = Date.now();
-  if (memoryCachedJobs && now - memoryCachedJobs.timestamp < CACHE_TTL_MS) {
+  if (!force && memoryCachedJobs && now - memoryCachedJobs.timestamp < CACHE_TTL_MS) {
     return memoryCachedJobs.data;
   }
 
@@ -413,12 +491,23 @@ export async function fetchPublishedJobs(): Promise<Job[]> {
 
       if (error) {
         console.warn('[jobs] Supabase rejected the published-roles query:', error.message);
-      } else if (data && data.length > 0) {
-        const mapped = data.map(mapRequirementToJob);
+      } else {
+        /*
+          A successful query is authoritative, including when it returns
+          nothing. This used to require `data.length > 0` before caching, so
+          zero rows fell through to the stale-cache return below — and since
+          that cache is only ever overwritten by a non-empty result, closing
+          every requisition left the last known list on /jobs and in the
+          sitemap for the life of the process. `fetchJobById` meanwhile
+          correctly reported the roles as gone, so a visitor clicking one of
+          those listings got a 404.
+        */
+        const mapped = (data ?? []).map(mapRequirementToJob);
+        if (mapped.length === 0) {
+          console.warn('[jobs] No published requirements visible to the public key.');
+        }
         memoryCachedJobs = { data: mapped, timestamp: Date.now() };
         return mapped;
-      } else {
-        console.warn('[jobs] No published requirements visible to the public key.');
       }
     } catch (err) {
       console.warn('[jobs] Error or timeout fetching live jobs from Supabase:', err);
@@ -477,13 +566,13 @@ export async function fetchJobById(id: string): Promise<Job | null> {
         console.warn(`[jobs] Supabase rejected the lookup for "${decodedId}":`, error.message);
       } else if (data) {
         const mapped = mapRequirementToJob(data);
-        jobCache.set(decodedId.toLowerCase(), { data: mapped, timestamp: Date.now() });
+        cacheJob(decodedId.toLowerCase(), mapped);
         return mapped;
       } else {
         // The query genuinely came back empty: this reference code is not a
         // published requisition. That is the only result worth remembering as
         // a miss.
-        jobCache.set(decodedId.toLowerCase(), { data: null, timestamp: Date.now() });
+        cacheJob(decodedId.toLowerCase(), null);
       }
     } catch (err) {
       console.warn(`[jobs] Error or timeout fetching job ${decodedId} from Supabase:`, err);

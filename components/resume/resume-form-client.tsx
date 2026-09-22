@@ -118,6 +118,51 @@ const CATEGORIES: {
     },
   ]
 
+/**
+ * Maps a free-text department (`?category=`) or job title (`?role=`) onto a
+ * category form.
+ *
+ * This replaces two `String.includes()` chains. Unbounded substring tests
+ * matched *inside* words, so real traffic landed on the wrong form and the
+ * candidate's resume went into the wrong pipeline with nothing on screen to
+ * suggest it: department "IT" matched `cybersecurity` (secur-**it**-y), title
+ * "HTML Developer" matched `ml` (ht-**ml**), "Mobile Developer" matched `bi`
+ * (mo-**bi**-le), "Email Marketing" matched `ai` (em-**ai**-l). Four
+ * categories — database, integration, RPA, enterprise apps — were unreachable
+ * from the title chain entirely.
+ *
+ * Every pattern is word-boundary anchored, and order matters: the first match
+ * wins, so the specific categories come before the broad ones and
+ * `softwareDevelopment` sits last as the catch-all. Tokens are drawn from each
+ * category's own description above, so the two stay in step.
+ */
+const CATEGORY_PATTERNS: { key: CategoryFormKey; pattern: RegExp }[] = [
+  // "Solution, Enterprise, Cloud, Data, Security Architecture" — the
+  // architecture form owns every architect title, whatever the specialism.
+  { key: "architectureRoles", pattern: /\b(architect|architecture)\b/i },
+  { key: "cyberSecurity", pattern: /\b(cyber|security|infosec|soc|iam|grc|appsec|pen test(ing)?|penetration)\b/i },
+  { key: "testingQA", pattern: /\b(qa|quality assurance|sdet|tester|testing|test engineer)\b/i },
+  { key: "automationRPA", pattern: /\b(rpa|uipath|blue prism|automation anywhere|power automate|process automation)\b/i },
+  { key: "databaseTechnologies", pattern: /\b(dba|database|sql server|postgres(ql)?|mongo(db)?|mysql|oracle)\b/i },
+  { key: "integrationMiddleware", pattern: /\b(integration|middleware|mulesoft|api management|ipaas|esb|tibco|boomi|kafka)\b/i },
+  { key: "enterpriseApplications", pattern: /\b(sap|salesforce|servicenow|workday|dynamics|peoplesoft|erp|crm|enterprise applications?)\b/i },
+  { key: "emergingAIAutomation", pattern: /\b(ai|ml|genai|llm|machine learning|deep learning|nlp|computer vision|data scien(ce|tist))\b/i },
+  { key: "cloudDevOps", pattern: /\b(cloud|devops|sre|aws|azure|gcp|kubernetes|terraform|infrastructure|platform engineer(ing)?)\b/i },
+  { key: "dataEngineeringAnalytics", pattern: /\b(data engineer(ing)?|analytics|analyst|bi|business intelligence|etl|snowflake|databricks|data warehouse|big data|spark)\b/i },
+  { key: "technicalLeadership", pattern: /\b(director|vp|cto|head of|lead|manager|management|product owner|scrum master|delivery)\b/i },
+  {
+    key: "softwareDevelopment",
+    pattern:
+      /\b(software|developer|engineer|full[ -]?stack|front[ -]?end|back[ -]?end|java|\.net|dotnet|python|react|angular|node|web|computer science)\b/i,
+  },
+]
+
+function matchCategory(text: string | null | undefined): CategoryFormKey | undefined {
+  const value = text?.trim()
+  if (!value) return undefined
+  return CATEGORY_PATTERNS.find(({ pattern }) => pattern.test(value))?.key
+}
+
 function ResumeFormInner() {
   const [selectedKey, setSelectedKey] = useState<CategoryFormKey | null>(null)
   const formSectionRef = useRef<HTMLDivElement | null>(null)
@@ -133,40 +178,17 @@ function ResumeFormInner() {
     // name here. This used to be an `else if`, so an unmatched department meant
     // the candidate arrived from "Apply for this Role" with nothing selected
     // and no fallback. Both signals are tried now, category first.
-    const dept = categoryParam?.toLowerCase().trim()
-    const matched = dept
-      ? CATEGORIES.find(
-          (c) =>
-            c.key.toLowerCase().includes(dept) ||
-            c.name.toLowerCase().includes(dept) ||
-            dept.includes(c.name.toLowerCase())
-        )
-      : undefined
-
+    const matched = matchCategory(categoryParam) ?? matchCategory(roleParam)
     if (matched) {
-      setSelectedKey(matched.key)
+      setSelectedKey(matched)
       return
     }
 
-    if (!roleParam) return
-    const lower = roleParam.toLowerCase()
-    if (lower.includes("architect")) {
-      setSelectedKey("architectureRoles")
-    } else if (lower.includes("cloud") || lower.includes("devops") || lower.includes("aws") || lower.includes("azure")) {
-      setSelectedKey("cloudDevOps")
-    } else if (lower.includes("ai") || lower.includes("ml") || lower.includes("machine learning") || lower.includes("genai")) {
-      setSelectedKey("emergingAIAutomation")
-    } else if (lower.includes("data") || lower.includes("analytics") || lower.includes("bi")) {
-      setSelectedKey("dataEngineeringAnalytics")
-    } else if (lower.includes("security") || lower.includes("cyber")) {
-      setSelectedKey("cyberSecurity")
-    } else if (lower.includes("qa") || lower.includes("test") || lower.includes("sdet")) {
-      setSelectedKey("testingQA")
-    } else if (lower.includes("director") || lower.includes("lead") || lower.includes("manager") || lower.includes("product")) {
-      setSelectedKey("technicalLeadership")
-    } else {
-      setSelectedKey("softwareDevelopment")
-    }
+    // Neither signal was recognised. Only fall back to the broadest category
+    // when the candidate actually arrived from a role — that is the case the
+    // note above describes, where landing with nothing selected was the bug.
+    // A bare /resume visit keeps the grid open so they choose for themselves.
+    if (roleParam) setSelectedKey("softwareDevelopment")
   }, [categoryParam, roleParam])
 
   const selectedCategory = CATEGORIES.find((category) => category.key === selectedKey)

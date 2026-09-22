@@ -152,7 +152,11 @@ export default function HiringSolutionsPage() {
               <div className="mx-auto mb-5 flex size-12 items-center justify-center rounded-xl bg-primary/[0.08] ring-1 ring-primary/10">
                 <item.icon className="size-5 text-primary" aria-hidden="true" />
               </div>
-              <p className="text-subtitle text-foreground">{item.title}</p>
+              {/* h3, matching the service cards above. As a <p> this whole
+                  section was invisible to heading navigation, so a screen
+                  reader cycling headings skipped the four differentiators
+                  entirely. */}
+              <h3 className="text-subtitle text-foreground">{item.title}</h3>
               <p className="mt-2 text-body text-muted-foreground">{item.description}</p>
             </div>
           ))}
