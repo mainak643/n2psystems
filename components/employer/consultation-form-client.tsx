@@ -174,10 +174,9 @@ export function ConsultationFormClient() {
 
     setStatus("loading")
     try {
-      const res = await fetch("https://formspree.io/f/xqazpory", {
+      const res = await fetch("/api/contact", {
         method: "POST",
         body: data,
-        headers: { Accept: "application/json" },
       })
       setStatus(res.ok ? "success" : "error")
     } catch {

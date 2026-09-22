@@ -67,10 +67,9 @@ function ContactForm() {
     if (!formRef.current) return
     setStatus("loading")
     try {
-      const res = await fetch("https://formspree.io/f/xqazpory", {
+      const res = await fetch("/api/contact", {
         method: "POST",
         body: new FormData(formRef.current),
-        headers: { Accept: "application/json" },
       })
       setStatus(res.ok ? "success" : "error")
     } catch {
