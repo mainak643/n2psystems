@@ -441,11 +441,19 @@ export function SpecializationSection() {
           staffing, permanent placement, executive search) previously had no
           link anywhere on the homepage — this is the natural spot for it,
           right after the reader has just seen the full services list.
+
+          Design-review finding: as a bare line of caption-sized text on the
+          section's plain background, this had nothing to anchor it and read
+          as a stray footnote rather than the fix for the audit's #1 nav
+          finding. Framed as a pill (the site's existing chip pattern, e.g.
+          the "Verified Opportunities" badge on /jobs) so it has the visual
+          weight its importance warrants, without competing with the
+          section's actual primary CTAs.
         */}
         <div className="mt-9 flex justify-center sm:mt-12 sm:justify-start">
           <Link
             href="/hiring-solutions"
-            className="group inline-flex items-center gap-1.5 text-caption font-semibold text-primary outline-none hover:underline focus-visible:underline"
+            className="pill group border-primary/20 bg-primary/5 font-semibold text-primary outline-none transition-colors duration-150 hover:border-primary/35 hover:bg-primary/10 focus-visible:ring-2 focus-visible:ring-primary/40"
           >
             Looking to hire technology talent? Explore our Hiring Solutions
             <ArrowUpRight className="size-3.5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" aria-hidden="true" />
