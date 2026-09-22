@@ -229,7 +229,7 @@ export default function RootLayout({
           }}
         />
         <Script
-          src="https://api.reapdat.com/static/widget.js"
+          src="https://api.reapdat.in/static/widget.js"
           data-tenant-id="01d65500-be64-4909-b7d5-598d460c97e4"
           data-key="pk_live_97kJ26nJjkBq3kj1zlKb1TiLDtKNnY8I"
           data-avatar-url={`${SITE_URL}/images/n2p-logo-light.png`}
