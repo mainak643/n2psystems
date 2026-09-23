@@ -41,16 +41,27 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const job = await getJob(id)
   if (!job) return { title: "Job Not Found | N2P Systems" }
 
-  // Prefer the clean overview so a stray "##"/"-" from the raw JD never
-  // leaks into a search snippet or social preview; fall back through the
-  // structured lists rather than the raw, markdown-ish description.
+  // Build an attractive, structured social preview for WhatsApp, LinkedIn, and Twitter
+  const facts = [
+    job.location ? `📍 ${job.location}` : '',
+    job.experience ? `💼 ${job.experience}` : '',
+    job.mode ? `⚡ ${job.mode}` : '',
+    job.salary ? `💰 ${job.salary}` : '',
+  ].filter(Boolean).join(' · ');
+
   const summarySource = job.overview || job.responsibilities?.[0] || job.description
-  const description = summarySource
-    .replace(/\*\*/g, "")
-    .replace(/^#+\s*/gm, "")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, 160)
+  const rawClean = summarySource
+    .replace(/^[🚀⚡🔥💼✨\s*#]+/gu, '')
+    .replace(/\*\*/g, '')
+    .replace(/^#+\s*/gm, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  const snippet = rawClean.length > 110
+    ? `${rawClean.slice(0, 110).replace(/\s+\S*$/, '')}...`
+    : rawClean;
+
+  const description = facts ? `${facts} — ${snippet}` : snippet;
   const canonical = `/jobs/${encodeURIComponent(job.id)}`
   const absoluteJobUrl = `https://www.n2psystems.com/jobs/${encodeURIComponent(job.id)}`
   const absoluteImageUrl = `${absoluteJobUrl}/opengraph-image`
