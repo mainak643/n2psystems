@@ -45,8 +45,15 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   // leaks into a search snippet or social preview; fall back through the
   // structured lists rather than the raw, markdown-ish description.
   const summarySource = job.overview || job.responsibilities?.[0] || job.description
-  const description = summarySource.replace(/^#+\s*/gm, "").replace(/\s+/g, " ").trim().slice(0, 160)
+  const description = summarySource
+    .replace(/\*\*/g, "")
+    .replace(/^#+\s*/gm, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 160)
   const canonical = `/jobs/${encodeURIComponent(job.id)}`
+  const absoluteJobUrl = `https://www.n2psystems.com/jobs/${encodeURIComponent(job.id)}`
+  const absoluteImageUrl = `${absoluteJobUrl}/opengraph-image`
 
   return {
     title: `${job.title} | N2P Systems Careers`,
@@ -55,13 +62,24 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     openGraph: {
       title: `${job.title} | N2P Systems Careers`,
       description,
-      url: canonical,
+      url: absoluteJobUrl,
+      siteName: "N2P Systems",
+      images: [
+        {
+          url: absoluteImageUrl,
+          width: 1200,
+          height: 630,
+          alt: `${job.title} — N2P Systems`,
+          type: "image/png",
+        },
+      ],
       type: "website",
     },
     twitter: {
       card: "summary_large_image",
       title: `${job.title} | N2P Systems Careers`,
       description,
+      images: [absoluteImageUrl],
     },
   }
 }
