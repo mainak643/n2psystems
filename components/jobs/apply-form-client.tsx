@@ -300,6 +300,8 @@ export function ApplyFormClient({ job }: { job: Job }) {
       }
 
       setSubmitState("done")
+      const thankYouUrl = `/jobs/thank-you?ref=${encodeURIComponent(job.id)}&role=${encodeURIComponent(job.title)}&name=${encodeURIComponent(values.fullName.trim())}`
+      window.location.href = thankYouUrl
     } catch (err) {
       setSubmitState("idle")
       setSubmitError(err instanceof Error ? err.message : "Something went wrong. Please try again.")
@@ -330,6 +332,15 @@ export function ApplyFormClient({ job }: { job: Job }) {
             <Link href="/jobs">Browse other roles</Link>
           </Button>
         </div>
+        {/* LinkedIn Jobs Conversion Event (Completed Application) */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          height="1"
+          width="1"
+          style={{ display: "none" }}
+          alt=""
+          src="https://px.ads.linkedin.com/collect/?pid=10047398&fmt=gif"
+        />
       </div>
     )
   }

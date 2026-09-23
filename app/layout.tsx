@@ -141,6 +141,15 @@ export default function RootLayout({
           strategy="afterInteractive"
         />
         <Analytics />
+        {/* LinkedIn Jobs Conversion Tracking Pixel (Partner ID: 10047398) */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          height="1"
+          width="1"
+          style={{ display: 'none' }}
+          alt=""
+          src="https://px.ads.linkedin.com/collect/?pid=10047398&fmt=gif"
+        />
       </body>
     </html>
   )

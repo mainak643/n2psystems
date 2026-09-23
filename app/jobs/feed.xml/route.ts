@@ -23,6 +23,29 @@ function parseLocation(location: string) {
   };
 }
 
+function mapLinkedInJobType(type: string): string {
+  const lower = (type || '').toLowerCase();
+  if (lower.includes('contract')) return 'CONTRACT';
+  if (lower.includes('part')) return 'PART_TIME';
+  return 'FULL_TIME';
+}
+
+function mapLinkedInWorkplaceType(mode: string): 'On-site' | 'Hybrid' | 'Remote' {
+  const lower = (mode || '').toLowerCase();
+  if (lower.includes('remote')) return 'Remote';
+  if (lower.includes('hybrid')) return 'Hybrid';
+  return 'On-site';
+}
+
+function mapLinkedInExperience(exp?: string, title?: string): string {
+  const text = `${exp || ''} ${title || ''}`.toLowerCase();
+  if (/director|head|vp|vice president/i.test(text)) return 'DIRECTOR';
+  if (/lead|senior|sr|architect|principal|manager|8\+|7\+|6\+|5\+/i.test(text)) return 'MID_SENIOR_LEVEL';
+  if (/intern/i.test(text)) return 'INTERNSHIP';
+  if (/junior|entry|0-2|1\+|2\+/i.test(text)) return 'ENTRY_LEVEL';
+  return 'MID_SENIOR_LEVEL';
+}
+
 /**
  * Universal XML Job Feed compatible with:
  * - LinkedIn Job Wrapping / Ingestion Specification (supports ?limit=6 for 6-slot licenses)
@@ -86,6 +109,14 @@ export async function GET(req: NextRequest) {
       const postedDate = job.datePostedISO ? new Date(job.datePostedISO).toISOString().split('T')[0] : '';
       const validThrough = job.validThroughISO || new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
+      const workModeTag = isLinkedIn
+        ? job.mode === 'Remote'
+          ? '#LI-Remote'
+          : job.mode === 'Hybrid'
+            ? '#LI-Hybrid'
+            : '#LI-Onsite'
+        : '';
+
       const fullDescription = [
         (job.overview || '').replace(/\*\*/g, ''),
         job.responsibilities && job.responsibilities.length > 0
@@ -95,27 +126,62 @@ export async function GET(req: NextRequest) {
           ? `Required Skills & Qualifications:\n• ${job.requirements.map((r: string) => r.replace(/\*\*/g, '')).join('\n• ')}`
           : '',
         `Apply directly at: ${url}`,
+        workModeTag,
+        isLinkedIn ? '#LI-P1' : '',
       ]
         .filter(Boolean)
         .join('\n\n');
 
+      const workplaceType = mapLinkedInWorkplaceType(job.mode);
+      const linkedInJobType = mapLinkedInJobType(job.type);
+      const experienceLevel = mapLinkedInExperience(job.experience, job.title);
+      const locationFull = `${city}${state ? `, ${state}` : ''}, ${country}`;
+
+      const skillsList =
+        job.techStack && job.techStack.length > 0
+          ? `    <skills>\n${job.techStack
+              .slice(0, 10)
+              .map((s: string) => `      <skill><![CDATA[${s}]]></skill>`)
+              .join('\n')}\n    </skills>`
+          : `    <skills><![CDATA[${job.techStack.join(', ')}]]></skills>`;
+
+      const salaryXml =
+        job.salaryMin || job.salaryMax
+          ? `    <salaries>
+      <salary>
+        ${job.salaryMax ? `<highEnd><amount><![CDATA[${job.salaryMax}]]></amount><currencyCode>${job.salaryCurrency || 'USD'}</currencyCode></highEnd>` : ''}
+        ${job.salaryMin ? `<lowEnd><amount><![CDATA[${job.salaryMin}]]></amount><currencyCode>${job.salaryCurrency || 'USD'}</currencyCode></lowEnd>` : ''}
+        <period><![CDATA[YEARLY]]></period>
+        <type><![CDATA[BASE_SALARY]]></type>
+      </salary>
+    </salaries>`
+          : '';
+
       return `  <job>
+    <partnerJobId><![CDATA[${job.id}]]></partnerJobId>
+    <referencenumber><![CDATA[${job.id}]]></referencenumber>
+    <company><![CDATA[${job.company || 'N2P Systems'}]]></company>
+    <companyId><![CDATA[104779739]]></companyId>
     <title><![CDATA[${job.title}]]></title>
     <date><![CDATA[${postedDate}]]></date>
     <expirationdate><![CDATA[${validThrough}]]></expirationdate>
-    <referencenumber><![CDATA[${job.id}]]></referencenumber>
     <url><![CDATA[${url}]]></url>
-    <company><![CDATA[${job.company || 'N2P Systems'}]]></company>
+    <applyUrl><![CDATA[${url}]]></applyUrl>
+    <location><![CDATA[${locationFull}]]></location>
     <city><![CDATA[${city}]]></city>
     <state><![CDATA[${state}]]></state>
     <country><![CDATA[${country}]]></country>
+    <workplaceTypes><![CDATA[${workplaceType}]]></workplaceTypes>
+    <jobtype><![CDATA[${linkedInJobType}]]></jobtype>
+    <experienceLevel><![CDATA[${experienceLevel}]]></experienceLevel>
+    <jobPostingAvailability><![CDATA[PUBLIC]]></jobPostingAvailability>
     <description><![CDATA[${fullDescription}]]></description>
     <salary><![CDATA[${job.salary || 'Competitive'}]]></salary>
-    <jobtype><![CDATA[${job.type}]]></jobtype>
     <workmode><![CDATA[${job.mode}]]></workmode>
     <category><![CDATA[${job.domain}]]></category>
     <experience><![CDATA[${job.experience}]]></experience>
-    <skills><![CDATA[${job.techStack.join(', ')}]]></skills>
+${skillsList}
+${salaryXml}
   </job>`;
     })
     .join('\n');
