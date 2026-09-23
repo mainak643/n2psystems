@@ -299,18 +299,6 @@ export function ApplyFormClient({ job }: { job: Job }) {
         throw new Error(`We could not record your application. ${insertError.message}`)
       }
 
-      if (typeof window !== "undefined") {
-        const url = new URL(window.location.href)
-        url.searchParams.set("status", "applied")
-        window.history.replaceState(null, "", url.toString())
-        try {
-          if ((window as unknown as { lintrk?: (action: string) => void }).lintrk) {
-            (window as unknown as { lintrk: (action: string) => void }).lintrk("track")
-          }
-        } catch {
-          // ignore tracking error
-        }
-      }
       setSubmitState("done")
     } catch (err) {
       setSubmitState("idle")
@@ -349,7 +337,7 @@ export function ApplyFormClient({ job }: { job: Job }) {
           width="1"
           style={{ display: "none" }}
           alt=""
-          src="https://px.ads.linkedin.com/collect/?pid=10047388&fmt=gif"
+          src="https://px.ads.linkedin.com/collect/?pid=10047398&fmt=gif"
         />
       </div>
     )

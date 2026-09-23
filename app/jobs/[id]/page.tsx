@@ -14,22 +14,28 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { fetchJobById } from "@/lib/jobs-service"
+import { fetchJobById, fetchPublishedJobs } from "@/lib/jobs-service"
 import { buildJobPostingSchema } from "@/lib/job-schema"
 import { buildBreadcrumbSchema } from "@/lib/seo-schema"
 import { PageHero } from "@/components/ui/page-hero"
 import { Section } from "@/components/ui/section"
 import { FormattedParagraphs, FormattedText } from "@/components/ui/formatted-text"
 
-/**
- * Revalidate rather than `force-dynamic`. Every crawler hit and every visitor
- * used to open its own Supabase round trip for a page that changes when a
- * recruiter edits a requisition — minutes or days apart, not seconds. The
- * board's realtime channel already pushes live changes to open tabs, so a
- * 60-second window costs nothing a visitor would notice and takes the database
- * out of the critical path for TTFB.
- */
 export const revalidate = 60
+
+/**
+ * Pre-render all active published jobs into static HTML at build/deploy time.
+ * Under surges of 1,000+ concurrent visitors, edge CDNs serve the static
+ * artifact instantly without querying Supabase on every click.
+ */
+export async function generateStaticParams() {
+  try {
+    const jobs = await fetchPublishedJobs()
+    return jobs.map((job) => ({ id: job.id }))
+  } catch {
+    return []
+  }
+}
 
 /**
  * `generateMetadata` and the component both need the job. `cache` collapses

@@ -4,17 +4,10 @@ import { useEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { CheckCircle2, Loader2, AlertCircle } from "lucide-react"
 
 /**
- * The per-field message, styled to match the Select's hand-rolled error below
+ * The per-field message, styled to match native form errors
  * so a browser-generated string ("Please fill out this field.") and our own
  * copy read as one system.
  */
@@ -29,31 +22,9 @@ function FieldError({ id, message }: { id: string; message?: string }) {
 
 export function ConsultationFormClient() {
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle")
-  const [serviceInterest, setServiceInterest] = useState("")
-  const [budget, setBudget] = useState("")
-  const [timeline, setTimeline] = useState("")
-  /*
-    Tracks whether the required-Select check has run at least once, so the
-    empty-field error only appears after a real submit attempt rather than
-    on first render.
-  */
-  const [serviceInterestTouched, setServiceInterestTouched] = useState(false)
-  /*
-    Native constraint validation is switched off at the form level (see
-    `noValidate` below) so the browser's bubbles don't fight the Select's
-    custom error. It was never replaced for the *other* fields, though, so
-    every `required` and the email `type` check was unenforced: pick a
-    service, fill nothing, submit, and the form reported "Quote Request
-    Received" having captured no contact details at all. `validate()` runs
-    those same checks by hand and records the browser's own message per field.
-  */
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const formRef = useRef<HTMLFormElement>(null)
   const successRef = useRef<HTMLDivElement>(null)
-  const serviceTriggerRef = useRef<HTMLButtonElement>(null)
-
-  const serviceInterestInvalid = serviceInterestTouched && serviceInterest === ""
-  const serviceInterestErrorId = "serviceInterest-error"
 
   const errorId = (name: string) => `${name}-error`
 
@@ -75,15 +46,9 @@ export function ConsultationFormClient() {
   }
 
   /**
-   * Back to a blank form after a successful submit. The form is unmounted in
-   * the success state, so the uncontrolled inputs come back empty on their
-   * own — only the controlled Selects and the status need clearing here.
+   * Back to a blank form after a successful submit.
    */
   const resetForm = () => {
-    setServiceInterest("")
-    setBudget("")
-    setTimeline("")
-    setServiceInterestTouched(false)
     setFieldErrors({})
     setStatus("idle")
   }
@@ -117,8 +82,6 @@ export function ConsultationFormClient() {
           Thank you for your interest. A member of our team will review your
           requirements and respond within one business day with a tailored proposal.
         </p>
-        {/* Success used to be terminal: the form unmounted with no way back,
-            so anyone with a second enquiry had to reload the page. */}
         <Button type="button" variant="outline" className="mt-8" onClick={resetForm}>
           Submit another request
         </Button>
@@ -130,10 +93,6 @@ export function ConsultationFormClient() {
     e.preventDefault()
     if (!formRef.current) return
 
-    /*
-      Every native control first, in DOM order — all of them sit above the
-      Select, so the first one reported here is also the first one on screen.
-    */
     const errors: Record<string, string> = {}
     let firstInvalid: HTMLElement | null = null
     for (const el of Array.from(formRef.current.elements)) {
@@ -147,30 +106,12 @@ export function ConsultationFormClient() {
     }
     setFieldErrors(errors)
 
-    /*
-      The Select's Radix Root used to carry `required`, which renders a
-      visually-hidden native <select> mirror inside the <form> and lets the
-      browser's own constraint validation block the submit — showing a
-      validation bubble anchored to a 1x1px clipped element that nobody
-      could see. The button looked dead. Validating explicitly here, with a
-      visible + announced error, replaces that invisible block.
-    */
-    const serviceMissing = serviceInterest === ""
-    if (serviceMissing) setServiceInterestTouched(true)
-
     if (firstInvalid) {
       firstInvalid.focus()
       return
     }
-    if (serviceMissing) {
-      serviceTriggerRef.current?.focus()
-      return
-    }
 
     const data = new FormData(formRef.current)
-    data.set("serviceInterest", serviceInterest)
-    data.set("budget", budget)
-    data.set("timeline", timeline)
 
     setStatus("loading")
     try {
@@ -193,6 +134,22 @@ export function ConsultationFormClient() {
       // ↓ Mobile: tighter vertical rhythm. sm+ unchanged.
       className="space-y-4 sm:space-y-6"
     >
+      {/* Honeypot field — hidden from real users, filled by automated spam bots */}
+      <div
+        className="absolute -left-[9999px] -top-[9999px] h-0 w-0 overflow-hidden opacity-0 pointer-events-none"
+        aria-hidden="true"
+        tabIndex={-1}
+      >
+        <label htmlFor="website_hp">Website</label>
+        <input
+          id="website_hp"
+          type="text"
+          name="website_hp"
+          tabIndex={-1}
+          autoComplete="off"
+        />
+      </div>
+
       {/* Live region so submission failures are announced, not just shown. */}
       <div role="alert" aria-live="assertive">
         {status === "error" && (
@@ -302,83 +259,6 @@ export function ConsultationFormClient() {
             inputMode="tel"
             placeholder="+1 (555) 123-4567"
           />
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <label htmlFor="serviceInterest" className="text-sm font-medium text-foreground">
-          Service You're Interested In *
-        </label>
-        <Select
-          value={serviceInterest}
-          onValueChange={(value) => {
-            setServiceInterest(value)
-            setServiceInterestTouched(true)
-          }}
-        >
-          <SelectTrigger
-            id="serviceInterest"
-            ref={serviceTriggerRef}
-            aria-invalid={serviceInterestInvalid}
-            aria-describedby={serviceInterestInvalid ? serviceInterestErrorId : undefined}
-            className="w-full"
-          >
-            <SelectValue placeholder="Select a service area" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="consulting">Consulting & Strategy Advisory</SelectItem>
-            <SelectItem value="digital-transformation">Digital Transformation</SelectItem>
-            <SelectItem value="ai-integration">AI Integration & Automation</SelectItem>
-            <SelectItem value="program-management">Program Management & Delivery</SelectItem>
-            <SelectItem value="hosting">Hosting & Cloud Infrastructure</SelectItem>
-            <SelectItem value="learning">Learning & Enablement</SelectItem>
-            <SelectItem value="partnerships">Strategic Partnerships</SelectItem>
-            <SelectItem value="multiple">Multiple Services / Not Sure Yet</SelectItem>
-          </SelectContent>
-        </Select>
-        {serviceInterestInvalid && (
-          <p id={serviceInterestErrorId} role="alert" className="text-xs font-medium text-red-600">
-            Please select a service area.
-          </p>
-        )}
-      </div>
-
-      {/* Budget & Timeline: 1-col on mobile so select labels never truncate, 2-col on sm+ */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
-        <div className="space-y-2">
-          <label htmlFor="budget" className="text-sm font-medium text-foreground">
-            Estimated Budget
-          </label>
-          <Select value={budget} onValueChange={setBudget}>
-            <SelectTrigger id="budget" className="w-full">
-              <SelectValue placeholder="Select a range" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="under-10k">Under $10,000</SelectItem>
-              <SelectItem value="10k-25k">$10,000 – $25,000</SelectItem>
-              <SelectItem value="25k-50k">$25,000 – $50,000</SelectItem>
-              <SelectItem value="50k-100k">$50,000 – $100,000</SelectItem>
-              <SelectItem value="100k-plus">$100,000+</SelectItem>
-              <SelectItem value="tbd">To Be Discussed</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <label htmlFor="timeline" className="text-sm font-medium text-foreground">
-            Expected Timeline
-          </label>
-          <Select value={timeline} onValueChange={setTimeline}>
-            <SelectTrigger id="timeline" className="w-full">
-              <SelectValue placeholder="Select a timeline" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="asap">As Soon As Possible</SelectItem>
-              <SelectItem value="1-month">Within 1 Month</SelectItem>
-              <SelectItem value="1-3-months">1 – 3 Months</SelectItem>
-              <SelectItem value="3-6-months">3 – 6 Months</SelectItem>
-              <SelectItem value="flexible">Flexible / Ongoing</SelectItem>
-            </SelectContent>
-          </Select>
         </div>
       </div>
 

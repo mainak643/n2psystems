@@ -21,16 +21,23 @@ export async function POST(req: NextRequest) {
   const secretKey = process.env.INDEXING_SECRET_KEY?.trim();
   const indexNowKey = process.env.INDEXNOW_KEY?.trim() || 'n2psystems-indexnow-key';
 
-  if (secretKey) {
-    const authHeader = req.headers.get('authorization')?.replace(/^Bearer\s+/i, '').trim();
-    const apiKey = req.headers.get('x-api-key')?.trim();
-    const provided = authHeader || apiKey;
-    if (provided !== secretKey) {
+  const authHeader = req.headers.get('authorization')?.replace(/^Bearer\s+/i, '').trim();
+  const apiKey = req.headers.get('x-api-key')?.trim();
+  const provided = authHeader || apiKey;
+
+  // Protect by default: require configured secret key in production
+  if (!secretKey) {
+    if (process.env.NODE_ENV === 'production') {
       return NextResponse.json(
-        { error: 'Unauthorized. Invalid or missing secret key.' },
+        { error: 'Endpoint is locked. Set INDEXING_SECRET_KEY in production.' },
         { status: 401 }
       );
     }
+  } else if (!provided || provided !== secretKey) {
+    return NextResponse.json(
+      { error: 'Unauthorized. Invalid or missing secret key.' },
+      { status: 401 }
+    );
   }
 
   let body: IndexNowPayload = {};

@@ -83,6 +83,22 @@ function ContactForm() {
       onSubmit={handleSubmit}
       className="space-y-4"
     >
+      {/* Honeypot field — hidden from real users, filled by automated spam bots */}
+      <div
+        className="absolute -left-[9999px] -top-[9999px] h-0 w-0 overflow-hidden opacity-0 pointer-events-none"
+        aria-hidden="true"
+        tabIndex={-1}
+      >
+        <label htmlFor="website_hp_contact">Website</label>
+        <input
+          id="website_hp_contact"
+          type="text"
+          name="website_hp"
+          tabIndex={-1}
+          autoComplete="off"
+        />
+      </div>
+
       {/* Live region so submission failures are announced, not just shown. */}
       <div role="alert" aria-live="assertive">
         {status === "error" && (

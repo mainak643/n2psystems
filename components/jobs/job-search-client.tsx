@@ -15,7 +15,6 @@ import {
 } from "@/components/ui/select"
 import type { Job } from "@/lib/jobs-data"
 import { fetchPublishedJobs, getDynamicFilterOptions, inferCountry, extractCity } from "@/lib/jobs-service"
-import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 
 interface JobSearchClientProps {
   initialJobs?: Job[]
@@ -38,33 +37,19 @@ export function JobSearchClient({ initialJobs }: JobSearchClientProps) {
   const [showFilters, setShowFilters] = useState(false)
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
 
-  // Realtime Supabase updates when recruiter creates or updates requirements
+  // Revalidate published jobs when the browser tab regains focus.
+  // This replaces an unthrottled public WebSocket connection, allowing the
+  // board to effortlessly scale to thousands of concurrent visitors without
+  // exhausting Supabase Realtime connection quotas or creating thundering herds.
   useEffect(() => {
-    if (!isSupabaseConfigured()) return
-
-    const channel = supabase
-      .channel('public_jobs_channel')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'requirements' },
-        () => {
-          /*
-            `force` skips the 60s module cache, which lives in this bundle too:
-            a second change within a minute used to read straight back out of
-            it and re-apply the pre-change list, so the update never appeared
-            until a manual reload. The result is applied whether or not it is
-            empty — the old `length > 0` guard meant closing the last open role
-            left it on screen indefinitely.
-          */
-          fetchPublishedJobs(true).then((updated) => {
-            if (updated) setJobsList(updated)
-          })
-        }
-      )
-      .subscribe()
-
+    const handleFocus = () => {
+      fetchPublishedJobs().then((updated) => {
+        if (updated && updated.length > 0) setJobsList(updated)
+      })
+    }
+    window.addEventListener("focus", handleFocus)
     return () => {
-      void supabase.removeChannel(channel)
+      window.removeEventListener("focus", handleFocus)
     }
   }, [])
 
