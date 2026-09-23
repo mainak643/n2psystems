@@ -299,9 +299,19 @@ export function ApplyFormClient({ job }: { job: Job }) {
         throw new Error(`We could not record your application. ${insertError.message}`)
       }
 
+      if (typeof window !== "undefined") {
+        const url = new URL(window.location.href)
+        url.searchParams.set("status", "applied")
+        window.history.replaceState(null, "", url.toString())
+        try {
+          if ((window as unknown as { lintrk?: (action: string) => void }).lintrk) {
+            (window as unknown as { lintrk: (action: string) => void }).lintrk("track")
+          }
+        } catch {
+          // ignore tracking error
+        }
+      }
       setSubmitState("done")
-      const thankYouUrl = `/jobs/thank-you?ref=${encodeURIComponent(job.id)}&role=${encodeURIComponent(job.title)}&name=${encodeURIComponent(values.fullName.trim())}`
-      window.location.href = thankYouUrl
     } catch (err) {
       setSubmitState("idle")
       setSubmitError(err instanceof Error ? err.message : "Something went wrong. Please try again.")
