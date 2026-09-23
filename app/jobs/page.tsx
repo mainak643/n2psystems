@@ -4,6 +4,7 @@ import { ArrowRight, ClipboardCheck, Sparkles, MessageCircle, ShieldCheck } from
 import { JobSearchClient } from "@/components/jobs/job-search-client"
 import { fetchPublishedJobs } from "@/lib/jobs-service"
 import { buildJobListSchema } from "@/lib/job-schema"
+import { buildBreadcrumbSchema } from "@/lib/seo-schema"
 import { Button } from "@/components/ui/button"
 import { PageHero } from "@/components/ui/page-hero"
 import { Section } from "@/components/ui/section"
@@ -27,10 +28,19 @@ export const metadata: Metadata = {
     title: "Technology Jobs & Openings | N2P Systems",
     description: "Browse verified engineering, architecture, and consulting positions with N2P Systems.",
   },
+  twitter: {
+    card: "summary_large_image",
+    title: "Technology Jobs & Openings | N2P Systems",
+    description: "Browse verified engineering, architecture, and consulting positions with N2P Systems.",
+  },
 }
 
 export default async function JobsPage() {
   const publishedJobs = await fetchPublishedJobs()
+  const breadcrumbs = buildBreadcrumbSchema([
+    { name: "Home", url: "/" },
+    { name: "Careers", url: "/jobs" },
+  ])
 
   return (
     <main>
@@ -39,6 +49,13 @@ export default async function JobsPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: JSON.stringify(buildJobListSchema(publishedJobs)),
+        }}
+      />
+      {/* BreadcrumbList structured data */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(breadcrumbs),
         }}
       />
 

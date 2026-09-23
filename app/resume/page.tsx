@@ -4,6 +4,7 @@ import { ShieldCheck } from "lucide-react"
 import { ResumeFormClient } from "@/components/resume/resume-form-client"
 import { PageHero } from "@/components/ui/page-hero"
 import { Section } from "@/components/ui/section"
+import { buildBreadcrumbSchema } from "@/lib/seo-schema"
 
 export const metadata: Metadata = {
   title: "Submit Your Profile | N2P Systems",
@@ -12,11 +13,31 @@ export const metadata: Metadata = {
   alternates: {
     canonical: '/resume',
   },
+  openGraph: {
+    title: "Submit Your Candidate Profile | N2P Systems",
+    description: "Join N2P Systems' premier global technology talent network across Canada, USA, and India.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Submit Your Candidate Profile | N2P Systems",
+    description: "Join N2P Systems' premier global technology talent network across Canada, USA, and India.",
+  },
 }
 
 export default function SubmitResumePage() {
+  const breadcrumbs = buildBreadcrumbSchema([
+    { name: "Home", url: "/" },
+    { name: "Submit Profile", url: "/resume" },
+  ])
+
   return (
     <main>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(breadcrumbs),
+        }}
+      />
       <PageHero
         eyebrow="Careers with N2P"
         badge={

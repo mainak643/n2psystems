@@ -9,6 +9,7 @@ import {
   IndexingActionType,
   getServiceAccountCredentials,
 } from '@/lib/google-indexing';
+import { fetchPublishedJobs } from '@/lib/jobs-service';
 
 export const dynamic = 'force-dynamic';
 
@@ -97,6 +98,8 @@ export async function GET(req: NextRequest) {
 }
 
 interface IndexingRequestBody {
+  all?: boolean;
+  syncAll?: boolean;
   jobId?: string;
   url?: string;
   action?: IndexingActionType;
@@ -115,6 +118,7 @@ interface IndexingRequestBody {
  * 1. Single: { "jobId": "REQ-101", "action": "URL_UPDATED" }
  * 2. Delete: { "jobId": "REQ-101", "action": "URL_DELETED" }
  * 3. Batch:  { "requests": [ { "jobId": "REQ-101", "action": "URL_UPDATED" }, ... ] }
+ * 4. Sync All: { "syncAll": true, "action": "URL_UPDATED" }
  */
 export async function POST(req: NextRequest) {
   if (!verifySecret(req)) {
@@ -144,7 +148,20 @@ export async function POST(req: NextRequest) {
 
   const itemsToProcess: Array<{ target: string; action: IndexingActionType }> = [];
 
-  if (Array.isArray(body.requests) && body.requests.length > 0) {
+  if (body.all || body.syncAll) {
+    try {
+      const published = await fetchPublishedJobs();
+      const action = body.action || 'URL_UPDATED';
+      for (const job of published) {
+        itemsToProcess.push({ target: job.id, action });
+      }
+    } catch (e: any) {
+      return NextResponse.json(
+        { error: `Failed to fetch published jobs for batch indexing: ${e?.message}` },
+        { status: 500 }
+      );
+    }
+  } else if (Array.isArray(body.requests) && body.requests.length > 0) {
     for (const item of body.requests) {
       const target = item.url || item.jobId;
       if (target && item.action) {

@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { fetchJobById } from "@/lib/jobs-service"
 import { buildJobPostingSchema } from "@/lib/job-schema"
+import { buildBreadcrumbSchema } from "@/lib/seo-schema"
 import { PageHero } from "@/components/ui/page-hero"
 import { Section } from "@/components/ui/section"
 
@@ -57,6 +58,11 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
       url: canonical,
       type: "website",
     },
+    twitter: {
+      card: "summary_large_image",
+      title: `${job.title} | N2P Systems Careers`,
+      description,
+    },
   }
 }
 
@@ -76,6 +82,12 @@ export default async function JobDetailPage({
     ? `/jobs/${encodeURIComponent(job.id)}/apply`
     : `/resume?role=${encodeURIComponent(job.title)}&req=${encodeURIComponent(job.id)}&category=${encodeURIComponent(job.domain)}`
 
+  const breadcrumbs = buildBreadcrumbSchema([
+    { name: "Home", url: "/" },
+    { name: "Careers", url: "/jobs" },
+    { name: job.title, url: `/jobs/${encodeURIComponent(job.id)}` },
+  ])
+
   return (
     <main>
       {/* JobPosting structured data — makes the role eligible for Google Jobs. */}
@@ -83,6 +95,13 @@ export default async function JobDetailPage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: JSON.stringify(buildJobPostingSchema(job)),
+        }}
+      />
+      {/* BreadcrumbList structured data — enhances Google search result hierarchy */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(breadcrumbs),
         }}
       />
 

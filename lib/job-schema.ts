@@ -40,26 +40,24 @@ function cleanLocality(location: string): string {
   return location.replace(/\s*\([^)]*\)\s*$/, '').trim() || location;
 }
 
+function parseExperienceMonths(experience?: string): number | undefined {
+  if (!experience) return undefined;
+  const match = experience.match(/(\d+)/);
+  if (!match) return undefined;
+  const years = parseInt(match[1], 10);
+  if (isNaN(years) || years <= 0 || years > 40) return undefined;
+  return years * 12;
+}
+
 /**
  * schema.org JobPosting — the markup Google Jobs indexes a role from. Without
  * it these pages are ordinary HTML to a crawler and never surface in the jobs
  * carousel, which for a recruitment site is the point of publishing them.
- *
- * Optional fields are omitted rather than filled with placeholders: an invented
- * salary or closing date is a structured-data violation, and Google penalises
- * postings whose markup disagrees with the visible page.
  */
 export function buildJobPostingSchema(job: Job) {
   const locality = cleanLocality(job.location);
-  // Infer from the cleaned locality, not the raw string: the raw one still
-  // carries the recruiter's "(On-site)" / "(Hybrid)" suffix, which is mode
-  // information, not geography, and used to steer the country guess.
   const country = inferCountry(locality);
 
-  // Google wants the full posting here — responsibilities and qualifications
-  // included — but these lists are usually *parsed out of* job.description, and
-  // repeating them verbatim reads as keyword stuffing. Append a list only when
-  // the description does not already contain it.
   const alreadyStated = (items: string[]) =>
     items.length === 0 || job.description.includes(items[0]);
 
@@ -86,11 +84,15 @@ export function buildJobPostingSchema(job: Job) {
       value: job.id,
     },
     employmentType: EMPLOYMENT_TYPE[job.type] || 'FULL_TIME',
+    industry: 'Information Technology & Services',
     hiringOrganization: {
       '@type': 'Organization',
       name: job.company || 'N2P Systems',
-      sameAs: SITE_URL,
-      logo: `${SITE_URL}/images/n2p-logo-square.png`,
+      sameAs: [
+        SITE_URL,
+        'https://www.linkedin.com/company/n2p-systems/',
+      ],
+      logo: `${SITE_URL}/images/n2p-logo-light.png`,
     },
     jobLocation: {
       '@type': 'Place',
@@ -101,6 +103,10 @@ export function buildJobPostingSchema(job: Job) {
       },
     },
     url: `${SITE_URL}/jobs/${encodeURIComponent(job.id)}`,
+    mainEntityOfPage: {
+      '@type': 'WebPage',
+      '@id': `${SITE_URL}/jobs/${encodeURIComponent(job.id)}`,
+    },
     directApply: true,
   };
 
@@ -108,26 +114,26 @@ export function buildJobPostingSchema(job: Job) {
   const postedTimestamp = job.datePostedISO ? new Date(job.datePostedISO).getTime() : Date.now();
   schema.datePosted = job.datePostedISO || new Date(postedTimestamp).toISOString();
 
-  // validThrough is strongly recommended, but only ever emitted from a real
-  // closing date. The old fallback was datePosted + 90 days, which is in the
-  // *past* for any role open longer than a quarter — Google reads that as an
-  // expired posting and drops it from the jobs carousel while the site is
-  // still accepting applications. A missing recommended field costs far less.
-  if (job.validThroughISO) schema.validThrough = job.validThroughISO;
+  // validThrough: Google requires this to avoid stale listings. If not set on requisition,
+  // set a safe 60-day rolling forward window so active jobs stay eligible in Google for Jobs.
+  if (job.validThroughISO) {
+    schema.validThrough = job.validThroughISO;
+  } else {
+    schema.validThrough = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString();
+  }
+
+  // Structured experience requirements for Google for Jobs ranking
+  const expMonths = parseExperienceMonths(job.experience);
+  if (expMonths !== undefined) {
+    schema.experienceRequirements = {
+      '@type': 'OccupationalExperienceRequirements',
+      monthsOfExperience: expMonths,
+    };
+  }
 
   if (job.techStack.length > 0) schema.skills = job.techStack.join(', ');
   if (job.domain) schema.occupationalCategory = job.domain;
 
-  // TELECOMMUTE means the role is performed *entirely* remotely, so it cannot
-  // cover Hybrid — and `normalizeWorkMode` defaults a null work_mode to
-  // "Hybrid", so including it here made every requisition with no mode set
-  // claim full remote while the page rendered a "Hybrid" badge.
-  //
-  // Google requires applicantLocationRequirements alongside TELECOMMUTE. When
-  // the location gives us nothing to go on we drop the telecommute marker
-  // rather than assert a country: the old `country || 'IN'` fallback silently
-  // restricted a Remote role with an unrecognised location to applicants in
-  // India.
   if (job.mode === 'Remote' && country) {
     schema.jobLocationType = 'TELECOMMUTE';
     schema.applicantLocationRequirements = {
@@ -136,8 +142,7 @@ export function buildJobPostingSchema(job: Job) {
     };
   }
 
-  // Only emit a salary when the requisition actually carried numbers; the
-  // display string may read "Competitive".
+  // Only emit a salary when the requisition actually carried numbers
   if (job.salaryMin !== undefined || job.salaryMax !== undefined) {
     schema.baseSalary = {
       '@type': 'MonetaryAmount',

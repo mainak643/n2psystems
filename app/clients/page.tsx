@@ -13,6 +13,7 @@ import {
 } from "lucide-react"
 import { PageHero } from "@/components/ui/page-hero"
 import { Section } from "@/components/ui/section"
+import { buildBreadcrumbSchema } from "@/lib/seo-schema"
 
 export const metadata: Metadata = {
   title: "Partner With Us — Request a Quote | N2P Systems",
@@ -20,6 +21,15 @@ export const metadata: Metadata = {
     "Request a custom quote from N2P Systems for consulting, AI integration, digital transformation, cloud infrastructure, or strategic advisory services.",
   alternates: {
     canonical: '/clients',
+  },
+  openGraph: {
+    title: "Partner With Us — Request a Quote | N2P Systems",
+    description: "Request enterprise technology talent solutions and consulting advisory from N2P Systems.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Partner With Us — Request a Quote | N2P Systems",
+    description: "Request enterprise technology talent solutions and consulting advisory from N2P Systems.",
   },
 }
 
@@ -82,8 +92,19 @@ const trustPoints = [
 ]
 
 export default function RequestConsultationPage() {
+  const breadcrumbs = buildBreadcrumbSchema([
+    { name: "Home", url: "/" },
+    { name: "Partner With Us", url: "/clients" },
+  ])
+
   return (
     <main>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(breadcrumbs),
+        }}
+      />
       {/*
         The nav (desktop pill, Contact dropdown, footer) all call this
         destination "Partner With Us" — this page's own H1 used to say

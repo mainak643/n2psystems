@@ -6,6 +6,11 @@ import { Footer } from '@/components/footer'
 import { Toaster } from '@/components/ui/toaster'
 import Script from 'next/script'
 import { SITE_URL } from '@/lib/site'
+import {
+  buildOrganizationSchema,
+  buildWebSiteSchema,
+  buildFaqSchema,
+} from '@/lib/seo-schema'
 import './globals.css'
 
 const inter = Inter({
@@ -34,6 +39,22 @@ export const metadata: Metadata = {
   ],
   alternates: {
     canonical: '/',
+    types: {
+      'text/markdown': `${SITE_URL}/llms.txt`,
+      'application/rss+xml': `${SITE_URL}/jobs/rss`,
+      'application/xml': `${SITE_URL}/jobs/feed.xml`,
+    },
+  },
+  verification: {
+    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION || undefined,
+  },
+  other: {
+    'geo.region': 'CA-ON;US-TX;IN-MH',
+    'geo.placename': 'Toronto;Austin;Airoli Navi Mumbai',
+    'llms-txt': `${SITE_URL}/llms.txt`,
+    ...(process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION
+      ? { 'msvalidate.01': process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION }
+      : {}),
   },
   openGraph: {
     title: 'N2P Systems | Global Technology Recruitment',
@@ -68,40 +89,12 @@ export const viewport = {
   viewportFit: 'cover' as const,
 }
 
-const organizationSchema = {
+const fullSchemaGraph = {
   '@context': 'https://schema.org',
-  '@type': ['Organization', 'EmploymentAgency'],
-  '@id': `${SITE_URL}/#organization`,
-  name: 'N2P Systems',
-  legalName: 'N2P Systems Inc.',
-  url: SITE_URL,
-  logo: `${SITE_URL}/images/n2p-logo-light.png`,
-  description:
-    'Connecting elite technology professionals with leading companies across Canada, USA, and India. Precision-driven hiring for Software Engineering, Data Science, DevOps, AI/ML, Cybersecurity, and Product Leadership.',
-  sameAs: [
-    'https://www.linkedin.com/company/n2p-systems/',
-    'https://ops.n2psystems.com',
-  ],
-  knowsAbout: [
-    'Software Engineering Recruitment',
-    'Data Science & AI/ML Talent',
-    'DevOps & Cloud Engineering',
-    'Cybersecurity Staffing',
-    'Executive & Technical Leadership Hiring',
-  ],
-  areaServed: [
-    { '@type': 'Country', name: 'Canada' },
-    { '@type': 'Country', name: 'United States' },
-    { '@type': 'Country', name: 'India' },
-  ],
-  contactPoint: [
-    {
-      '@type': 'ContactPoint',
-      contactType: 'recruitment',
-      email: 'info@n2psystems.ca',
-      telephone: '+91 97760 47567',
-      availableLanguage: ['English'],
-    },
+  '@graph': [
+    buildOrganizationSchema(),
+    buildWebSiteSchema(),
+    buildFaqSchema(),
   ],
 }
 
@@ -112,10 +105,15 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={inter.variable}>
+      <head>
+        <link rel="alternate" type="text/markdown" href="/llms.txt" title="LLM Context Documentation" />
+        <link rel="alternate" type="application/rss+xml" href="/jobs/rss" title="N2P Systems Jobs RSS Feed" />
+        <link rel="alternate" type="application/xml" href="/jobs/feed.xml" title="N2P Systems Jobs XML Feed" />
+      </head>
       <body className="font-sans antialiased overflow-x-hidden min-h-screen bg-background">
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(fullSchemaGraph) }}
         />
         <a href="#main-content" className="skip-link">
           Skip to main content

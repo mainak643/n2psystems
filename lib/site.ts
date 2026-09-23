@@ -21,7 +21,7 @@ function resolveSiteUrl(): string {
   const vercel = process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL?.trim()
   if (vercel) return `https://${vercel.replace(/^https?:\/\//, '').replace(/\/+$/, '')}`
 
-  return 'https://n2psystems.com'
+  return 'https://www.n2psystems.com'
 }
 
 export const SITE_URL = resolveSiteUrl()

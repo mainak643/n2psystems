@@ -14,6 +14,7 @@ import {
 } from "lucide-react"
 import { PageHero } from "@/components/ui/page-hero"
 import { Section } from "@/components/ui/section"
+import { buildBreadcrumbSchema } from "@/lib/seo-schema"
 
 export const metadata: Metadata = {
   title: "Hiring Solutions | N2P Systems",
@@ -21,6 +22,15 @@ export const metadata: Metadata = {
     "Discover how N2P Systems helps organizations build high-performing technology teams through Contract staffing, Contract-to-Hire, and Permanent Placement solutions.",
   alternates: {
     canonical: "/hiring-solutions",
+  },
+  openGraph: {
+    title: "Technology Hiring Solutions Built for Scale | N2P Systems",
+    description: "Contract staffing, permanent placement, and executive search for engineering teams.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Technology Hiring Solutions Built for Scale | N2P Systems",
+    description: "Contract staffing, permanent placement, and executive search for engineering teams.",
   },
 }
 
@@ -98,8 +108,19 @@ const differentiators = [
 ]
 
 export default function HiringSolutionsPage() {
+  const breadcrumbs = buildBreadcrumbSchema([
+    { name: "Home", url: "/" },
+    { name: "Hiring Solutions", url: "/hiring-solutions" },
+  ])
+
   return (
     <main>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(breadcrumbs),
+        }}
+      />
       <PageHero
         eyebrow="For Employers"
         title="Technology Hiring Solutions Built for Scale"
