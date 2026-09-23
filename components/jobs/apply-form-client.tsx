@@ -349,7 +349,7 @@ export function ApplyFormClient({ job }: { job: Job }) {
           width="1"
           style={{ display: "none" }}
           alt=""
-          src="https://px.ads.linkedin.com/collect/?pid=10047398&fmt=gif"
+          src="https://px.ads.linkedin.com/collect/?pid=10047388&fmt=gif"
         />
       </div>
     )

@@ -141,10 +141,10 @@ export default function RootLayout({
           strategy="afterInteractive"
         />
         <Analytics />
-        {/* LinkedIn Jobs Insight & Conversion Tracking (Partner ID: 10047398) */}
+        {/* LinkedIn Jobs Insight & Conversion Tracking (Partner ID: 10047388) */}
         <Script id="linkedin-insight" strategy="afterInteractive">
           {`
-            _linkedin_partner_id = "10047398";
+            _linkedin_partner_id = "10047388";
             window._linkedin_data_partner_ids = window._linkedin_data_partner_ids || [];
             window._linkedin_data_partner_ids.push(_linkedin_partner_id);
             (function(l) {
@@ -164,7 +164,7 @@ export default function RootLayout({
             width="1"
             style={{ display: 'none' }}
             alt=""
-            src="https://px.ads.linkedin.com/collect/?pid=10047398&fmt=gif"
+            src="https://px.ads.linkedin.com/collect/?pid=10047388&fmt=gif"
           />
         </noscript>
       </body>
