@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { fetchPublishedJobs } from '@/lib/jobs-service';
 import { SITE_URL } from '@/lib/site';
 
@@ -31,17 +31,35 @@ function parseLocation(location: string) {
 
 /**
  * Universal XML Job Feed compatible with:
- * - LinkedIn Job Wrapping / Ingestion Specification
+ * - LinkedIn Job Wrapping / Ingestion Specification (supports ?limit=6 for 6-slot licenses)
  * - Indeed Job Feed XML standard
  * - Google for Jobs XML
  * - ZipRecruiter & Glassdoor Aggregators
  */
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const { searchParams } = req.nextUrl;
+  const limitParam = searchParams.get('limit');
+  const countryParam = searchParams.get('country')?.toUpperCase();
+  const domainParam = searchParams.get('domain')?.toLowerCase();
+
   let jobs: any[] = [];
   try {
     jobs = await fetchPublishedJobs();
   } catch (error) {
     console.error('[Jobs Feed XML] Error fetching published jobs:', error);
+  }
+
+  if (countryParam) {
+    jobs = jobs.filter((j) => parseLocation(j.location).country === countryParam);
+  }
+  if (domainParam) {
+    jobs = jobs.filter((j) => (j.domain || '').toLowerCase().includes(domainParam));
+  }
+  if (limitParam) {
+    const limit = parseInt(limitParam, 10);
+    if (!isNaN(limit) && limit > 0) {
+      jobs = jobs.slice(0, limit);
+    }
   }
 
   const nowRfc = new Date().toUTCString();
