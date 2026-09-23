@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { fetchPublishedJobs } from '@/lib/jobs-service';
 import { SITE_URL } from '@/lib/site';
+import { parsePostalAddress } from '@/lib/job-schema';
 
 export const revalidate = 60;
 
@@ -14,19 +15,12 @@ function escapeXml(unsafe: string): string {
 }
 
 function parseLocation(location: string) {
-  const clean = location.replace(/\s*\([^)]*\)\s*$/, '').trim();
-  const parts = clean.split(',').map((p) => p.trim());
-  let country = 'US';
-
-  if (/india|mumbai|bengaluru|bangalore|pune|hyderabad|delhi|noida|kolkata|chennai/i.test(clean)) {
-    country = 'IN';
-  } else if (/canada|toronto|vancouver|montreal|calgary|ottawa|ontario|quebec|alberta/i.test(clean)) {
-    country = 'CA';
-  }
-
-  const city = parts[0] || clean;
-  const state = parts.length >= 3 ? parts[1] : (parts.length === 2 && parts[1].length <= 4 ? parts[1] : '');
-  return { city, state, country };
+  const parsed = parsePostalAddress(location);
+  return {
+    city: parsed.addressLocality,
+    state: parsed.addressRegion || '',
+    country: parsed.addressCountry || 'US',
+  };
 }
 
 /**
@@ -41,6 +35,8 @@ export async function GET(req: NextRequest) {
   const limitParam = searchParams.get('limit');
   const countryParam = searchParams.get('country')?.toUpperCase();
   const domainParam = searchParams.get('domain')?.toLowerCase();
+  const channelParam = searchParams.get('channel')?.toLowerCase() || searchParams.get('source')?.toLowerCase();
+  const idsParam = searchParams.get('ids');
 
   let jobs: any[] = [];
   try {
@@ -49,17 +45,36 @@ export async function GET(req: NextRequest) {
     console.error('[Jobs Feed XML] Error fetching published jobs:', error);
   }
 
+  if (idsParam) {
+    const requestedIds = new Set(idsParam.split(',').map((s) => s.trim().toLowerCase()).filter(Boolean));
+    jobs = jobs.filter((j) => requestedIds.has(j.id.toLowerCase()));
+  }
+
   if (countryParam) {
     jobs = jobs.filter((j) => parseLocation(j.location).country === countryParam);
   }
   if (domainParam) {
     jobs = jobs.filter((j) => (j.domain || '').toLowerCase().includes(domainParam));
   }
-  if (limitParam) {
-    const limit = parseInt(limitParam, 10);
-    if (!isNaN(limit) && limit > 0) {
-      jobs = jobs.slice(0, limit);
-    }
+
+  const isLinkedIn = channelParam === 'linkedin' || searchParams.get('linkedin') === 'true';
+
+  if (isLinkedIn) {
+    // Prioritize jobs explicitly marked for LinkedIn or Featured in skills/tags
+    jobs.sort((a, b) => {
+      const aFeatured = a.techStack?.some((t: string) => /linkedin|featured/i.test(t)) ? 1 : 0;
+      const bFeatured = b.techStack?.some((t: string) => /linkedin|featured/i.test(t)) ? 1 : 0;
+      return bFeatured - aFeatured;
+    });
+  }
+
+  // LinkedIn Recruiter 6-slot license default: exactly 6 slots
+  const effectiveLimit = limitParam
+    ? parseInt(limitParam, 10)
+    : (isLinkedIn ? 6 : undefined);
+
+  if (effectiveLimit && !isNaN(effectiveLimit) && effectiveLimit > 0) {
+    jobs = jobs.slice(0, effectiveLimit);
   }
 
   const nowRfc = new Date().toUTCString();

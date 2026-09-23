@@ -40,6 +40,50 @@ function cleanLocality(location: string): string {
   return location.replace(/\s*\([^)]*\)\s*$/, '').trim() || location;
 }
 
+const REGION_MAP: Record<string, string> = {
+  quebec: 'QC', qc: 'QC', qb: 'QC',
+  ontario: 'ON', on: 'ON',
+  'british columbia': 'BC', bc: 'BC',
+  alberta: 'AB', ab: 'AB',
+  co: 'CO', colorado: 'CO',
+  tn: 'TN', tennessee: 'TN',
+  tx: 'TX', texas: 'TX',
+  fl: 'FL', florida: 'FL',
+  ca: 'CA', california: 'CA',
+  ny: 'NY', 'new york': 'NY',
+  'tamil nadu': 'Tamil Nadu',
+  karnataka: 'Karnataka',
+  maharashtra: 'Maharashtra',
+  delhi: 'Delhi',
+};
+
+export interface ParsedPostalAddress {
+  addressLocality: string;
+  addressRegion?: string;
+  addressCountry?: string;
+}
+
+export function parsePostalAddress(location: string): ParsedPostalAddress {
+  const clean = cleanLocality(location).replace(/\s+or\s+remote/i, '').trim();
+  const country = inferCountry(clean);
+  const parts = clean.split(/[,/]/).map((p) => p.trim()).filter(Boolean);
+
+  let locality = clean;
+  let region: string | undefined;
+
+  if (parts.length >= 2) {
+    locality = parts[0];
+    const secondPart = parts[1].toLowerCase();
+    region = REGION_MAP[secondPart] || parts[1];
+  }
+
+  return {
+    addressLocality: locality,
+    ...(region ? { addressRegion: region } : {}),
+    ...(country ? { addressCountry: country } : {}),
+  };
+}
+
 function parseExperienceMonths(experience?: string): number | undefined {
   if (!experience) return undefined;
   const match = experience.match(/(\d+)/);
@@ -55,8 +99,8 @@ function parseExperienceMonths(experience?: string): number | undefined {
  * carousel, which for a recruitment site is the point of publishing them.
  */
 export function buildJobPostingSchema(job: Job) {
-  const locality = cleanLocality(job.location);
-  const country = inferCountry(locality);
+  const parsedAddress = parsePostalAddress(job.location);
+  const country = parsedAddress.addressCountry;
 
   const htmlParts: string[] = [];
   const cleanOverview = (job.overview || job.description || '').replace(/\*\*/g, '').trim();
@@ -100,8 +144,9 @@ export function buildJobPostingSchema(job: Job) {
       '@type': 'Place',
       address: {
         '@type': 'PostalAddress',
-        addressLocality: locality,
-        ...(country ? { addressCountry: country } : {}),
+        addressLocality: parsedAddress.addressLocality,
+        ...(parsedAddress.addressRegion ? { addressRegion: parsedAddress.addressRegion } : {}),
+        ...(parsedAddress.addressCountry ? { addressCountry: parsedAddress.addressCountry } : {}),
       },
     },
     url: `${SITE_URL}/jobs/${encodeURIComponent(job.id)}`,
