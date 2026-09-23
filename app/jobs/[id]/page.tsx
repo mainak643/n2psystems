@@ -19,6 +19,7 @@ import { buildJobPostingSchema } from "@/lib/job-schema"
 import { buildBreadcrumbSchema } from "@/lib/seo-schema"
 import { PageHero } from "@/components/ui/page-hero"
 import { Section } from "@/components/ui/section"
+import { FormattedParagraphs, FormattedText } from "@/components/ui/formatted-text"
 
 /**
  * Revalidate rather than `force-dynamic`. Every crawler hit and every visitor
@@ -214,9 +215,7 @@ export default async function JobDetailPage({
             {job.overview && job.overview.trim() && (
               <div className="surface p-6 sm:p-8">
                 <h2 className="text-title text-foreground">Role Overview</h2>
-                <div className="mt-4 whitespace-pre-line text-body text-muted-foreground">
-                  {job.overview}
-                </div>
+                <FormattedParagraphs text={job.overview} />
               </div>
             )}
 
@@ -227,7 +226,7 @@ export default async function JobDetailPage({
                   {job.responsibilities.map((item, idx) => (
                     <li key={idx} className="flex items-start gap-3 text-body text-muted-foreground">
                       <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-tech-green" aria-hidden="true" />
-                      <span>{item}</span>
+                      <FormattedText text={item} />
                     </li>
                   ))}
                 </ul>
@@ -241,7 +240,7 @@ export default async function JobDetailPage({
                   {job.requirements.map((item, idx) => (
                     <li key={idx} className="flex items-start gap-3 text-body text-muted-foreground">
                       <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-primary" aria-hidden="true" />
-                      <span>{item}</span>
+                      <FormattedText text={item} />
                     </li>
                   ))}
                 </ul>
@@ -263,7 +262,7 @@ export default async function JobDetailPage({
                       <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
                         {idx + 1}
                       </span>
-                      <span className="font-medium text-foreground">{item}</span>
+                      <FormattedText text={item} className="font-medium text-foreground" />
                     </li>
                   ))}
                 </ul>

@@ -72,12 +72,12 @@ export async function GET(req: NextRequest) {
       const validThrough = job.validThroughISO || new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
       const fullDescription = [
-        job.overview || '',
+        (job.overview || '').replace(/\*\*/g, ''),
         job.responsibilities && job.responsibilities.length > 0
-          ? `Key Responsibilities:\n• ${job.responsibilities.join('\n• ')}`
+          ? `Key Responsibilities:\n• ${job.responsibilities.map((r: string) => r.replace(/\*\*/g, '')).join('\n• ')}`
           : '',
         job.requirements && job.requirements.length > 0
-          ? `Required Skills & Qualifications:\n• ${job.requirements.join('\n• ')}`
+          ? `Required Skills & Qualifications:\n• ${job.requirements.map((r: string) => r.replace(/\*\*/g, '')).join('\n• ')}`
           : '',
         `Apply directly at: ${url}`,
       ]

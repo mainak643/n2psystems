@@ -157,7 +157,7 @@ function normalizeWorkMode(mode?: string): "Remote" | "Onsite" | "Hybrid" {
   return "Hybrid";
 }
 
-const BULLET_RE = /^\s*(?:[•▪◦*\-–—]|\d+[.)])\s+/;
+const BULLET_RE = /^\s*(?:[•▪◦*\-–—]|[\u{1F300}-\u{1F9FF}🔹⭐❌📌💡🎯📢🚀]|\d+[.)])\s*/u;
 
 /**
  * Words that stay lowercase in title case, so they don't disqualify a heading.
@@ -173,49 +173,43 @@ function isTitleCase(text: string): boolean {
   return words.every((w) => !/^[a-z]/.test(w) || TITLE_CASE_MINOR_WORDS.has(w.toLowerCase()));
 }
 
+function cleanHeadingText(line: string): string {
+  return line
+    .replace(/^#{1,6}\s+/, '')
+    .replace(/^[\u{1F300}-\u{1F9FF}🔹⭐❌📌💡🎯📢🚀\s*]+/u, '')
+    .replace(/\*+/g, '')
+    .replace(/^[:\s-]+/, '')
+    .replace(/[:\s-]+$/, '')
+    .trim();
+}
+
 /**
  * Does this line have the *shape* of a heading, independent of its wording?
- *
- * Without this gate the keyword checks in `sectionOf` fire on ordinary prose.
- * A JD opening "We are looking for a Senior Data Engineer." contains
- * "looking for" and sits under the length cap, so it was consumed as a
- * Required-Skills heading: the Role Overview card vanished (the detail page
- * hides it when empty) and the intro sentences that followed rendered as
- * green-checkmarked skill bullets, in the JSON-LD description too.
- *
- * Three shapes count, in the order real JDs use them.
  */
 function looksLikeHeading(raw: string, normalized: string): boolean {
   // "## Key Responsibilities" — an explicit markdown heading, always.
   if (/^\s*#{1,6}\s+/.test(raw)) return true;
   // "Requirements:" — a label introducing the list that follows.
-  if (normalized.endsWith(':')) return true;
+  if (normalized.endsWith(':') || raw.trim().endsWith(':')) return true;
   // Sentence-ending punctuation means prose, whatever the wording.
   if (/[.!?]$/.test(normalized)) return false;
   // A bare title is short enough that it cannot be a sentence. Title case
-  // buys a few more words, which is what separates the heading "What We Are
-  // Looking For In A Candidate" from the sentence "We are looking for a
-  // Senior Data Engineer" — same length, same keyword, different case.
+  // buys a few more words.
   const words = normalized.split(/\s+/).filter(Boolean).length;
   return words <= 6 || (words <= 10 && isTitleCase(normalized));
 }
 
 /**
- * A heading is a short line that introduces a section — never a list item
- * itself. `'overview'` is a heading too (a JD that opens with a literal
- * "## Role Overview" line before its actual summary), but it introduces no
- * list — it's matched purely so the loop below can consume and discard the
- * heading text itself instead of treating it as the summary's first line.
+ * Categorises a line into a known job section, or returns null if it is prose/list item.
  */
-function sectionOf(line: string): 'responsibilities' | 'requirements' | 'overview' | null {
-  if (BULLET_RE.test(line)) return null;
-  // Raw JDs write headings as "## Role Overview" — the substring checks
-  // below (`.includes('responsibilit')`, etc.) match right through a "##"
-  // prefix, but an exact-equality check like `lower === 'overview'` would
-  // not, so strip the markdown marker once, up front, for every check here.
-  const normalized = line.replace(/^#{1,6}\s+/, '').trim();
+function sectionOf(line: string): 'responsibilities' | 'requirements' | 'overview' | 'ignore' | null {
+  const isMdHeading = /^\s*#{1,6}\s+/.test(line);
+  if (!isMdHeading && /^\s*[•▪◦*\-–—]\s+/.test(line)) return null;
+
+  const normalized = cleanHeadingText(line);
   if (normalized.length > 64) return null;
-  if (!looksLikeHeading(line, normalized)) return null;
+  if (!isMdHeading && !looksLikeHeading(line, normalized)) return null;
+
   const lower = normalized.toLowerCase();
   if (
     lower === 'overview' ||
@@ -225,7 +219,9 @@ function sectionOf(line: string): 'responsibilities' | 'requirements' | 'overvie
     lower === 'job summary' ||
     lower === 'position summary' ||
     lower.includes('about the role') ||
-    lower.includes('about this role')
+    lower.includes('about this role') ||
+    lower.includes('about the job') ||
+    lower.includes('introduction')
   ) {
     return 'overview';
   }
@@ -233,9 +229,20 @@ function sectionOf(line: string): 'responsibilities' | 'requirements' | 'overvie
     lower.includes('responsibilit') ||
     lower.includes('what you will do') ||
     lower.includes("what you'll do") ||
-    lower.includes('key duties')
+    lower.includes('key duties') ||
+    lower.includes('duties') ||
+    lower.includes('scope of work')
   ) {
     return 'responsibilities';
+  }
+  if (
+    lower.includes('not required') ||
+    lower.includes('not a requirement') ||
+    lower.includes('out of scope') ||
+    lower.includes('exclusions') ||
+    lower.includes('not needed')
+  ) {
+    return 'ignore';
   }
   if (
     lower.includes('requirement') ||
@@ -244,45 +251,82 @@ function sectionOf(line: string): 'responsibilities' | 'requirements' | 'overvie
     lower.includes("what you'll need") ||
     lower.includes('must have') ||
     lower.includes('skills') ||
-    // "What We Are/Were Looking For", "Preferred & Bonus Experience", "Nice
-    // to Have" — these headings used to fall through unrecognized, which
-    // left `current` stuck on whatever section came before and silently
-    // filed candidate-facing "what we want" bullets under Responsibilities.
     lower.includes('looking for') ||
     lower.includes('preferred') ||
     lower.includes('bonus') ||
-    lower.includes('nice to have')
+    lower.includes('nice to have') ||
+    lower.includes('who you are')
   ) {
     return 'requirements';
   }
   return null;
 }
 
+function isMetadataOrRecruiterNote(line: string): boolean {
+  const trimmed = line.trim();
+  if (/^📌/.test(trimmed)) return true;
+  if (
+    /^(?:\*\*)?(?:experience|role|budget|location|work style|visa|joining|notice period|primary skills|key skill|client|rate|ctc|target start date|mode)\b.*?:/i.test(
+      trimmed
+    )
+  ) {
+    return true;
+  }
+  return false;
+}
+
+function isTitleLikeLine(line: string, jobTitle?: string): boolean {
+  const trimmed = line.trim();
+  if (
+    /^[🚀⚡🔥💼✨\s*#]*(?:hiring|we are hiring|job opening|position|urgent requirement|immediate opening)[\s:]+/i.test(
+      trimmed
+    )
+  ) {
+    return true;
+  }
+  if (jobTitle) {
+    const cleanLine = trimmed
+      .replace(/^[#\s*"'🚀⚡🔥💼✨\-]+/u, '')
+      .replace(/[#\s*"'—\-]+$/u, '')
+      .trim()
+      .toLowerCase();
+    const cleanTitle = jobTitle.trim().toLowerCase();
+    if (cleanLine === cleanTitle || cleanLine.startsWith(cleanTitle) || cleanTitle.startsWith(cleanLine)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function cleanBulletText(line: string): string {
+  return line
+    .replace(/^#{1,6}\s+/, '')
+    .replace(BULLET_RE, '')
+    .replace(/^[\u{1F300}-\u{1F9FF}🔹⭐❌📌💡🎯📢🚀\s]+/u, '')
+    .trim();
+}
+
+function isConcludingProse(line: string): boolean {
+  const trimmed = line.trim();
+  if (BULLET_RE.test(trimmed)) return false;
+  return /^(?:we are (?:specifically|also|particularly|looking)|the ideal candidate|in this role|to be successful|this position|candidates should|candidates who)\b/i.test(
+    trimmed
+  );
+}
+
 /**
- * Splits a free-text JD into two bullet lists.
- *
- * Two failure modes this guards against, both reachable with the Gemini-parsed
- * descriptions the portal writes:
- *
- *  - The heading test used to run against every line, so a real bullet like
- *    "• Gather requirements from stakeholders" was read as a "requirements"
- *    heading, silently dropped, and every bullet after it filed under the wrong
- *    list. `sectionOf` now only matches short, non-bullet lines.
- *  - Only lines opening with a bullet glyph were collected, so a JD listing its
- *    duties as plain lines under a heading produced nothing and fell through to
- *    the generic placeholder copy. Once a heading establishes the section,
- *    plain lines count too.
+ * Splits a free-text JD into structured overview prose, key responsibilities,
+ * and candidate requirements, stripping raw metadata notes, social media banners,
+ * and out-of-scope sections.
  */
-function extractBulletPoints(text?: string): { responsibilities: string[]; requirements: string[]; overview: string } {
+function extractBulletPoints(text?: string, jobTitle?: string): { responsibilities: string[]; requirements: string[]; overview: string } {
   if (!text) return { responsibilities: [], requirements: [], overview: '' };
 
   const responsibilities: string[] = [];
   const requirements: string[] = [];
-  // Prose lines seen before any recognized heading — the genuinely unique
-  // part of the JD, as opposed to the bullet lists that get re-rendered
-  // structurally below. See the `overview` field on `Job`.
-  const overviewLines: string[] = [];
-  let current: 'overview' | 'responsibilities' | 'requirements' = 'overview';
+  let overviewLines: string[] = [];
+  const concludingLines: string[] = [];
+  let current: 'overview' | 'responsibilities' | 'requirements' | 'ignore' = 'overview';
 
   for (const raw of text.split('\n')) {
     const line = raw.trim();
@@ -290,35 +334,51 @@ function extractBulletPoints(text?: string): { responsibilities: string[]; requi
 
     const heading = sectionOf(line);
     if (heading) {
+      if (heading === 'overview') {
+        overviewLines = [];
+      }
       current = heading;
+      continue;
+    }
+
+    if (isMetadataOrRecruiterNote(line)) {
+      continue;
+    }
+
+    if (isTitleLikeLine(line, jobTitle)) {
+      continue;
+    }
+
+    if (isConcludingProse(line)) {
+      concludingLines.push(line);
+      continue;
+    }
+
+    if (current === 'ignore') {
       continue;
     }
 
     const isBullet = BULLET_RE.test(line);
 
-    // Prose ahead of the first heading is the overview; bullets ahead of
-    // the first heading keep the existing heuristic below instead (a JD
-    // that opens straight into a bare bullet list, no intro paragraph).
     if (current === 'overview' && !isBullet) {
       if (line.length >= 6) overviewLines.push(line);
       continue;
     }
 
-    const cleaned = line.replace(BULLET_RE, '').trim();
-    // Under 6 chars is noise; over 300 is a prose paragraph, not a bullet.
-    if (cleaned.length < 6 || cleaned.length > 300) continue;
+    const cleaned = cleanBulletText(line);
+    if (cleaned.length < 5 || cleaned.length > 300) continue;
 
     if (current === 'responsibilities') {
       responsibilities.push(cleaned);
     } else if (current === 'requirements') {
       requirements.push(cleaned);
     } else if (isBullet) {
-      // Bullets before any heading: the first few read as duties, rest as asks.
       (responsibilities.length < 5 ? responsibilities : requirements).push(cleaned);
     }
   }
 
-  return { responsibilities, requirements, overview: overviewLines.join('\n\n') };
+  const allOverview = [...overviewLines, ...concludingLines].join('\n\n');
+  return { responsibilities, requirements, overview: allOverview };
 }
 
 /**
@@ -352,7 +412,7 @@ const PUBLIC_JOB_COLUMNS =
   'closing_date, created_at, updated_at';
 
 export function mapRequirementToJob(req: any): Job {
-  const extracted = extractBulletPoints(req.description);
+  const extracted = extractBulletPoints(req.description, req.title);
 
   const skills: string[] = Array.isArray(req.skills) ? req.skills.filter(Boolean) : [];
   const mandatory: string[] = Array.isArray(req.mandatory_skills) ? req.mandatory_skills.filter(Boolean) : [];

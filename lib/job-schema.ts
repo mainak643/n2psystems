@@ -58,20 +58,22 @@ export function buildJobPostingSchema(job: Job) {
   const locality = cleanLocality(job.location);
   const country = inferCountry(locality);
 
-  const alreadyStated = (items: string[]) =>
-    items.length === 0 || job.description.includes(items[0]);
-
-  const description = [
-    job.description,
-    alreadyStated(job.responsibilities)
-      ? ''
-      : `Key Responsibilities: ${job.responsibilities.join('; ')}`,
-    alreadyStated(job.requirements)
-      ? ''
-      : `Required Skills & Qualifications: ${job.requirements.join('; ')}`,
-  ]
-    .filter(Boolean)
-    .join('\n\n');
+  const htmlParts: string[] = [];
+  const cleanOverview = (job.overview || job.description || '').replace(/\*\*/g, '').trim();
+  if (cleanOverview) {
+    cleanOverview.split(/\n\s*\n/).filter(Boolean).forEach((para) => {
+      htmlParts.push(`<p>${para.replace(/\n/g, '<br/>')}</p>`);
+    });
+  }
+  if (job.responsibilities && job.responsibilities.length > 0) {
+    htmlParts.push('<p><strong>Key Responsibilities:</strong></p>');
+    htmlParts.push(`<ul>${job.responsibilities.map((r) => `<li>${r.replace(/\*\*/g, '')}</li>`).join('')}</ul>`);
+  }
+  if (job.requirements && job.requirements.length > 0) {
+    htmlParts.push('<p><strong>Required Skills & Qualifications:</strong></p>');
+    htmlParts.push(`<ul>${job.requirements.map((r) => `<li>${r.replace(/\*\*/g, '')}</li>`).join('')}</ul>`);
+  }
+  const description = htmlParts.join('\n');
 
   const schema: Record<string, unknown> = {
     '@context': 'https://schema.org/',

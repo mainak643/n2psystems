@@ -29,7 +29,7 @@ export async function GET() {
       const pubDate = job.datePostedISO ? new Date(job.datePostedISO).toUTCString() : nowRfc;
       const snippet = escapeXml(
         `${job.title} at ${job.company || 'N2P Systems'} (${job.location}) — ${job.type} (${job.mode}). ${
-          job.overview || job.description.slice(0, 200)
+          (job.overview || job.description.slice(0, 200)).replace(/\*\*/g, '')
         }`
       );
 
