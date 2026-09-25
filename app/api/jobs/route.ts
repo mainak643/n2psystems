@@ -193,6 +193,29 @@ export async function GET(req: NextRequest) {
     }
 
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || SITE_URL || 'https://n2psystems.com';
+    /**
+     * A single pre-formatted line per job for AI agents to read verbatim.
+     *
+     * Reapdat (and any future agent) receives structured JSON but reconstructs
+     * it into prose — badly: duplicated salaries, stray braces, garbled `Pay: }`
+     * on voice calls. This field removes the guesswork: the agent can quote it
+     * as-is, and every field is represented exactly once, in the right order.
+     */
+    const buildAgentText = (r: PublicRequirementRow): string => {
+      const salary = formatSalary(r.salary_min, r.salary_max, r.salary_currency, r.location);
+      const parts = [
+        r.title || 'Untitled Role',
+        `in ${r.department || 'Engineering'}`,
+        `– ${r.location || 'Location TBD'}`,
+        r.work_mode ? `(${r.work_mode})` : '',
+        r.employment_type ? `| ${r.employment_type}` : '',
+        salary ? `| Pay: ${salary}` : '',
+        r.min_experience_years ? `| ${r.min_experience_years}+ yrs exp` : '',
+        r.reference_code ? `| Ref: ${r.reference_code}` : '',
+      ];
+      return parts.filter(Boolean).join(' ');
+    };
+
     const formatted = items.map((req) => {
       const base = {
         id: req.id,
@@ -221,6 +244,9 @@ export async function GET(req: NextRequest) {
         job_url: `${baseUrl}/jobs/${encodeURIComponent(req.reference_code || req.id)}`,
         apply_url: `${baseUrl}/jobs/${encodeURIComponent(req.reference_code || req.id)}/apply`,
         screening_chat_link: req.reapdat_chat_link || undefined,
+        // Pre-formatted line for AI agents — read this verbatim instead of
+        // reconstructing from structured fields.
+        agent_text: buildAgentText(req),
       };
 
       if (isSummary) {
