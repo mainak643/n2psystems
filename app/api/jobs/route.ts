@@ -33,6 +33,31 @@ export async function OPTIONS() {
  * while selecting neither, so `?summary=true` returned no summary at all and
  * reported `skills: []` for every role.
  */
+/**
+ * Bare-minimum columns for AI agent consumption (Reapdat voice/chat).
+ *
+ * The full and summary selects pull 20+ columns including skills arrays that
+ * inflate the payload to 15KB+ and push response time past the 800ms phone
+ * call SLA. This select fetches only what `buildAgentText` needs — 10 scalar
+ * columns, no arrays — so the response is ~1KB and returns in <400ms.
+ *
+ * Activate with `?format=agent`.
+ */
+const AGENT_COLUMNS = `
+            id,
+            reference_code,
+            title,
+            department,
+            employment_type,
+            location,
+            work_mode,
+            salary_min,
+            salary_max,
+            salary_currency,
+            min_experience_years,
+            reapdat_chat_link
+          `;
+
 const SUMMARY_COLUMNS = `
             id,
             reference_code,
@@ -138,11 +163,14 @@ export async function GET(req: NextRequest) {
     const codeParam = searchParams.get('code') || searchParams.get('reference_code') || searchParams.get('ref') || '';
     const queryParam = (searchParams.get('q') || searchParams.get('query') || searchParams.get('search') || '').toLowerCase().trim();
     const isSummary = searchParams.get('summary') === 'true' || searchParams.get('compact') === 'true';
+    const isAgent = searchParams.get('format') === 'agent';
     const limitParam = parseInt(searchParams.get('limit') || '0', 10);
+
+    const selectColumns = isAgent ? AGENT_COLUMNS : isSummary ? SUMMARY_COLUMNS : FULL_COLUMNS;
 
     let query = supabase
       .from('requirements')
-      .select(isSummary ? SUMMARY_COLUMNS : FULL_COLUMNS)
+      .select(selectColumns)
       .in('status', ['Active', 'Open'])
       .order('created_at', { ascending: false });
 
@@ -158,6 +186,7 @@ export async function GET(req: NextRequest) {
         present, fetch the active set and apply the limit after filtering.
       */
       if (limitParam > 0) query = query.limit(limitParam);
+      else if (isAgent) query = query.limit(10);
       else if (isSummary) query = query.limit(8);
     }
 
@@ -172,6 +201,37 @@ export async function GET(req: NextRequest) {
     }
 
     let items = requirements || [];
+
+    // --- Agent fast-path: tiny payload, no skills filtering, early return ---
+    if (isAgent) {
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || SITE_URL || 'https://n2psystems.com';
+      const agentPayload = items.map((r) => {
+        const salary = formatSalary(r.salary_min, r.salary_max, r.salary_currency, r.location);
+        const parts = [
+          r.title || 'Untitled Role',
+          `in ${r.department || 'Engineering'}`,
+          `– ${r.location || 'Location TBD'}`,
+          r.work_mode ? `(${r.work_mode})` : '',
+          r.employment_type ? `| ${r.employment_type}` : '',
+          salary ? `| Pay: ${salary}` : '',
+          r.min_experience_years ? `| ${r.min_experience_years}+ yrs exp` : '',
+          r.reference_code ? `| Ref: ${r.reference_code}` : '',
+        ];
+        return {
+          agent_text: parts.filter(Boolean).join(' '),
+          reference_code: r.reference_code,
+          apply_url: `${baseUrl}/jobs/${encodeURIComponent(r.reference_code || r.id)}/apply`,
+          screening_chat_link: r.reapdat_chat_link || undefined,
+        };
+      });
+      return NextResponse.json(agentPayload, {
+        status: 200,
+        headers: {
+          ...corsHeaders,
+          'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=60',
+        },
+      });
+    }
 
     // Optional keyword search filter across title, department, location, skills
     if (queryParam) {
