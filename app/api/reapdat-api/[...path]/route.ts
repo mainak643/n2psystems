@@ -161,12 +161,79 @@ function deny(status: number, detail: string, cors: Record<string, string>): Nex
   return NextResponse.json({ detail }, { status, headers: cors });
 }
 
+/**
+ * Is the relay actually able to reach REAPDAT?
+ *
+ * Authentication runs before everything else below, which is correct — but it
+ * means that from outside, with no session to hand, a missing key and an
+ * expired token are the same 401. This answers the question that ambiguity
+ * hides, and is the one path deliberately reachable without a session.
+ *
+ * It reports booleans, a status code and a count. Never the key, never its
+ * length or prefix, and never a candidate's name, email or answers. "The
+ * integration is configured" is the whole disclosure.
+ *
+ * Handled here rather than as its own `_health` segment because the catch-all
+ * shadows sibling routes on this path.
+ */
+async function health(cors: Record<string, string>): Promise<NextResponse> {
+  const raw = process.env.REAPDAT_ADMIN_API_KEY || process.env.REAPDAT_API_KEY;
+  const configured = Boolean(raw?.trim());
+  const usable = Boolean(raw?.trim().startsWith('ua_admin_'));
+  const headers = { ...cors, 'Cache-Control': 'no-store' };
+
+  if (!usable) {
+    return NextResponse.json(
+      {
+        configured,
+        usable,
+        upstream: null,
+        hint: configured
+          ? 'A key is set but does not begin with ua_admin_. The relay accepts only an admin key.'
+          : 'Set REAPDAT_ADMIN_API_KEY on the Vercel project (Production) and redeploy — env vars are captured per deployment.',
+      },
+      { headers }
+    );
+  }
+
+  try {
+    const res = await fetch(`${REAPDAT_API}/questionnaires`, {
+      headers: { 'X-API-Key': raw!.trim() },
+      signal: AbortSignal.timeout(10_000),
+    });
+    const body = res.ok ? ((await res.json()) as { questionnaires?: unknown[] }) : null;
+    return NextResponse.json(
+      {
+        configured: true,
+        usable: true,
+        upstream: { status: res.status, questionnaires: body?.questionnaires?.length ?? null },
+        hint: res.ok ? 'Relay can reach REAPDAT.' : 'REAPDAT rejected the configured key.',
+      },
+      { headers }
+    );
+  } catch (err: unknown) {
+    return NextResponse.json(
+      {
+        configured: true,
+        usable: true,
+        upstream: { status: null, error: err instanceof Error ? err.name : 'unknown' },
+        hint: 'Key is present but REAPDAT was unreachable from the function.',
+      },
+      { headers }
+    );
+  }
+}
+
 async function relay(
   req: NextRequest,
   segments: string[],
   method: 'GET' | 'POST' | 'DELETE'
 ): Promise<NextResponse> {
   const cors = corsHeaders(req);
+
+  if (method === 'GET' && segments.length === 1 && segments[0] === '_health') {
+    return health(cors);
+  }
 
   if (!(await isAuthenticatedCaller(req))) {
     return deny(401, 'Authentication required.', cors);
