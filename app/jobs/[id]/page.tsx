@@ -147,7 +147,7 @@ export default async function JobDetailPage({
         title={job.title}
         actions={
           <Button asChild variant="brand" size="xl">
-            <Link href={applyUrl}>
+            <Link href={applyUrl} prefetch={true}>
               Apply for this Role
               <ArrowRight className="size-4" aria-hidden="true" />
             </Link>
@@ -324,7 +324,7 @@ export default async function JobDetailPage({
                 Submit your resume and contact information. Our recruitment lead for this role will review your dossier and connect with you.
               </p>
               <Button asChild variant="brand" size="lg" className="w-full">
-                <Link href={applyUrl}>Apply for this Role</Link>
+                <Link href={applyUrl} prefetch={true}>Apply for this Role</Link>
               </Button>
             </div>
           </div>

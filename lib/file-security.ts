@@ -11,8 +11,6 @@ const MAGIC_BYTES = {
   pdf: [0x25, 0x50, 0x44, 0x46],
   // "PK\x03\x04" (Zip container for modern OOXML .docx)
   docx: [0x50, 0x4b, 0x03, 0x04],
-  // Compound File Binary Format (Legacy Microsoft Office .doc)
-  doc: [0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1],
 };
 
 const DANGEROUS_EXTENSIONS = new Set([
@@ -75,8 +73,10 @@ export async function verifyFileMagicBytes(file: File): Promise<{ valid: boolean
     return { valid: false, reason: 'The file name contains dangerous file extensions.' };
   }
 
-  if (!['pdf', 'docx', 'doc'].includes(ext)) {
-    return { valid: false, reason: 'Only PDF, DOCX, or DOC documents are accepted.' };
+  // Legacy .doc is refused: the AI screening pipeline cannot read it, so a
+  // .doc applicant could never be screened or auto-promoted.
+  if (!['pdf', 'docx'].includes(ext)) {
+    return { valid: false, reason: 'Please upload your resume/CV as a PDF or DOCX file.' };
   }
 
   try {
@@ -112,18 +112,15 @@ export async function verifyFileMagicBytes(file: File): Promise<{ valid: boolean
           reason: 'File content does not match a valid DOCX format. Please attach a genuine DOCX document.',
         };
       }
-    } else if (ext === 'doc') {
-      // DOC compound file binary format
-      const isDoc =
-        bytes[0] === MAGIC_BYTES.doc[0] &&
-        bytes[1] === MAGIC_BYTES.doc[1] &&
-        bytes[2] === MAGIC_BYTES.doc[2] &&
-        bytes[3] === MAGIC_BYTES.doc[3];
 
-      if (!isDoc) {
+      // Every zip starts with PK. A Word document also carries its body at
+      // word/document.xml, whose name sits uncompressed in the archive's
+      // directory — so a renamed .zip or .xlsx is caught without unzipping.
+      const whole = new TextDecoder('latin1').decode(await file.arrayBuffer());
+      if (!whole.includes('word/document.xml')) {
         return {
           valid: false,
-          reason: 'File content does not match a valid DOC format. Please attach a genuine DOC document.',
+          reason: 'This file is not a Word document. Please attach your resume as a PDF or DOCX.',
         };
       }
     }

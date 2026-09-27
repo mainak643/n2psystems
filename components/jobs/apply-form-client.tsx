@@ -5,79 +5,35 @@ import Link from "next/link"
 import { AlertCircle, CheckCircle2, FileText, HelpCircle, Loader2, Paperclip, ShieldCheck, X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { supabase } from "@/lib/supabase"
 import type { Job } from "@/lib/jobs-data"
 
-/** Mirrors the `applications` bucket limits so a rejection is explained here. */
-const MAX_BYTES = 8 * 1024 * 1024
+/** Mirrors /api/apply, which enforces it. Checked here so the message comes early. */
+const MAX_BYTES = 2 * 1024 * 1024
 
 /** Budget for `job_applications.cover_note`. Screening answers get it first. */
 const COVER_NOTE_MAX_CHARS = 4000
 const ACCEPTED = {
   "application/pdf": ".pdf",
-  "application/msword": ".doc",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
 } as const
 
-type Field = "fullName" | "email" | "phone" | "location" | "currentCompany" | "experienceYears" | "linkedinUrl" | "coverNote"
+type Field = "fullName" | "email" | "phone" | "location" | "linkedinUrl"
 
 const EMPTY: Record<Field, string> = {
   fullName: "",
   email: "",
   phone: "",
   location: "",
-  currentCompany: "",
-  experienceYears: "",
   linkedinUrl: "",
-  coverNote: "",
 }
 
 /**
- * `<REFERENCE_CODE>/<uuid>.<ext>` inside the `applications` bucket — the exact
- * shape the storage policy in migration 00026 accepts. A random filename keeps
- * applicant PII out of object keys; the requisition folder keeps a recruiter's
- * inbox browsable.
+ * The extension, lowercased. Checked instead of `File.type`, which browsers
+ * leave empty often enough (drag-and-drop, some Linux desktops) that trusting
+ * it would reject a legitimate CV. The server checks the actual bytes.
  */
-function storagePath(referenceCode: string, file: File): string {
-  const safeRef = referenceCode.replace(/[^A-Za-z0-9._-]/g, "_").slice(0, 20)
-  return `${safeRef}/${randomId()}.${extensionOf(file)}`
-}
-
-/**
- * `crypto.randomUUID` only exists in a secure context, and this call sits
- * inside the submit handler's `try` — so over plain HTTP (the LAN dev origin
- * in next.config.mjs, or any non-TLS deployment) every application died after
- * passing validation with "crypto.randomUUID is not a function" shown to the
- * candidate. The fallback only needs to be unique within a requisition folder.
- */
-function randomId(): string {
-  return (
-    globalThis.crypto?.randomUUID?.() ??
-    `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`
-  )
-}
-
 function extensionOf(file: File): string {
-  const ext = file.name.split(".").pop()?.toLowerCase() ?? ""
-  return /^[a-z0-9]{1,8}$/.test(ext) ? ext : "pdf"
-}
-
-/**
- * The bucket enforces `allowed_mime_types` against the content type we send,
- * not the file's actual bytes — and browsers leave `File.type` empty often
- * enough (drag-and-drop, some Linux desktops, files with no registered handler)
- * that trusting it gets a legitimate CV rejected at the door. The portal hit
- * exactly this on its own `resumes` bucket; deriving from the extension is the
- * same fix, and the extension is what the allow-list is written against.
- */
-const MIME_BY_EXTENSION: Record<string, string> = {
-  pdf: "application/pdf",
-  doc: "application/msword",
-  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-}
-
-function resolveContentType(file: File): string {
-  return MIME_BY_EXTENSION[extensionOf(file)] ?? (file.type || "application/pdf")
+  return file.name.split(".").pop()?.toLowerCase() ?? ""
 }
 
 /**
@@ -108,27 +64,40 @@ function classifyScreeningQuestion(question: string): QuestionKind {
 function validate(values: Record<Field, string>, file: File | null) {
   const errors: Partial<Record<Field | "resume", string>> = {}
 
-  if (values.fullName.trim().length < 2) errors.fullName = "Please enter your full name."
+  if (values.fullName.trim().length < 2) {
+    errors.fullName = "Please enter your full name."
+  }
+
   // Deliberately permissive — the database CHECK is the real gate, and an
   // over-strict pattern rejects valid addresses.
-  if (!/^\S+@\S+\.\S+$/.test(values.email.trim())) errors.email = "Please enter a valid email address."
-  if (values.coverNote.length > 4000) errors.coverNote = "Please keep this under 4000 characters."
+  if (!/^\S+@\S+\.\S+$/.test(values.email.trim())) {
+    errors.email = "Please enter a valid email address."
+  }
 
-  if (values.experienceYears.trim()) {
-    const years = Number(values.experienceYears)
-    if (!Number.isFinite(years) || years < 0 || years > 60) {
-      errors.experienceYears = "Enter a number of years between 0 and 60."
-    }
+  const cleanedPhone = values.phone.replace(/[\s().-]/g, "")
+  if (!values.phone.trim()) {
+    errors.phone = "Please enter your phone number."
+  } else if (cleanedPhone.length < 7 || !/^\+?[0-9]{7,20}$/.test(cleanedPhone)) {
+    errors.phone = "Please enter a valid phone number."
+  }
+
+  if (values.location.trim().length < 2) {
+    errors.location = "Please enter your current location."
+  }
+
+  const trimmedLinkedIn = values.linkedinUrl.trim().toLowerCase()
+  if (!trimmedLinkedIn) {
+    errors.linkedinUrl = "Please enter your LinkedIn profile URL."
+  } else if (!trimmedLinkedIn.includes("linkedin.com/")) {
+    errors.linkedinUrl = "Please enter a valid LinkedIn URL (e.g. https://linkedin.com/in/yourprofile)."
   }
 
   if (!file) {
     errors.resume = "Please attach your resume."
   } else if (file.size > MAX_BYTES) {
-    errors.resume = "That file is over 8 MB. Please attach a smaller copy."
-  } else if (!(extensionOf(file) in MIME_BY_EXTENSION)) {
-    // Checked by extension, not File.type, for the reason given on
-    // MIME_BY_EXTENSION — an empty File.type is common and not an error.
-    errors.resume = "Please attach a PDF, DOC, or DOCX file."
+    errors.resume = "That file is over 2 MB. Please attach a smaller PDF or DOCX."
+  } else if (!["pdf", "docx"].includes(extensionOf(file))) {
+    errors.resume = "Please upload your resume/CV as a PDF or DOCX file."
   }
 
   return errors
@@ -142,6 +111,7 @@ export function ApplyFormClient({ job }: { job: Job }) {
   const [errors, setErrors] = useState<Partial<Record<Field | "resume", string>>>({})
   const [screeningErrors, setScreeningErrors] = useState<Record<number, string>>({})
   const [submitState, setSubmitState] = useState<"idle" | "submitting" | "done">("idle")
+  const [submitPhase, setSubmitPhase] = useState<"uploading" | "recording">("uploading")
   const [submitError, setSubmitError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const errorSummaryRef = useRef<HTMLDivElement | null>(null)
@@ -208,15 +178,12 @@ export function ApplyFormClient({ job }: { job: Job }) {
     }
 
     setSubmitState("submitting")
+    setSubmitPhase("uploading")
+    const phaseTimer = setTimeout(() => {
+      setSubmitPhase("recording")
+    }, 1500)
+
     try {
-      const path = storagePath(job.id, file!)
-
-      const { error: uploadError } = await supabase.storage
-        .from("applications")
-        .upload(path, file!, { contentType: resolveContentType(file!), upsert: false })
-
-      if (uploadError) throw new Error(`We could not upload your resume. ${uploadError.message}`)
-
       // Format screening questions & answers cleanly into cover_note
       const formattedScreeningNotes = (job.screeningQuestions || [])
         .map((q, idx) => {
@@ -225,82 +192,40 @@ export function ApplyFormClient({ job }: { job: Job }) {
         })
         .join("\n\n")
 
-      /*
-        The screening answers are the dealbreaker record — work authorization,
-        knockout skills, notice period — and recruiters triage on them. So the
-        4000-character budget is spent on them first and the free-text note
-        absorbs the cut, rather than one long note silently truncating the
-        answers off the end. A note that is trimmed says so, because a cover
-        letter that just stops mid-sentence reads as the applicant's doing.
-      */
-      const screeningBlock = formattedScreeningNotes
-        ? `--- Pre-Screening Questions ---\n${formattedScreeningNotes}`
-        : ""
-      const noteBody = values.coverNote.trim()
+      const combinedCoverNote = formattedScreeningNotes
+        ? `--- Pre-Screening Questions ---\n${formattedScreeningNotes}`.slice(0, COVER_NOTE_MAX_CHARS)
+        : null
 
-      const noteParts: string[] = []
-      if (screeningBlock) noteParts.push(screeningBlock)
-      if (noteBody) {
-        const header = "--- Candidate Note ---\n"
-        const separator = screeningBlock ? "\n\n" : ""
-        const budget =
-          COVER_NOTE_MAX_CHARS - screeningBlock.length - separator.length - header.length
-        if (budget > 0) {
-          const marker = "\n[note truncated]"
-          const fits = noteBody.length <= budget
-          noteParts.push(
-            header +
-              (fits ? noteBody : noteBody.slice(0, Math.max(0, budget - marker.length)) + marker)
-          )
-        }
+      if (!job.requirementUuid) throw new Error("This job posting could not be identified. Please reload the page.")
+
+      let formattedLinkedIn = values.linkedinUrl.trim()
+      if (formattedLinkedIn && !/^https?:\/\//i.test(formattedLinkedIn)) {
+        formattedLinkedIn = `https://${formattedLinkedIn}`
       }
-      // Still bounded: a screening block alone can in principle exceed the
-      // column budget, and losing the tail of it beats losing the whole row.
-      const combinedCoverNote =
-        noteParts.length > 0 ? noteParts.join("\n\n").slice(0, COVER_NOTE_MAX_CHARS) : null
 
-      // Do not add `.select()` here. `anon` holds an INSERT grant on these
-      // columns and no SELECT grant at all (migration 00025), so asking for the
-      // inserted row back turns a working submission into "permission denied
-      // for table job_applications" and the applicant loses their upload.
-      const { error: insertError } = await supabase.from("job_applications").insert({
-        requirement_id: job.requirementUuid,
-        full_name: values.fullName.trim(),
-        email: values.email.trim().toLowerCase(),
-        phone: values.phone.trim() || null,
-        location: values.location.trim() || null,
-        current_company: values.currentCompany.trim() || null,
-        experience_years: values.experienceYears.trim() ? Number(values.experienceYears) : null,
-        linkedin_url: values.linkedinUrl.trim() || null,
-        cover_note: combinedCoverNote,
-        resume_path: path,
-        resume_filename: file!.name.slice(0, 260),
-      })
+      // The server validates the file and the fields, uploads and records the
+      // application. Nothing here is trusted by it; these are just the values.
+      const payload = new FormData()
+      payload.set("requirementId", job.requirementUuid)
+      payload.set("fullName", values.fullName.trim())
+      payload.set("email", values.email.trim().toLowerCase())
+      payload.set("phone", values.phone.trim())
+      payload.set("location", values.location.trim())
+      payload.set("linkedinUrl", formattedLinkedIn)
+      payload.set("coverNote", combinedCoverNote ?? "")
+      payload.set("resume", file!, file!.name)
 
-      if (insertError) {
-        /*
-          The object uploaded above is now orphaned: the CV has to be in the
-          bucket before the row can carry its path, so a failed insert leaves a
-          file nothing references — most often on the ordinary "already
-          applied" retry.
+      const response = await fetch("/api/apply", { method: "POST", body: payload })
+      clearTimeout(phaseTimer)
 
-          It is deliberately not cleaned up here. `anon` holds INSERT and only
-          INSERT on storage.objects for this bucket (migration 00026), so a
-          client-side remove is refused every time — dead code that reads like
-          a safeguard. Granting anon DELETE is the wrong trade: these uploads
-          have no owner, so the narrowest policy expressible would let any
-          visitor delete any applicant's CV. Reaping belongs server-side, to a
-          scheduled sweep of objects with no matching `job_applications.resume_path`.
-        */
-        // 23505 is the (requirement_id, lower(email)) unique index.
-        if (insertError.code === "23505") {
-          throw new Error("You have already applied to this role. Our team has your profile.")
-        }
-        throw new Error(`We could not record your application. ${insertError.message}`)
+      if (!response.ok) {
+        const body = (await response.json().catch(() => ({}))) as { error?: string }
+        throw new Error(body.error || "We could not record your application. Please try again.")
       }
 
       setSubmitState("done")
     } catch (err) {
+      clearTimeout(phaseTimer)
       setSubmitState("idle")
       setSubmitError(err instanceof Error ? err.message : "Something went wrong. Please try again.")
     }
@@ -378,6 +303,7 @@ export function ApplyFormClient({ job }: { job: Job }) {
           onChange={set("fullName")}
           error={errors.fullName}
           autoComplete="name"
+          placeholder="e.g. Sarah Jenkins"
         />
         <TextField
           id={fieldId("email")}
@@ -393,47 +319,31 @@ export function ApplyFormClient({ job }: { job: Job }) {
           onChange={set("email")}
           error={errors.email}
           autoComplete="email"
+          placeholder="sarah.jenkins@example.com"
         />
         <TextField
           id={fieldId("phone")}
           errorId={errorId("phone")}
-          label="Phone"
+          label="Phone number"
+          required
           type="tel"
           inputMode="tel"
           value={values.phone}
           onChange={set("phone")}
           error={errors.phone}
           autoComplete="tel"
+          placeholder="+1 (555) 234-5678"
         />
         <TextField
           id={fieldId("location")}
           errorId={errorId("location")}
           label="Current location"
+          required
           value={values.location}
           onChange={set("location")}
           error={errors.location}
           placeholder="City, Country"
           autoComplete="address-level2"
-        />
-        <TextField
-          id={fieldId("currentCompany")}
-          errorId={errorId("currentCompany")}
-          label="Current company"
-          value={values.currentCompany}
-          onChange={set("currentCompany")}
-          error={errors.currentCompany}
-          autoComplete="organization"
-        />
-        <TextField
-          id={fieldId("experienceYears")}
-          errorId={errorId("experienceYears")}
-          label="Years of experience"
-          type="number"
-          inputMode="decimal"
-          value={values.experienceYears}
-          onChange={set("experienceYears")}
-          error={errors.experienceYears}
-          placeholder="e.g. 6"
         />
       </div>
 
@@ -441,6 +351,7 @@ export function ApplyFormClient({ job }: { job: Job }) {
         id={fieldId("linkedinUrl")}
         errorId={errorId("linkedinUrl")}
         label="LinkedIn profile"
+        required
         type="url"
         inputMode="url"
         autoComplete="url"
@@ -450,7 +361,7 @@ export function ApplyFormClient({ job }: { job: Job }) {
         value={values.linkedinUrl}
         onChange={set("linkedinUrl")}
         error={errors.linkedinUrl}
-        placeholder="https://linkedin.com/in/..."
+        placeholder="https://linkedin.com/in/yourprofile"
       />
 
       {/* Resume upload */}
@@ -486,7 +397,7 @@ export function ApplyFormClient({ job }: { job: Job }) {
           </p>
         ) : (
           <p id={`${formId}-resume-hint`} className="text-xs text-muted-foreground">
-            PDF, DOC, or DOCX. Maximum 8 MB.
+            PDF or DOCX. Maximum 2 MB.
           </p>
         )}
       </div>
@@ -606,35 +517,6 @@ export function ApplyFormClient({ job }: { job: Job }) {
         </div>
       )}
 
-      {/* Cover note */}
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor={fieldId("coverNote")} className="text-sm font-semibold text-foreground">
-          Anything you would like the hiring team to know?
-        </label>
-        <textarea
-          id={fieldId("coverNote")}
-          rows={5}
-          maxLength={4000}
-          value={values.coverNote}
-          onChange={set("coverNote")}
-          aria-invalid={Boolean(errors.coverNote)}
-          aria-describedby={errors.coverNote ? errorId("coverNote") : undefined}
-          /*
-            text-base on mobile, text-body from sm+ — the previous text-sm
-            (14px) at every breakpoint triggered iOS Safari's automatic
-            viewport zoom on focus for every one of this form's fields.
-          */
-          className={`w-full rounded-xl border bg-background px-3.5 py-3 text-base text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 sm:text-[0.9375rem] ${
-            errors.coverNote ? "border-rose-300" : "border-border"
-          }`}
-          placeholder="Optional — a short note on why this role fits."
-        />
-        {errors.coverNote && (
-          <p id={errorId("coverNote")} className="text-xs font-medium text-rose-600">
-            {errors.coverNote}
-          </p>
-        )}
-      </div>
 
       <div className="flex flex-col gap-4 border-t border-border pt-5 sm:flex-row sm:items-center sm:justify-between">
         <p className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -646,12 +528,12 @@ export function ApplyFormClient({ job }: { job: Job }) {
           variant="brand"
           size="lg"
           disabled={submitState === "submitting"}
-          className="shrink-0"
+          className="shrink-0 min-w-[190px]"
         >
           {submitState === "submitting" ? (
             <>
               <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-              Submitting…
+              {submitPhase === "uploading" ? "Uploading resume…" : "Recording application…"}
             </>
           ) : (
             "Submit application"

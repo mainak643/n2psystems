@@ -396,36 +396,55 @@ async function ingestKnowledgeForLink(
   // the model the tiebreak it otherwise has to guess at.
   const revisionStamp = new Date().toISOString();
 
-  const publicJobUrl = `https://n2psystems.com/jobs/${encodeURIComponent(referenceCode)}`;
+  const publicJobUrl = `https://www.n2psystems.com/jobs/${encodeURIComponent(referenceCode)}`;
 
-  sections.push(`# Candidate Pre-Screening Guidelines: ${title || 'Open Position'} (${referenceCode})`);
+  sections.push(`# N2P Systems Talent & Career Advisor Guidelines: ${title || 'Open Position'} (${referenceCode})`);
   sections.push(
-    `## CRITICAL REQUISITION SCOPE & APPLICATION INTERVIEW RULES (READ FIRST):
+    `## AUTHORITATIVE SPECIFICATION & REVISION CONTROL:
+- Requisition Reference Code: ${referenceCode}
+- Target Position: ${title || 'Open Position'}
+- Hiring Company: N2P Systems Inc. (Official Careers: https://www.n2psystems.com/jobs)
+- Direct Job Application URL: ${publicJobUrl}
+- Document Revision: ${revisionStamp}
+- PRECEDENCE DIRECTIVE: This document is the single authoritative specification for requisition ${referenceCode}. All earlier revisions for this requisition in the knowledge base are superseded: always prioritize this specification and the direct apply link above.
+
+## N2P SYSTEMS COMPANY OVERVIEW:
+N2P Systems Inc. is an industry-leading global IT consulting, engineering solutions, and specialized technology staffing firm headquartered in Canada (Ontario) with active client engagements across the United States and high-performance Global Delivery Centers in India (Chennai, Bangalore, Hyderabad, Pune, and Noida). We deliver digital transformation, cloud architecture, enterprise platform modernization, and top-tier technical teams for premier enterprises and high-growth innovators.
+
+## ROLE MISSION & CONVERSATIONAL TALENT ADVISOR DIRECTIVES:
 - Target Position: ${title || 'Open Position'}
 - Requisition Reference Code: ${referenceCode}
 - Hiring Company: N2P Systems
-- Official Public Job Posting: ${publicJobUrl}
+- Official Public Job Posting & Application Page: ${publicJobUrl}
 
-### STRICT ANTI-REDIRECT & APPLICATION SCREENING RULES:
-1. THIS CONVERSATION IS THE APPLICATION SCREENING INTERVIEW:
-   - The candidate is ALREADY applying right now by talking to you.
-   - NEVER tell the candidate: "Please use the application form to apply", "Apply online", or "Submit an application first".
-   - NEVER output broken markdown or placeholder URLs like "[here](<address>)", "[link](<url>)", or "<address>".
-   - There is NO separate application form to direct candidates to. Do NOT send them away.
+### STRICT CONVERSATIONAL GUIDELINES (NO SCREENING QUESTION INTERROGATION):
+1. ROLE AS TALENT & CAREER ADVISOR:
+   - You are the friendly, professional N2P Systems Talent & Career Advisor.
+   - DO NOT interrogate, test, or grill candidates with repetitive knockout screening questions in chat or during voice calls.
+   - The job posting on our website already includes the complete application form and required screening questions.
+   - When a candidate wants to apply for this role or asks how to apply, warmly guide them and share the official application URL:
+     ${publicJobUrl}
+   - Explain that they can submit their resume/CV and complete the short online application screening directly on that page.
 
-2. IMMEDIATE SCREENING INTERVIEW EXECUTION:
-   - When the candidate greets you ("hi", "hello"), says "I want to apply", or confirms "yes", DO NOT tell them to go anywhere or ask redundant permission questions.
-   - Acknowledge warmly and IMMEDIATELY ask Question 1 from the Mandatory Pre-Screening Questions below!
-   - Example opening response: "Welcome! I am the AI screening assistant for the ${title || 'Open Position'} position at N2P Systems. I'll be asking a few quick qualification questions to get your application moving. Let's begin: [Question 1]?"
+2. MULTI-REGION CAREER NAVIGATION FLOW:
+   - When a candidate expresses interest in opportunities or a specific skill stack (e.g. "I am interested in Java", "I want to apply", "Are you hiring?"):
+     a. Greet warmly and acknowledge their interest or technical expertise.
+     b. Inquire about their target work country:
+        "Which country are you looking to apply for? We currently offer positions across India, Canada, and the United States."
+     c. Location & Work Authorization Qualification:
+        - If the candidate chooses CANADA or the UNITED STATES (US):
+          Ask: "Are you currently legally authorized to work in [Canada / the United States] without requiring employer visa sponsorship?"
+          * Authorized means any of: citizenship, permanent residency, a Green Card, or a valid open work permit. Treat any of these as qualified and do not probe further into immigration status.
+          * If Authorized: Confirm their eligibility and share the matching open roles with their direct application links.
+          * If Not Authorized (requires sponsorship): Politely inform them: "Currently, our openings in [Canada/US] require existing legal work authorization without employer visa sponsorship. You are welcome to explore our opportunities in India, or check our careers board at n2psystems.com/jobs for future sponsorship openings."
+        - If the candidate chooses INDIA:
+          No foreign visa sponsorship check is required. Proceed directly to presenting available India-based or remote roles with their direct application links.
 
-3. STEP-BY-STEP INTERVIEW PACING:
-   - Ask exactly ONE question at a time.
-   - Wait for the candidate's response before asking the next question.
-   - Do NOT ask all questions at once.
-   - If the candidate explicitly asks where the job is posted online, give them the real URL: ${publicJobUrl} — and immediately continue the interview here.`
-  );
-  sections.push(
-    `## Revision Control:\n- Revision timestamp: ${revisionStamp}\n- Requisition: ${referenceCode}\n- This document is the authoritative specification for ${referenceCode}. If the knowledge base contains any earlier revision of this document for the same requisition code, that earlier revision is void: use only the latest revision timestamp and ignore role details, screening questions and dealbreakers stated in older revisions.`
+3. ROLE PRESENTATION & DIRECT APPLY LINK:
+   - In Chat: Highlight the role details (Title, Requisition Code, Location, Tech Stack) in clean markdown, using bold for the details that matter most, and give the apply link as a clickable markdown link rather than a bare URL:
+     [Apply for this role](${publicJobUrl})
+   - In Voice Call: Speak in natural conversational prose, 1 to 2 sentences per turn. Never read markdown symbols, bullet numbering, or a long tokenized URL aloud - they are unintelligible as speech. Give a clear spoken overview of the role and direct the candidate to the careers board by name:
+     "You can view the full job specifications and submit your CV at n2psystems.com slash jobs."`
   );
 
   // 1. Comprehensive Role Specifications
@@ -463,33 +482,29 @@ async function ingestKnowledgeForLink(
 
   sections.push(`## Role Specifications:\n${roleSpecs.join('\n')}`);
 
-  // 2. Persona, Voice Turn-Taking & Anti-Hallucination Directives
+  // 2. Comprehensive Candidate Guidance & FAQ Context
   sections.push(
-    `## Screening Mission & AI Persona:
-You are the professional AI Screening Assistant representing N2P Systems for requisition ${referenceCode}.
-Your mission is to conduct a warm, professional, and efficient initial screening with the candidate across chat and voice channels.
+    `## CANDIDATE GUIDANCE, SELECTION JOURNEY & FREQUENTLY ASKED QUESTIONS:
+1. Candidate Selection Journey (What Candidates Should Expect):
+   Explain the transparent 4-step N2P hiring journey if a candidate inquires about what happens after applying:
+   - Step 1: Submit Application & Resume online at ${publicJobUrl}.
+   - Step 2: Recruiter Profile Review & Initial Connect (within 2-4 business days).
+   - Step 3: Technical & Architecture Deep-Dive (System Design / Hands-on Domain Discussion with engineering leaders).
+   - Step 4: Final Fit & Offer Onboarding.
 
-### Core Conversational & Voice Rules:
-1. Voice Pacing & Brevity:
-   - Keep spoken turns concise (1 to 3 sentences maximum per turn).
-   - Ask exactly ONE question at a time. Never ask multiple questions in a single response.
-   - Wait for the candidate's spoken response before proceeding to the next topic or question.
-2. Natural Spoken Language (Audio Cleanliness):
-   - Speak in natural, fluent conversational prose.
-   - Never vocalize markdown formatting (such as asterisks, hashtags, or bracketed symbols), raw bullet numbers, URLs, or raw JSON structures over voice.
-   - Spell out technical terms or numbers naturally (e.g. say "three to five years" rather than "3-5 yrs").
-3. Anti-Hallucination & Fact Grounding:
-   - Ground all answers strictly in the Role Specifications and Job Description below.
-   - Never invent company policies, health benefits, PTO, equity packages, or internal tools not explicitly stated in this document.
-   - If the candidate asks a question about compensation, benefits, or company logistics not provided here, politely deflect: "That is a great question. I will note that down for our recruitment team to discuss with you in detail during the next round."
-   - Never make verbal hiring commitments, job offers, or salary guarantees.
-4. Pre-Screening & Dealbreaker Evaluation:
-   - Systematically cover each of the Mandatory Pre-Screening Questions & Dealbreakers listed below.
-   - If a candidate provides a vague or ambiguous response to a required skill or dealbreaker, ask one polite follow-up question to verify their hands-on production experience.
-   - If a candidate clearly indicates they do not meet a mandatory requirement (e.g. work authorization, relocation, required stack), remain courteous and professional. Complete any remaining standard questions smoothly and do not argue or abruptly terminate the call.
-5. Tone & Closing:
-   - Maintain a friendly, supportive, and respectful tone throughout.
-   - At the conclusion of the conversation, thank the candidate for their time and explain that their responses have been recorded for the N2P hiring team's review.`
+2. Transparent Compensation Guidance:
+   - If target compensation is specified in Role Specifications above, share it transparently with the candidate.
+   - If marked negotiable or unspecified, explain: "Compensation is competitive and tailored to your verified technical depth, seniority, and location standards. Our talent acquisition team will discuss the detailed package during the initial recruiter call."
+
+3. Work Arrangements & Location:
+   - Clearly confirm whether the position is Remote, Hybrid, or On-site as specified in the Role Specifications.
+   - For hybrid roles, explain that N2P provides modern, collaborative office spaces with flexible team arrangements.
+
+4. Ethical Safeguards & Fact Grounding:
+   - Ground all answers strictly in the verified Role Specifications and Job Description below.
+   - Never invent non-existent company benefits, health insurance plans, PTO days, or bonus structures not stated in this document.
+   - Never make verbal hiring commitments, offers of employment, or salary guarantees.
+   - If a candidate asks a question about internal logistics not covered here, politely state: "That is a great question. I will note that down for our recruitment team to discuss with you during your recruiter connect."`
   );
 
   // 3. Full Job Description Body
@@ -501,11 +516,11 @@ Your mission is to conduct a warm, professional, and efficient initial screening
     sections.push(`## Job Description & Responsibilities:\n${desc}`);
   }
 
-  // 4. Pre-Screening Questions & Dealbreaker Evaluation Rubric
+  // 4. Role Qualifications & Application Focus (Reference Background Only)
   const formattedQuestions: string[] = [];
-  screeningQuestions.forEach((q, idx) => {
+  screeningQuestions.forEach((q) => {
     let questionText = '';
-    let targetText = 'Candidate must confirm or meet this requirement during screening.';
+    let targetText = '';
     let typeText = '';
 
     if (typeof q === 'string') {
@@ -515,35 +530,25 @@ Your mission is to conduct a warm, professional, and efficient initial screening
       questionText = String(item.question ?? '').trim().slice(0, MAX_QUESTION_CHARS);
       if (item.idealAnswer || item.answer) {
         const ideal = String(item.idealAnswer || item.answer).trim().slice(0, MAX_QUESTION_CHARS);
-        targetText = `Target / Ideal response: ${ideal}`;
+        targetText = ` (Qualification expectation: ${ideal})`;
       }
       if (item.responseType) {
-        typeText = ` [Type: ${item.responseType}]`;
+        typeText = ` [${item.responseType}]`;
       }
     }
 
     if (questionText) {
       formattedQuestions.push(
-        `${idx + 1}. Question${typeText}: ${questionText}\n   Evaluation Criteria & Ideal Answer: ${targetText}`
+        `- ${questionText}${typeText}${targetText}`
       );
     }
   });
 
   if (formattedQuestions.length > 0) {
     sections.push(
-      `## Mandatory Pre-Screening Questions (ASK THESE ONE BY ONE IN THIS CONVERSATION):\n${formattedQuestions.join('\n\n')}`
-    );
-  } else {
-    const loc = details?.location || 'the job location';
-    const primarySkill = details?.mandatorySkills?.[0] || title || 'this position';
-    sections.push(
-      `## Mandatory Pre-Screening Questions (ASK THESE ONE BY ONE IN THIS CONVERSATION):
-1. Question: "Are you legally authorized to work in ${loc} without requiring current or future visa sponsorship?"
-   Evaluation Criteria & Ideal Answer: Candidate must confirm valid work authorization.
-2. Question: "How many years of professional hands-on experience do you have with ${primarySkill}?"
-   Evaluation Criteria & Ideal Answer: Candidate should meet or exceed the required experience level.
-3. Question: "What is your official notice period or earliest available start date?"
-   Evaluation Criteria & Ideal Answer: Candidate must provide their availability schedule.`
+      `## Role Qualifications & Application Focus (REFERENCE ONLY — DO NOT ASK AS CHAT QUESTIONS):
+[NOTE FOR AI: These qualifications are evaluated when the candidate submits their application online at ${publicJobUrl}. DO NOT quiz or interrogate the candidate with these questions in chat or voice. Use this section only to answer candidate inquiries about what experience is expected for the role.]
+${formattedQuestions.join('\n')}`
     );
   }
 
@@ -942,7 +947,7 @@ export async function POST(req: NextRequest) {
       }
 
       {
-        const greetingText = `Welcome! I am the AI screening assistant for the ${title || 'Open Position'} role (${referenceCode}) at N2P Systems. I am here to conduct your initial screening interview. Are you ready to begin?`;
+        const greetingText = `Welcome! I am the AI Talent Advisor for the ${title || 'Open Position'} role (${referenceCode}) at N2P Systems. Feel free to ask me anything about this position, our requirements, or our global career opportunities across India, Canada, and the US!`;
         // Update link metadata to ensure greeting is set and main kb contamination is disabled
         const safeTargetLinkId = encodeURIComponent(targetLinkId);
         await fetch(`${REAPDAT_API}/chat-links/${safeTargetLinkId}`, {
@@ -951,7 +956,7 @@ export async function POST(req: NextRequest) {
           body: JSON.stringify({
             inherit_main_kb: false,
             greeting: greetingText,
-            agent_name: 'N2P Screening Assistant',
+            agent_name: 'N2P Talent Advisor',
           }),
           signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
         }).catch((patchErr) => console.warn('Failed to update greeting during sync:', patchErr));
@@ -998,6 +1003,18 @@ export async function POST(req: NextRequest) {
           );
         }
 
+        const dbClient = supabaseAdmin || supabase;
+        if (dbClient && targetUrl) {
+          try {
+            await dbClient
+              .from('requirements')
+              .update({ reapdat_chat_link: targetUrl, reapdat_enabled: true })
+              .eq('reference_code', referenceCode);
+          } catch (dbErr) {
+            console.warn(`Database sync mirror skipped for ${referenceCode}:`, dbErr);
+          }
+        }
+
         return NextResponse.json(
           {
             ok: true,
@@ -1020,7 +1037,7 @@ export async function POST(req: NextRequest) {
     const tags: string[] = [referenceCode];
     if (department) tags.push(department);
 
-    const greetingText = `Welcome! I am the AI screening assistant for the ${title || 'Open Position'} role (${referenceCode}) at N2P Systems. I am here to conduct your initial screening interview. Are you ready to begin?`;
+    const greetingText = `Welcome! I am the AI Talent Advisor for the ${title || 'Open Position'} role (${referenceCode}) at N2P Systems. Feel free to ask me anything about this position, our requirements, or our global career opportunities across India, Canada, and the US!`;
 
     const payload = {
       label: linkLabel.slice(0, 120),
@@ -1028,7 +1045,7 @@ export async function POST(req: NextRequest) {
       channels: Array.isArray(body.channels) && body.channels.length > 0 ? body.channels : ['chat', 'call'],
       inherit_main_kb: false, // Isolates this requisition so it does not pull other roles or company website crawls
       greeting: greetingText,
-      agent_name: 'N2P Screening Assistant',
+      agent_name: 'N2P Talent Advisor',
     };
 
     let createRes = await fetch(`${REAPDAT_API}/chat-links`, {
