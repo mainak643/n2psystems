@@ -5,6 +5,7 @@ import { ResumeFormClient } from "@/components/resume/resume-form-client"
 import { PageHero } from "@/components/ui/page-hero"
 import { Section } from "@/components/ui/section"
 import { buildBreadcrumbSchema } from "@/lib/seo-schema"
+import { JsonLd } from "@/components/seo/json-ld"
 
 export const metadata: Metadata = {
   title: "Submit Your Profile | N2P Systems",
@@ -32,12 +33,7 @@ export default function SubmitResumePage() {
 
   return (
     <main>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(breadcrumbs),
-        }}
-      />
+      <JsonLd data={breadcrumbs} />
       <PageHero
         eyebrow="Careers with N2P"
         badge={

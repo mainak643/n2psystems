@@ -20,6 +20,11 @@ import { buildBreadcrumbSchema } from "@/lib/seo-schema"
 import { PageHero } from "@/components/ui/page-hero"
 import { Section } from "@/components/ui/section"
 import { FormattedParagraphs, FormattedText } from "@/components/ui/formatted-text"
+import { ShareJob } from "@/components/jobs/share-job"
+import { MobileApplyBar } from "@/components/jobs/mobile-apply-bar"
+import { absoluteUrl } from "@/lib/site"
+import type { Job } from "@/lib/jobs-data"
+import { JsonLd } from "@/components/seo/json-ld"
 
 export const revalidate = 60
 
@@ -70,15 +75,19 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
   const description = facts ? `${facts} — ${snippet}` : snippet;
   const canonical = `/jobs/${encodeURIComponent(job.id)}`
-  const absoluteJobUrl = `https://www.n2psystems.com/jobs/${encodeURIComponent(job.id)}`
+  // Built from SITE_URL like the canonical and the JobPosting `url`. This was
+  // hardcoded to the www host, so whenever the site was served from the bare
+  // domain the OpenGraph URL disagreed with the canonical one.
+  const absoluteJobUrl = absoluteUrl(canonical)
   const absoluteImageUrl = `${absoluteJobUrl}/opengraph-image`
+  const pageTitle = jobPageTitle(job)
 
   return {
-    title: `${job.title} | N2P Systems Careers`,
+    title: pageTitle,
     description,
     alternates: { canonical },
     openGraph: {
-      title: `${job.title} | N2P Systems Careers`,
+      title: pageTitle,
       description,
       url: absoluteJobUrl,
       siteName: "N2P Systems",
@@ -95,11 +104,30 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     },
     twitter: {
       card: "summary_large_image",
-      title: `${job.title} | N2P Systems Careers`,
+      title: pageTitle,
       description,
       images: [absoluteImageUrl],
     },
   }
+}
+
+/**
+ * "Senior Data Engineer – Toronto, ON | N2P Systems". Candidates search by
+ * role *and* place ("data engineer jobs toronto"), and the title is the
+ * strongest on-page signal for both, so the location belongs in it.
+ */
+function jobPageTitle(job: Job): string {
+  const place = job.location.replace(/\s*\([^)]*\)\s*$/, "").trim()
+  const where = job.mode === "Remote" ? (place ? `Remote, ${place}` : "Remote") : place
+  return where ? `${job.title} – ${where} | N2P Systems` : `${job.title} | N2P Systems`
+}
+
+/** Same-domain roles first, then the newest others — up to three. */
+function pickRelatedJobs(current: Job, all: Job[]): Job[] {
+  const others = all.filter((j) => j.id !== current.id)
+  const sameDomain = others.filter((j) => j.domain === current.domain)
+  const rest = others.filter((j) => j.domain !== current.domain)
+  return [...sameDomain, ...rest].slice(0, 3)
 }
 
 export default async function JobDetailPage({
@@ -118,6 +146,9 @@ export default async function JobDetailPage({
     ? `/jobs/${encodeURIComponent(job.id)}/apply`
     : `/resume?role=${encodeURIComponent(job.title)}&req=${encodeURIComponent(job.id)}&category=${encodeURIComponent(job.domain)}`
 
+  const relatedJobs = pickRelatedJobs(job, await fetchPublishedJobs().catch(() => [] as Job[]))
+  const jobUrl = absoluteUrl(`/jobs/${encodeURIComponent(job.id)}`)
+
   const breadcrumbs = buildBreadcrumbSchema([
     { name: "Home", url: "/" },
     { name: "Careers", url: "/jobs" },
@@ -127,26 +158,16 @@ export default async function JobDetailPage({
   return (
     <main>
       {/* JobPosting structured data — makes the role eligible for Google Jobs. */}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(buildJobPostingSchema(job)),
-        }}
-      />
+      <JsonLd data={buildJobPostingSchema(job)} />
       {/* BreadcrumbList structured data — enhances Google search result hierarchy */}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(breadcrumbs),
-        }}
-      />
+      <JsonLd data={breadcrumbs} />
 
       <PageHero
         align="start"
         backLink={{ href: "/jobs", label: "Back to All Positions" }}
         title={job.title}
         actions={
-          <Button asChild variant="brand" size="xl">
+          <Button asChild variant="brand" size="xl" id="hero-apply">
             <Link href={applyUrl} prefetch={true}>
               Apply for this Role
               <ArrowRight className="size-4" aria-hidden="true" />
@@ -326,10 +347,59 @@ export default async function JobDetailPage({
               <Button asChild variant="brand" size="lg" className="w-full">
                 <Link href={applyUrl} prefetch={true}>Apply for this Role</Link>
               </Button>
+              <div className="mt-6 border-t border-border pt-5">
+                <p className="text-caption font-medium text-foreground">Know someone who fits?</p>
+                <p className="mb-3 text-xs text-muted-foreground">Share this role with them.</p>
+                <ShareJob url={jobUrl} title={job.title} location={job.location} />
+              </div>
             </div>
           </div>
         </div>
       </Section>
+
+      {relatedJobs.length > 0 && (
+        <Section tone="card" pad="compact" className="border-t border-border" aria-labelledby="related-roles">
+          <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+            <h2 id="related-roles" className="text-title text-foreground">
+              More open roles
+            </h2>
+            <Link href="/jobs" className="inline-flex items-center gap-1 text-caption font-semibold text-primary hover:underline">
+              View all positions
+              <ArrowRight className="size-3.5" aria-hidden="true" />
+            </Link>
+          </div>
+          <ul className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {relatedJobs.map((related) => (
+              <li key={related.id}>
+                <Link
+                  href={`/jobs/${encodeURIComponent(related.id)}`}
+                  className="surface surface-interactive group flex h-full flex-col p-5"
+                >
+                  <span className="text-xs font-medium text-primary">{related.domain}</span>
+                  <span className="mt-1.5 text-subtitle text-foreground transition-colors group-hover:text-primary">
+                    {related.title}
+                  </span>
+                  <span className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-caption text-muted-foreground">
+                    <span className="flex items-center gap-1.5">
+                      <MapPin className="size-3.5" aria-hidden="true" />
+                      {related.location}
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <Briefcase className="size-3.5" aria-hidden="true" />
+                      {related.experience}
+                    </span>
+                  </span>
+                  {related.salary ? (
+                    <span className="mt-auto pt-4 text-sm font-semibold text-foreground">{related.salary}</span>
+                  ) : null}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </Section>
+      )}
+
+      <MobileApplyBar href={applyUrl} title={job.title} meta={job.location} watchId="hero-apply" />
     </main>
   )
 }

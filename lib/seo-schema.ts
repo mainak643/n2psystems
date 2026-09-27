@@ -158,56 +158,56 @@ export function buildOrganizationSchema() {
   };
 }
 
+export type FaqItem = { question: string; answer: string }
+
 /**
- * FAQPage schema for Answer Engine Optimization (AEO) and Google Rich Snippets.
- * Used by Perplexity, SearchGPT, Gemini, and Claude for direct factual citations.
+ * Company FAQ — rendered visibly on the homepage (components/seo/faq-section)
+ * with its FAQPage markup alongside. Answer engines (Perplexity, ChatGPT
+ * search, Gemini, Google AI Overviews) quote visible Q&A directly.
  */
-export function buildFaqSchema() {
+export const COMPANY_FAQ: FaqItem[] = [
+  {
+    question: 'What recruitment services does N2P Systems provide?',
+    answer:
+      'N2P Systems provides enterprise technology recruitment services including Contract Staffing, Permanent Placement, Contract-to-Hire, Executive Search, and Managed Engineering Teams across Software Engineering, Cloud/DevOps, AI/ML, Data Science, and Cybersecurity.',
+  },
+  {
+    question: 'Which geographical regions does N2P Systems recruit in?',
+    answer:
+      'N2P Systems operates across Canada (Toronto, Vancouver, Ottawa, Montreal, Calgary), the United States (San Francisco, New York, Austin, Seattle, Boston), and India (Mumbai, Navi Mumbai, Bengaluru, Hyderabad, Pune).',
+  },
+  {
+    question: 'How does N2P Systems screen and vet technical talent?',
+    answer:
+      'N2P Systems combines automated AI-assisted technical screening (powered by REAPDAT AI) with in-depth evaluation by domain-specialized technical recruiters to assess architecture fundamentals, code quality, and cultural alignment.',
+  },
+  {
+    question: 'How can candidates apply for open roles or submit resumes?',
+    answer:
+      'Candidates can browse verified technology openings at https://n2psystems.com/jobs and apply directly, or submit general candidate profiles at https://n2psystems.com/resume for proactive matchmaking.',
+  },
+  {
+    question: 'How can employers partner with N2P Systems to hire talent?',
+    answer:
+      'Hiring managers and enterprises can submit their talent requirements or request a custom recruitment consultation at https://n2psystems.com/clients. The N2P advisory team responds within one business day.',
+  },
+]
+
+/**
+ * FAQPage schema for the items a page actually shows. This used to be emitted
+ * site-wide from the root layout while the questions appeared on no page at
+ * all — Google requires FAQ markup to match visible content, and repeating one
+ * FAQPage across every URL reads as duplicate markup.
+ */
+export function buildFaqSchema(items: FaqItem[]) {
   return {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',
-    mainEntity: [
-      {
-        '@type': 'Question',
-        name: 'What recruitment services does N2P Systems provide?',
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: 'N2P Systems provides enterprise technology recruitment services including Contract Staffing, Permanent Placement, Contract-to-Hire, Executive Search, and Managed Engineering Teams across Software Engineering, Cloud/DevOps, AI/ML, Data Science, and Cybersecurity.',
-        },
-      },
-      {
-        '@type': 'Question',
-        name: 'Which geographical regions does N2P Systems recruit in?',
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: 'N2P Systems operates across Canada (Toronto, Vancouver, Ottawa, Montreal, Calgary), the United States (San Francisco, New York, Austin, Seattle, Boston), and India (Mumbai, Navi Mumbai, Bengaluru, Hyderabad, Pune).',
-        },
-      },
-      {
-        '@type': 'Question',
-        name: 'How does N2P Systems screen and vet technical talent?',
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: 'N2P Systems combines automated AI-assisted technical screening (powered by REAPDAT AI) with in-depth evaluation by domain-specialized technical recruiters to assess architecture fundamentals, code quality, and cultural alignment.',
-        },
-      },
-      {
-        '@type': 'Question',
-        name: 'How can candidates apply for open roles or submit resumes?',
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: 'Candidates can browse verified technology openings at https://n2psystems.com/jobs and apply directly, or submit general candidate profiles at https://n2psystems.com/resume for proactive matchmaking.',
-        },
-      },
-      {
-        '@type': 'Question',
-        name: 'How can employers partner with N2P Systems to hire talent?',
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: 'Hiring managers and enterprises can submit their talent requirements or request a custom recruitment consultation at https://n2psystems.com/clients. The N2P advisory team responds within one business day.',
-        },
-      },
-    ],
+    mainEntity: items.map((item) => ({
+      '@type': 'Question',
+      name: item.question,
+      acceptedAnswer: { '@type': 'Answer', text: item.answer },
+    })),
   };
 }
 

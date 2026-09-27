@@ -197,7 +197,7 @@ function DesktopDropdown({
         aria-expanded={isOpen}
         onKeyDown={handleTriggerKeyDown}
         className={cn(
-          "group flex items-center gap-1.5 rounded-md py-2 text-[14px] xl:text-[15.5px] font-medium transition-colors duration-200 outline-none",
+          "group flex items-center gap-1.5 rounded-md py-2 text-[0.875rem] xl:text-[0.9688rem] font-medium transition-colors duration-200 outline-none",
           "focus-visible:text-white focus-visible:ring-2 focus-visible:ring-sky-400/50",
           isHighlighted ? "text-white" : "text-white/80 hover:text-white",
         )}
@@ -242,7 +242,7 @@ function DesktopDropdown({
             ? "pointer-events-auto translate-y-0 scale-y-100 opacity-100"
             : "pointer-events-none -translate-y-1 scale-y-95 opacity-0",
         )}
-        style={{ minWidth: 240 }}
+        style={{ minWidth: "15rem" }}
       >
         {/* Invisible gap bridge so hover doesn't drop between trigger and menu */}
         <div className="absolute -top-3 left-0 right-0 h-3" aria-hidden="true" />
@@ -315,7 +315,7 @@ const MOBILE_STYLES = `
 
   .nav-row {
     opacity: 0;
-    transform: translateX(14px);
+    transform: translateX(0.875rem);
     transition: opacity 0.32s ease, transform 0.32s ease;
   }
   .nav-row.vis {
@@ -337,7 +337,7 @@ const MOBILE_STYLES = `
 
   .mob-ctas {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(0.625rem);
     transition: opacity 0.35s ease 0.22s, transform 0.35s ease 0.22s;
   }
   .mob-ctas.vis {
@@ -489,7 +489,7 @@ function MobileMenu({
         aria-modal="true"
         aria-label="Navigation menu"
         className={cn(
-          "mob-drawer fixed right-0 top-0 bottom-0 z-50 flex w-[min(85vw,360px)] flex-col lg:hidden",
+          "mob-drawer fixed right-0 top-0 bottom-0 z-50 flex w-[min(85vw,22.5rem)] flex-col lg:hidden",
           visible && "vis",
         )}
         style={{
@@ -511,7 +511,7 @@ function MobileMenu({
           style={{ padding: "20px 24px 18px", borderBottom: "1px solid var(--on-dark-fill)" }}
         >
           <Link href="/" onClick={onClose} className="flex items-center gap-2.5">
-            <div className="flex h-[34px] w-[34px] shrink-0 items-center justify-center overflow-hidden rounded-lg border border-white/[0.08] bg-white/5">
+            <div className="flex h-[2.125rem] w-[2.125rem] shrink-0 items-center justify-center overflow-hidden rounded-lg border border-white/[0.08] bg-white/5">
               <Image
                 src="/images/n2p-logo-light.png"
                 alt="N2P Systems"
@@ -690,7 +690,7 @@ function MobileMenu({
           <Link
             href="/jobs"
             onClick={onClose}
-            className="mb-2.5 block rounded-[10px] outline-none focus-visible:ring-2 focus-visible:ring-sky-400/60"
+            className="mb-2.5 block rounded-[0.625rem] outline-none focus-visible:ring-2 focus-visible:ring-sky-400/60"
           >
             <div
               className="flex items-center justify-center gap-2 transition-all duration-200 hover:brightness-105 active:scale-[0.98]"
@@ -712,7 +712,7 @@ function MobileMenu({
           <Link
             href="/#contact"
             onClick={onClose}
-            className="block rounded-[10px] outline-none focus-visible:ring-2 focus-visible:ring-white/30"
+            className="block rounded-[0.625rem] outline-none focus-visible:ring-2 focus-visible:ring-white/30"
           >
             <div
               className="flex items-center justify-center gap-2 transition-all duration-200 hover:bg-white/[0.05] active:scale-[0.98]"
@@ -852,7 +852,7 @@ export function Navbar() {
             aria-label="N2P Systems — Home"
           >
             <div
-              className="relative flex h-[34px] w-[34px] sm:h-[38px] sm:w-[38px] items-center justify-center overflow-hidden rounded-lg sm:rounded-xl border border-white/[0.16] transition-all duration-300 group-hover:border-sky-400/30 group-hover:ring-1 group-hover:ring-sky-400/25"
+              className="relative flex h-[2.125rem] w-[2.125rem] sm:h-[2.375rem] sm:w-[2.375rem] items-center justify-center overflow-hidden rounded-lg sm:rounded-xl border border-white/[0.16] transition-all duration-300 group-hover:border-sky-400/30 group-hover:ring-1 group-hover:ring-sky-400/25"
               style={{ background: "var(--nav-logo-glow)" }}
             >
               <Image
@@ -864,7 +864,7 @@ export function Navbar() {
                 priority
               />
             </div>
-            <span className="font-semibold tracking-tight leading-none text-white drop-shadow-sm text-[15px] sm:text-[17px]">
+            <span className="font-semibold tracking-tight leading-none text-white drop-shadow-sm text-[0.9375rem] sm:text-[1.0625rem]">
               N2P{" "}
               <span className="font-normal text-white/55">Systems</span>
             </span>
@@ -891,7 +891,7 @@ export function Navbar() {
                     <button
                       key={item.name}
                       onClick={() => scrollTo((item as NavAnchorItem).anchor)}
-                      className="group relative rounded-md px-1 py-2 text-[14px] xl:text-[15px] font-medium text-slate-200/80 transition-colors duration-200 outline-none hover:text-white focus-visible:text-white focus-visible:ring-2 focus-visible:ring-sky-400/50"
+                      className="group relative rounded-md px-1 py-2 text-[0.875rem] xl:text-[0.9375rem] font-medium text-slate-200/80 transition-colors duration-200 outline-none hover:text-white focus-visible:text-white focus-visible:ring-2 focus-visible:ring-sky-400/50"
                     >
                       {item.name}
                     </button>
@@ -907,7 +907,7 @@ export function Navbar() {
                       href={linkItem.href}
                       aria-current={isActive ? "page" : undefined}
                       className={cn(
-                        "group relative rounded-md px-1 py-2 text-[14px] xl:text-[15px] font-medium transition-colors duration-200 outline-none focus-visible:text-white focus-visible:ring-2 focus-visible:ring-sky-400/50",
+                        "group relative rounded-md px-1 py-2 text-[0.875rem] xl:text-[0.9375rem] font-medium transition-colors duration-200 outline-none focus-visible:text-white focus-visible:ring-2 focus-visible:ring-sky-400/50",
                         isActive ? "text-white" : "text-slate-200/80 hover:text-white",
                       )}
                     >
@@ -941,17 +941,17 @@ export function Navbar() {
 
                 <Link
                   href="/clients"
-                  className="hidden items-center gap-1.5 rounded-lg border border-white/15 bg-white/[0.05] px-3.5 py-2 text-[12px] xl:text-[13px] font-semibold text-slate-200 transition-all duration-150 hover:border-white/25 hover:bg-white/[0.09] hover:text-white active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-white/30 lg:flex"
+                  className="hidden items-center gap-1.5 rounded-lg border border-white/15 bg-white/[0.05] px-3.5 py-2 text-[0.75rem] xl:text-[0.8125rem] font-semibold text-slate-200 transition-all duration-150 hover:border-white/25 hover:bg-white/[0.09] hover:text-white active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-white/30 lg:flex"
                 >
                   Partner With Us
-                  <ArrowUpRight style={{ width: 12, height: 12, color: "var(--nav-partner-icon)" }} className="xl:size-[13px]" />
+                  <ArrowUpRight style={{ width: 12, height: 12, color: "var(--nav-partner-icon)" }} className="xl:size-[0.8125rem]" />
                 </Link>
               </>
             )}
 
             {/* ── Hamburger (accessible 44px touch target) ── */}
             <button
-              className="flex h-11 w-11 flex-col items-center justify-center gap-[5px] rounded-xl border border-white/10 bg-white/[0.04] transition-all duration-200 active:scale-95 outline-none hover:bg-white/[0.08] focus-visible:ring-2 focus-visible:ring-sky-400/50 lg:hidden"
+              className="flex h-11 w-11 flex-col items-center justify-center gap-[0.3125rem] rounded-xl border border-white/10 bg-white/[0.04] transition-all duration-200 active:scale-95 outline-none hover:bg-white/[0.08] focus-visible:ring-2 focus-visible:ring-sky-400/50 lg:hidden"
               onClick={() => setMobileOpen((prev) => !prev)}
               aria-expanded={mobileOpen}
               /*
@@ -972,7 +972,7 @@ export function Navbar() {
                   width: 20,
                   height: 1.5,
                   background: mobileOpen ? "var(--nav-accent-strong)" : "var(--nav-hamburger-idle)",
-                  transform: mobileOpen ? "translateY(6.5px) rotate(45deg)" : "none",
+                  transform: mobileOpen ? "translateY(0.4062rem) rotate(45deg)" : "none",
                   transition: "transform 0.28s ease, background 0.2s ease",
                   transformOrigin: "center",
                   willChange: "transform",
@@ -992,7 +992,7 @@ export function Navbar() {
                   willChange: "transform, opacity",
                 }}
               />
-              {/* Bottom bar — same width as top bar (20px) for symmetric X */}
+              {/* Bottom bar — same width as top bar (1.25rem) for symmetric X */}
               <span
                 className="block rounded-full"
                 style={{

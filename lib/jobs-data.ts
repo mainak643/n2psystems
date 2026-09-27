@@ -30,6 +30,8 @@ export interface Job {
    * re-parsing "$150K - $190K CAD" and "2 days ago".
    */
   datePostedISO?: string
+  /** `requirements.updated_at` — drives sitemap lastmod and re-indexing. */
+  dateModifiedISO?: string
   validThroughISO?: string
   salaryMin?: number
   salaryMax?: number

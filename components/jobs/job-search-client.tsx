@@ -37,6 +37,17 @@ export function JobSearchClient({ initialJobs }: JobSearchClientProps) {
   const [showFilters, setShowFilters] = useState(false)
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
 
+  /*
+    Honour /jobs?q=… — the WebSite SearchAction in the site-wide JSON-LD tells
+    search engines this URL runs a search, and shared "all React roles" links
+    use it too. Read after mount rather than via searchParams on the server
+    page, which would opt the whole board out of ISR.
+  */
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search).get("q")
+    if (q) setSearchQuery(q.slice(0, 100))
+  }, [])
+
   // Revalidate published jobs when the browser tab regains focus.
   // This replaces an unthrottled public WebSocket connection, allowing the
   // board to effortlessly scale to thousands of concurrent visitors without
@@ -177,8 +188,8 @@ export function JobSearchClient({ initialJobs }: JobSearchClientProps) {
         >
           {/* Country filter — fixed to India / Canada / USA */}
           <Select value={country} onValueChange={setCountry}>
-            <SelectTrigger size="lg" className="w-full rounded-xl">
-              <SelectValue placeholder="Country" />
+            <SelectTrigger size="lg" aria-label="Filter by country" className="w-full rounded-xl bg-background">
+              <SelectValue placeholder="Country">{country}</SelectValue>
             </SelectTrigger>
             <SelectContent>
               {countries.map((c) => (
@@ -191,8 +202,8 @@ export function JobSearchClient({ initialJobs }: JobSearchClientProps) {
 
           {/* City filter — derived from jobs, scoped to selected country */}
           <Select value={city} onValueChange={setCity}>
-            <SelectTrigger size="lg" className="w-full rounded-xl">
-              <SelectValue placeholder="City" />
+            <SelectTrigger size="lg" aria-label="Filter by city" className="w-full rounded-xl bg-background">
+              <SelectValue placeholder="City">{city}</SelectValue>
             </SelectTrigger>
             <SelectContent>
               {citiesForCountry.map((c) => (
@@ -204,8 +215,8 @@ export function JobSearchClient({ initialJobs }: JobSearchClientProps) {
           </Select>
 
           <Select value={domain} onValueChange={setDomain}>
-            <SelectTrigger size="lg" className="w-full rounded-xl">
-              <SelectValue placeholder="Domain" />
+            <SelectTrigger size="lg" aria-label="Filter by domain" className="w-full rounded-xl bg-background">
+              <SelectValue placeholder="Domain">{domain}</SelectValue>
             </SelectTrigger>
             <SelectContent>
               {domains.map((d) => (
@@ -217,8 +228,8 @@ export function JobSearchClient({ initialJobs }: JobSearchClientProps) {
           </Select>
 
           <Select value={experience} onValueChange={setExperience}>
-            <SelectTrigger size="lg" className="w-full rounded-xl">
-              <SelectValue placeholder="Experience" />
+            <SelectTrigger size="lg" aria-label="Filter by experience" className="w-full rounded-xl bg-background">
+              <SelectValue placeholder="Experience">{experience}</SelectValue>
             </SelectTrigger>
             <SelectContent>
               {experiences.map((exp) => (
@@ -230,8 +241,8 @@ export function JobSearchClient({ initialJobs }: JobSearchClientProps) {
           </Select>
 
           <Select value={mode} onValueChange={setMode}>
-            <SelectTrigger size="lg" className="w-full rounded-xl">
-              <SelectValue placeholder="Work Mode" />
+            <SelectTrigger size="lg" aria-label="Filter by work mode" className="w-full rounded-xl bg-background">
+              <SelectValue placeholder="Work Mode">{mode}</SelectValue>
             </SelectTrigger>
             <SelectContent>
               {modes.map((m) => (

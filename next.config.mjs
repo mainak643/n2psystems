@@ -6,6 +6,19 @@ const nextConfig = {
     'localhost:3000',
   ],
   poweredByHeader: false,
+  /*
+    The board lives at /jobs, but "careers" is the word people type and share
+    (n2psystems.com/careers/REQ-123/apply). Permanent redirects so every such
+    link lands on the real page and search engines consolidate on one URL.
+  */
+  async redirects() {
+    return [
+      { source: '/careers', destination: '/jobs', permanent: true },
+      { source: '/career', destination: '/jobs', permanent: true },
+      { source: '/careers/:path*', destination: '/jobs/:path*', permanent: true },
+      { source: '/career/:path*', destination: '/jobs/:path*', permanent: true },
+    ];
+  },
   async headers() {
     return [
       {

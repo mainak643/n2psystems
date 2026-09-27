@@ -14,6 +14,7 @@ import {
 import { PageHero } from "@/components/ui/page-hero"
 import { Section } from "@/components/ui/section"
 import { buildBreadcrumbSchema } from "@/lib/seo-schema"
+import { JsonLd } from "@/components/seo/json-ld"
 
 export const metadata: Metadata = {
   title: "Partner With Us — Request a Quote | N2P Systems",
@@ -99,12 +100,7 @@ export default function RequestConsultationPage() {
 
   return (
     <main>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(breadcrumbs),
-        }}
-      />
+      <JsonLd data={breadcrumbs} />
       {/*
         The nav (desktop pill, Contact dropdown, footer) all call this
         destination "Partner With Us" — this page's own H1 used to say

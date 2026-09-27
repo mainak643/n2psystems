@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { SITE_URL } from '@/lib/site';
+import { submitToIndexNow } from '@/lib/indexnow';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,7 +20,6 @@ interface IndexNowPayload {
  */
 export async function POST(req: NextRequest) {
   const secretKey = process.env.INDEXING_SECRET_KEY?.trim();
-  const indexNowKey = process.env.INDEXNOW_KEY?.trim() || 'n2psystems-indexnow-key';
 
   const authHeader = req.headers.get('authorization')?.replace(/^Bearer\s+/i, '').trim();
   const apiKey = req.headers.get('x-api-key')?.trim();
@@ -67,39 +67,21 @@ export async function POST(req: NextRequest) {
     ];
   }
 
-  try {
-    const indexNowResponse = await fetch('https://api.indexnow.org/indexnow', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json; charset=utf-8',
-      },
-      body: JSON.stringify({
-        host,
-        key: indexNowKey,
-        keyLocation: `${SITE_URL}/${indexNowKey}.txt`,
-        urlList,
-      }),
-    });
-
-    const isSuccess = indexNowResponse.status === 200 || indexNowResponse.status === 202;
-    const responseText = await indexNowResponse.text().catch(() => '');
-
-    return NextResponse.json({
-      success: isSuccess,
-      status: indexNowResponse.status,
-      submittedUrls: urlList,
-      host,
-      message: isSuccess
-        ? 'URLs successfully submitted to IndexNow (Bing/Yahoo/Yandex/Naver).'
-        : `IndexNow responded with status ${indexNowResponse.status}: ${responseText}`,
-    });
-  } catch (error: any) {
-    console.error('[IndexNow API] Failed to submit URLs to IndexNow:', error);
-    return NextResponse.json(
-      { error: error?.message || 'Failed to submit URLs to IndexNow' },
-      { status: 500 }
-    );
+  const result = await submitToIndexNow(urlList);
+  if (result.error && result.status === undefined) {
+    console.error('[IndexNow API] Failed to submit URLs to IndexNow:', result.error);
+    return NextResponse.json({ error: result.error }, { status: 500 });
   }
+
+  return NextResponse.json({
+    success: result.success,
+    status: result.status,
+    submittedUrls: result.submitted,
+    host,
+    message: result.success
+      ? 'URLs successfully submitted to IndexNow (Bing/Yahoo/Yandex/Naver).'
+      : `IndexNow responded with status ${result.status}: ${result.error ?? ''}`,
+  });
 }
 
 /**

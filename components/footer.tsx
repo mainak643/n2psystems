@@ -199,7 +199,7 @@ export function Footer() {
               </span>
             </Link>
 
-            <p className="mt-5 max-w-[240px] text-caption leading-[1.85] text-on-dark-muted">
+            <p className="mt-5 max-w-[15rem] text-caption leading-[1.85] text-on-dark-muted">
               Technology partner for AI adoption, cloud transformation, and enterprise growth.
             </p>
 
@@ -215,7 +215,7 @@ export function Footer() {
                   /* Slightly larger tap target on mobile */
                   className="group/s flex h-10 w-10 items-center justify-center rounded-lg border border-on-dark-line-strong bg-on-dark-fill text-on-dark-subtle outline-none transition-all duration-200 hover:border-blue-400/35 hover:bg-blue-500/[0.08] hover:text-on-dark focus-visible:ring-2 focus-visible:ring-blue-500/40 md:h-9 md:w-9"
                 >
-                  <Icon className="h-[15px] w-[15px]" aria-hidden="true" />
+                  <Icon className="h-[0.9375rem] w-[0.9375rem]" aria-hidden="true" />
                 </a>
               ))}
             </div>
@@ -279,7 +279,7 @@ export function Footer() {
                   className="group flex items-center gap-2.5 text-caption text-on-dark-muted outline-none transition-colors duration-150 hover:text-on-dark focus-visible:text-on-dark"
                 >
                   <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-on-dark-line bg-on-dark-fill transition-all duration-200 group-hover:border-blue-400/30 group-hover:bg-blue-500/[0.08]">
-                    <Mail className="h-[13px] w-[13px] text-sky-300/80" aria-hidden="true" />
+                    <Mail className="h-[0.8125rem] w-[0.8125rem] text-sky-300/80" aria-hidden="true" />
                   </span>
                   info@n2psystems.ca
                 </a>
@@ -287,7 +287,7 @@ export function Footer() {
               <li>
                 <div className="flex items-start gap-2.5">
                   <span className="mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-on-dark-line bg-on-dark-fill">
-                    <Phone className="h-[13px] w-[13px] text-sky-300/80" aria-hidden="true" />
+                    <Phone className="h-[0.8125rem] w-[0.8125rem] text-sky-300/80" aria-hidden="true" />
                   </span>
                   <div className="flex flex-col gap-3">
                     <a
@@ -339,7 +339,7 @@ export function Footer() {
         <div aria-hidden="true" className="hairline mt-8 md:mt-0" />
 
         {/* ── Bottom bar ── */}
-        <div className="flex flex-col gap-3 py-6 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] md:flex-row md:items-center md:justify-between md:pb-6">
+        <div className="flex flex-col gap-3 py-6 pb-[calc(1.5rem+env(safe-area-inset-bottom,0rem))] md:flex-row md:items-center md:justify-between md:pb-6">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
             <span className="text-caption text-on-dark-subtle">
               © {new Date().getFullYear()} N2P Systems. All rights reserved.

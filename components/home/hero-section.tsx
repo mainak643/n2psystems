@@ -66,7 +66,7 @@ export function HeroSection() {
       <div className="container-page relative z-10">
         <div className="w-full max-w-[39rem] sm:max-w-[43rem] lg:max-w-[46rem]">
           {/* Eyebrow Pre-Heading (Directly Introducing Headline) */}
-          <div className="mb-3.5 sm:mb-4 flex items-center gap-2 text-[11.5px] sm:text-[12.5px] font-semibold uppercase tracking-[0.24em] text-slate-400">
+          <div className="mb-3.5 sm:mb-4 flex items-center gap-2 text-[0.7188rem] sm:text-[0.7812rem] font-semibold uppercase tracking-[0.24em] text-slate-400">
             <span className="size-1.5 rounded-full bg-[#3894ea]" aria-hidden="true" />
             <span>Where Innovation Drives Success</span>
           </div>
@@ -83,7 +83,7 @@ export function HeroSection() {
           </h1>
 
           {/* Static Capability Bridge */}
-          <p className="mt-5 sm:mt-6 flex flex-wrap items-baseline gap-x-2 gap-y-1 text-[15.5px] sm:text-[17px] text-slate-300">
+          <p className="mt-5 sm:mt-6 flex flex-wrap items-baseline gap-x-2 gap-y-1 text-[0.9688rem] sm:text-[1.0625rem] text-slate-300">
             <span className="font-normal text-slate-400">Specializing in</span>
             <span className="font-semibold text-slate-100">Technology Solutions &amp; Talent</span>
           </p>
@@ -98,7 +98,7 @@ export function HeroSection() {
           */}
           <p
             id="hero-description"
-            className="mt-4 max-w-[560px] lg:max-w-[580px] text-[15.5px] sm:text-[16.5px] leading-[1.7] text-slate-300/90"
+            className="mt-4 max-w-[35rem] lg:max-w-[36.25rem] text-[0.9688rem] sm:text-[1.0312rem] leading-[1.7] text-slate-300/90"
           >
             We help organizations accelerate digital transformation and
             modernize operations — pairing technology consulting, AI, and
@@ -110,7 +110,7 @@ export function HeroSection() {
           <div className="mt-8 sm:mt-9 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3.5">
             <Link
               href="/#services"
-              className="inline-flex min-h-[48px] w-full items-center justify-center gap-2.5 rounded-xl bg-primary px-7 text-[14.5px] font-semibold text-white shadow-[0_4px_16px_-4px_rgba(30,99,181,0.5)] transition-all duration-200 hover:bg-[#164e93] hover:shadow-[0_8px_24px_-4px_rgba(30,99,181,0.65)] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] sm:w-auto"
+              className="inline-flex min-h-[3rem] w-full items-center justify-center gap-2.5 rounded-xl bg-primary px-7 text-[0.9062rem] font-semibold text-white shadow-[0_4px_16px_-4px_rgba(30,99,181,0.5)] transition-all duration-200 hover:bg-[#164e93] hover:shadow-[0_8px_24px_-4px_rgba(30,99,181,0.65)] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] sm:w-auto"
             >
               <span>Explore Services</span>
               <ArrowIcon />
@@ -118,14 +118,14 @@ export function HeroSection() {
 
             <Link
               href="/#contact"
-              className="inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/[0.04] px-7 text-[14.5px] font-semibold text-slate-200 transition-all duration-200 hover:border-white/25 hover:bg-white/[0.08] hover:text-white active:scale-[0.99] sm:w-auto"
+              className="inline-flex min-h-[3rem] w-full items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/[0.04] px-7 text-[0.9062rem] font-semibold text-slate-200 transition-all duration-200 hover:border-white/25 hover:bg-white/[0.08] hover:text-white active:scale-[0.99] sm:w-auto"
             >
               <span>Contact Us</span>
             </Link>
           </div>
 
           {/* Global Presence Strip (Quiet Supporting Metadata) */}
-          <div className="mt-9 sm:mt-11 flex flex-wrap items-center gap-2 text-[11px] font-medium uppercase tracking-[0.16em] text-slate-500">
+          <div className="mt-9 sm:mt-11 flex flex-wrap items-center gap-2 text-[0.6875rem] font-medium uppercase tracking-[0.16em] text-slate-500">
             <div className="flex items-center gap-1.5 text-slate-400 font-medium">
               <span className="size-1 rounded-full bg-emerald-500/80" aria-hidden="true" />
               <span>Global Presence</span>

@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react"
 import Link from "next/link"
-import { AlertCircle, CheckCircle2, FileText, HelpCircle, Loader2, Paperclip, ShieldCheck, X } from "lucide-react"
+import { AlertCircle, ArrowRight, CheckCircle2, FileText, Loader2, Paperclip, ShieldCheck, UploadCloud, X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import type { Job } from "@/lib/jobs-data"
@@ -238,7 +238,7 @@ export function ApplyFormClient({ job }: { job: Job }) {
         tabIndex={-1}
         role="status"
         aria-live="polite"
-        className="surface p-8 text-center outline-none"
+        className="py-6 text-center outline-none sm:py-10"
       >
         <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-full bg-tech-green/10 text-tech-green">
           <CheckCircle2 className="size-7" aria-hidden="true" />
@@ -270,9 +270,10 @@ export function ApplyFormClient({ job }: { job: Job }) {
 
   const invalidFields = Object.entries(errors).filter(([, message]) => Boolean(message))
   const invalidScreeningCount = Object.keys(screeningErrors).length
+  const hasScreening = Boolean(job.screeningQuestions && job.screeningQuestions.length > 0)
 
   return (
-    <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-6">
+    <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-8">
       {(invalidFields.length > 0 || invalidScreeningCount > 0 || submitError) && (
         <div
           ref={errorSummaryRef}
@@ -283,140 +284,140 @@ export function ApplyFormClient({ job }: { job: Job }) {
           <AlertCircle className="mt-0.5 size-5 shrink-0 text-rose-600" aria-hidden="true" />
           <div className="text-sm text-rose-800">
             <p className="font-semibold">
-              {submitError ? "We could not submit your application" : "Please check the highlighted fields"}
+              {submitError ? "We could not submit your application" : "Please fix the following"}
             </p>
             {submitError && <p className="mt-1 leading-relaxed">{submitError}</p>}
-            {!submitError && invalidScreeningCount > 0 && invalidFields.length === 0 && (
-              <p className="mt-1 leading-relaxed">Please answer all required pre-screening questions below.</p>
+            {!submitError && (
+              /*
+                Each entry links to its field, so on a long form (or a phone)
+                the applicant can jump straight to what needs fixing instead
+                of hunting for the red outline.
+              */
+              <ul className="mt-1.5 flex flex-col gap-1">
+                {invalidFields.map(([field, message]) => (
+                  <li key={field}>
+                    <a href={`#${fieldId(field)}`} className="underline underline-offset-2 hover:text-rose-950">
+                      {message}
+                    </a>
+                  </li>
+                ))}
+                {invalidScreeningCount > 0 && (
+                  <li>
+                    <a
+                      href={`#${fieldId(`screening_${Object.keys(screeningErrors)[0]}`)}`}
+                      className="underline underline-offset-2 hover:text-rose-950"
+                    >
+                      Answer {invalidScreeningCount === 1 ? "the remaining pre-screening question" : `the ${invalidScreeningCount} remaining pre-screening questions`}.
+                    </a>
+                  </li>
+                )}
+              </ul>
             )}
           </div>
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-        <TextField
-          id={fieldId("fullName")}
-          errorId={errorId("fullName")}
-          label="Full name"
-          required
-          value={values.fullName}
-          onChange={set("fullName")}
-          error={errors.fullName}
-          autoComplete="name"
-          placeholder="e.g. Sarah Jenkins"
-        />
-        <TextField
-          id={fieldId("email")}
-          errorId={errorId("email")}
-          label="Email address"
-          required
-          type="email"
-          inputMode="email"
-          autoCapitalize="none"
-          autoCorrect="off"
-          spellCheck={false}
-          value={values.email}
-          onChange={set("email")}
-          error={errors.email}
-          autoComplete="email"
-          placeholder="sarah.jenkins@example.com"
-        />
-        <TextField
-          id={fieldId("phone")}
-          errorId={errorId("phone")}
-          label="Phone number"
-          required
-          type="tel"
-          inputMode="tel"
-          value={values.phone}
-          onChange={set("phone")}
-          error={errors.phone}
-          autoComplete="tel"
-          placeholder="+1 (555) 234-5678"
-        />
-        <TextField
-          id={fieldId("location")}
-          errorId={errorId("location")}
-          label="Current location"
-          required
-          value={values.location}
-          onChange={set("location")}
-          error={errors.location}
-          placeholder="City, Country"
-          autoComplete="address-level2"
-        />
-      </div>
+      {/* ── 1. Contact details ── */}
+      <FormSection step={1} title="Your details" description="How the recruitment lead for this role can reach you.">
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+          <TextField
+            id={fieldId("fullName")}
+            errorId={errorId("fullName")}
+            label="Full name"
+            required
+            value={values.fullName}
+            onChange={set("fullName")}
+            error={errors.fullName}
+            autoComplete="name"
+            placeholder="e.g. Sarah Jenkins"
+          />
+          <TextField
+            id={fieldId("email")}
+            errorId={errorId("email")}
+            label="Email address"
+            required
+            type="email"
+            inputMode="email"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            value={values.email}
+            onChange={set("email")}
+            error={errors.email}
+            autoComplete="email"
+            placeholder="sarah.jenkins@example.com"
+          />
+          <TextField
+            id={fieldId("phone")}
+            errorId={errorId("phone")}
+            label="Phone number"
+            required
+            type="tel"
+            inputMode="tel"
+            value={values.phone}
+            onChange={set("phone")}
+            error={errors.phone}
+            autoComplete="tel"
+            placeholder="+1 (555) 234-5678"
+            hint="Include your country code."
+          />
+          <TextField
+            id={fieldId("location")}
+            errorId={errorId("location")}
+            label="Current location"
+            required
+            value={values.location}
+            onChange={set("location")}
+            error={errors.location}
+            placeholder="City, Country"
+            autoComplete="address-level2"
+          />
+          <div className="sm:col-span-2">
+            <TextField
+              id={fieldId("linkedinUrl")}
+              errorId={errorId("linkedinUrl")}
+              label="LinkedIn profile"
+              required
+              type="url"
+              inputMode="url"
+              autoComplete="url"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              value={values.linkedinUrl}
+              onChange={set("linkedinUrl")}
+              error={errors.linkedinUrl}
+              placeholder="linkedin.com/in/yourprofile"
+            />
+          </div>
+        </div>
+      </FormSection>
 
-      <TextField
-        id={fieldId("linkedinUrl")}
-        errorId={errorId("linkedinUrl")}
-        label="LinkedIn profile"
-        required
-        type="url"
-        inputMode="url"
-        autoComplete="url"
-        autoCapitalize="none"
-        autoCorrect="off"
-        spellCheck={false}
-        value={values.linkedinUrl}
-        onChange={set("linkedinUrl")}
-        error={errors.linkedinUrl}
-        placeholder="https://linkedin.com/in/yourprofile"
-      />
-
-      {/* Resume upload */}
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor={fieldId("resume")} className="text-sm font-semibold text-foreground">
-          Resume <span className="text-rose-600">*</span>
-        </label>
-        <input
-          ref={fileInputRef}
-          id={fieldId("resume")}
-          type="file"
-          accept={Object.values(ACCEPTED).join(",")}
-          required
-          aria-invalid={Boolean(errors.resume)}
-          aria-describedby={errors.resume ? errorId("resume") : `${formId}-resume-hint`}
-          onChange={(e) => {
-            setFile(e.target.files?.[0] ?? null)
+      {/* ── 2. Resume ── */}
+      <FormSection step={2} title="Resume" description="PDF or DOCX, up to 2 MB.">
+        <ResumeDropzone
+          inputId={fieldId("resume")}
+          errorId={errorId("resume")}
+          hintId={`${formId}-resume-hint`}
+          inputRef={fileInputRef}
+          file={file}
+          error={errors.resume}
+          onFile={(next) => {
+            setFile(next)
             setErrors((prev) => ({ ...prev, resume: undefined }))
           }}
-          className={`block w-full cursor-pointer rounded-xl border bg-background text-base text-foreground outline-none transition-colors file:mr-4 file:cursor-pointer file:border-0 file:bg-secondary file:px-4 file:py-2.5 file:text-sm file:font-semibold file:text-secondary-foreground hover:file:bg-secondary/80 focus-visible:ring-2 focus-visible:ring-primary/30 sm:text-[0.9375rem] ${
-            errors.resume ? "border-rose-300" : "border-border"
-          }`}
         />
-        {file && !errors.resume && (
-          <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <FileText className="size-3.5 text-muted-foreground/70" aria-hidden="true" />
-            {file.name} · {(file.size / 1024 / 1024).toFixed(1)} MB
-          </p>
-        )}
-        {errors.resume ? (
-          <p id={errorId("resume")} className="text-xs font-medium text-rose-600">
-            {errors.resume}
-          </p>
-        ) : (
-          <p id={`${formId}-resume-hint`} className="text-xs text-muted-foreground">
-            PDF or DOCX. Maximum 2 MB.
-          </p>
-        )}
-      </div>
+      </FormSection>
 
-      {/* Role Pre-Screening Questions */}
-      {job.screeningQuestions && job.screeningQuestions.length > 0 && (
-        <div className="flex flex-col gap-4 rounded-xl border border-primary/20 bg-primary/[0.02] p-5 sm:p-6">
-          <div>
-            <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-              <HelpCircle className="size-4 text-primary" aria-hidden="true" />
-              Role Pre-Screening Questions
-            </h3>
-            <p className="text-xs text-muted-foreground mt-1">
-              Please answer these qualifying questions from the hiring team for this requisition.
-            </p>
-          </div>
-
-          <div className="flex flex-col gap-4">
-            {job.screeningQuestions.map((question, idx) => {
+      {/* ── 3. Role pre-screening ── */}
+      {hasScreening && (
+        <FormSection
+          step={3}
+          title="Pre-screening questions"
+          description="Short qualifying questions from the hiring team for this role."
+        >
+          <div className="flex flex-col gap-5">
+            {job.screeningQuestions!.map((question, idx) => {
               const qFieldId = fieldId(`screening_${idx}`)
               const qErrorId = errorId(`screening_${idx}`)
               const hasError = Boolean(screeningErrors[idx])
@@ -428,30 +429,31 @@ export function ApplyFormClient({ job }: { job: Job }) {
               // "Yep", or a sentence a recruiter then has to interpret.
               if (kind === "boolean") {
                 return (
-                  <fieldset key={idx} className="flex flex-col gap-2">
-                    <legend className="text-sm font-medium text-foreground leading-snug">
-                      <span className="font-mono text-xs text-primary font-semibold mr-1.5">Q{idx + 1}.</span>
-                      {question} <span className="text-rose-600">*</span>
+                  <fieldset key={idx} className="flex flex-col gap-2.5">
+                    <legend className="mb-2.5 text-sm font-medium leading-snug text-foreground">
+                      {question} <span className="text-rose-600" aria-hidden="true">*</span>
                     </legend>
                     <div
                       role="radiogroup"
                       aria-invalid={hasError}
                       aria-describedby={hasError ? qErrorId : undefined}
-                      className="flex gap-2.5"
+                      className="grid grid-cols-2 gap-2.5 sm:flex"
                     >
-                      {(["Yes", "No"] as const).map((option) => {
-                        const optionId = `${qFieldId}-${option.toLowerCase()}`
+                      {(["Yes", "No"] as const).map((option, optionIdx) => {
+                        // The first option carries the question's id so the
+                        // error summary's link lands on this group.
+                        const optionId = optionIdx === 0 ? qFieldId : `${qFieldId}-${option.toLowerCase()}`
                         const checked = screeningAnswers[idx] === option
                         return (
                           <label
                             key={option}
                             htmlFor={optionId}
-                            className={`flex h-11 flex-1 cursor-pointer items-center justify-center rounded-xl border text-sm font-semibold outline-none transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-primary/30 sm:flex-none sm:px-10 ${
+                            className={`flex h-11 cursor-pointer items-center justify-center rounded-xl border text-sm font-semibold outline-none transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-primary/30 sm:min-w-28 sm:px-8 ${
                               checked
                                 ? "border-primary bg-primary/10 text-primary"
                                 : hasError
-                                  ? "border-rose-300 text-muted-foreground"
-                                  : "border-border text-muted-foreground hover:border-primary/40"
+                                  ? "border-rose-300 bg-background text-muted-foreground"
+                                  : "border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground"
                             }`}
                           >
                             <input
@@ -484,10 +486,9 @@ export function ApplyFormClient({ job }: { job: Job }) {
               const isNumeric = kind === "numeric"
 
               return (
-                <div key={idx} className="flex flex-col gap-1.5">
-                  <label htmlFor={qFieldId} className="text-sm font-medium text-foreground leading-snug">
-                    <span className="font-mono text-xs text-primary font-semibold mr-1.5">Q{idx + 1}.</span>
-                    {question} <span className="text-rose-600">*</span>
+                <div key={idx} className="flex flex-col gap-2">
+                  <label htmlFor={qFieldId} className="text-sm font-medium leading-snug text-foreground">
+                    {question} <span className="text-rose-600" aria-hidden="true">*</span>
                   </label>
                   <input
                     id={qFieldId}
@@ -500,10 +501,8 @@ export function ApplyFormClient({ job }: { job: Job }) {
                     aria-describedby={hasError ? qErrorId : undefined}
                     value={screeningAnswers[idx] || ""}
                     onChange={(e) => handleScreeningChange(idx, e.target.value)}
-                    placeholder={isNumeric ? "Enter number of years…" : "Enter your answer…"}
-                    className={`h-11 w-full rounded-xl border bg-background px-3.5 text-base text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 sm:text-[0.9375rem] ${
-                      hasError ? "border-rose-300" : "border-border"
-                    }`}
+                    placeholder={isNumeric ? "Number of years" : "Your answer"}
+                    className={`${INPUT_CLASS} ${isNumeric ? "sm:max-w-48" : ""} ${hasError ? "border-rose-300" : "border-border"}`}
                   />
                   {hasError && (
                     <p id={qErrorId} className="text-xs font-medium text-rose-600">
@@ -514,21 +513,26 @@ export function ApplyFormClient({ job }: { job: Job }) {
               )
             })}
           </div>
-        </div>
+        </FormSection>
       )}
 
-
-      <div className="flex flex-col gap-4 border-t border-border pt-5 sm:flex-row sm:items-center sm:justify-between">
-        <p className="flex items-center gap-2 text-xs text-muted-foreground">
-          <ShieldCheck className="size-4 shrink-0 text-muted-foreground/70" aria-hidden="true" />
-          Your details go directly to the N2P recruitment lead for this requisition.
+      <div className="flex flex-col gap-4 border-t border-border pt-6 sm:flex-row sm:items-center sm:justify-between">
+        <p className="flex items-start gap-2 text-xs leading-relaxed text-muted-foreground sm:max-w-sm">
+          <ShieldCheck className="mt-px size-4 shrink-0 text-tech-green" aria-hidden="true" />
+          <span>
+            Your details go only to the N2P recruitment lead for this role. By applying you agree to our{" "}
+            <Link href="/privacy-policy" className="font-medium text-foreground underline underline-offset-2 hover:text-primary">
+              Privacy Policy
+            </Link>
+            .
+          </span>
         </p>
         <Button
           type="submit"
           variant="brand"
           size="lg"
           disabled={submitState === "submitting"}
-          className="shrink-0 min-w-[190px]"
+          className="w-full shrink-0 sm:w-auto sm:min-w-48"
         >
           {submitState === "submitting" ? (
             <>
@@ -536,11 +540,53 @@ export function ApplyFormClient({ job }: { job: Job }) {
               {submitPhase === "uploading" ? "Uploading resume…" : "Recording application…"}
             </>
           ) : (
-            "Submit application"
+            <>
+              Submit application
+              <ArrowRight className="size-4" aria-hidden="true" />
+            </>
           )}
         </Button>
       </div>
     </form>
+  )
+}
+
+/*
+  text-base on mobile, 15px from sm+. Below 16px, iOS Safari auto-zooms the
+  viewport on focus — on the highest-intent form on the site.
+*/
+const INPUT_CLASS =
+  "h-11 w-full rounded-xl border bg-background px-3.5 text-base text-foreground outline-none transition-colors placeholder:text-muted-foreground/70 hover:border-primary/30 focus:border-primary focus:bg-card focus:ring-2 focus:ring-primary/20 sm:text-[0.9375rem]"
+
+function FormSection({
+  step,
+  title,
+  description,
+  children,
+}: {
+  step: number
+  title: string
+  description?: string
+  children: React.ReactNode
+}) {
+  return (
+    <section className="flex flex-col gap-5" aria-labelledby={`apply-step-${step}`}>
+      <div className="flex items-start gap-3">
+        <span
+          className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold tabular-nums text-primary"
+          aria-hidden="true"
+        >
+          {step}
+        </span>
+        <div>
+          <h2 id={`apply-step-${step}`} className="text-subtitle text-foreground">
+            {title}
+          </h2>
+          {description && <p className="mt-0.5 text-caption text-muted-foreground">{description}</p>}
+        </div>
+      </div>
+      {children}
+    </section>
   )
 }
 
@@ -549,6 +595,7 @@ function TextField({
   errorId,
   label,
   error,
+  hint,
   required,
   ...inputProps
 }: {
@@ -556,29 +603,148 @@ function TextField({
   errorId: string
   label: string
   error?: string
+  hint?: string
   required?: boolean
 } & React.InputHTMLAttributes<HTMLInputElement>) {
+  const hintId = `${id}-hint`
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className="flex flex-col gap-2">
       <label htmlFor={id} className="text-sm font-semibold text-foreground">
-        {label} {required && <span className="text-rose-600">*</span>}
+        {label} {required && <span className="text-rose-600" aria-hidden="true">*</span>}
       </label>
       <input
         id={id}
         required={required}
         aria-invalid={Boolean(error)}
-        aria-describedby={error ? errorId : undefined}
-        /*
-          text-base on mobile, text-body (15px) from sm+. This form's inputs
-          used to be text-sm (14px) at every breakpoint — below the 16px
-          threshold that keeps iOS Safari from auto-zooming the viewport on
-          focus, on the highest-intent form on the site.
-        */
-        className={`h-11 w-full rounded-xl border bg-background px-3.5 text-base text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 sm:text-[0.9375rem] ${
-          error ? "border-rose-300" : "border-border"
-        }`}
+        aria-describedby={error ? errorId : hint ? hintId : undefined}
+        className={`${INPUT_CLASS} ${error ? "border-rose-300" : "border-border"}`}
         {...inputProps}
       />
+      {error ? (
+        <p id={errorId} className="text-xs font-medium text-rose-600">
+          {error}
+        </p>
+      ) : hint ? (
+        <p id={hintId} className="text-xs text-muted-foreground">
+          {hint}
+        </p>
+      ) : null}
+    </div>
+  )
+}
+
+/**
+ * The browser's bare file input ("Choose File · No file chosen") was the one
+ * control on the form that looked unstyled, and it had no drop target — most
+ * desktop applicants drag the CV straight out of their downloads folder.
+ * The real <input type="file"> stays in the DOM (visually hidden, still
+ * focusable and labelled) so keyboard and screen-reader use is unchanged.
+ */
+function ResumeDropzone({
+  inputId,
+  errorId,
+  hintId,
+  inputRef,
+  file,
+  error,
+  onFile,
+}: {
+  inputId: string
+  errorId: string
+  hintId: string
+  inputRef: React.RefObject<HTMLInputElement | null>
+  file: File | null
+  error?: string
+  onFile: (file: File | null) => void
+}) {
+  const [dragging, setDragging] = useState(false)
+
+  const clear = () => {
+    if (inputRef.current) inputRef.current.value = ""
+    onFile(null)
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <input
+        ref={inputRef}
+        id={inputId}
+        type="file"
+        accept={Object.values(ACCEPTED).join(",")}
+        required
+        aria-invalid={Boolean(error)}
+        aria-describedby={error ? errorId : hintId}
+        onChange={(e) => onFile(e.target.files?.[0] ?? null)}
+        className="peer sr-only"
+      />
+
+      {file ? (
+        <div
+          className={`flex items-center gap-3 rounded-xl border bg-background p-3.5 sm:p-4 ${
+            error ? "border-rose-300" : "border-tech-green/40"
+          }`}
+        >
+          <div
+            className={`flex size-10 shrink-0 items-center justify-center rounded-lg ${
+              error ? "bg-rose-50 text-rose-600" : "bg-tech-green/10 text-tech-green"
+            }`}
+          >
+            <FileText className="size-5" aria-hidden="true" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold text-foreground">{file.name}</p>
+            <p className="text-xs text-muted-foreground">{formatBytes(file.size)}</p>
+          </div>
+          <label
+            htmlFor={inputId}
+            className="shrink-0 cursor-pointer rounded-lg px-2.5 py-1.5 text-xs font-semibold text-primary transition-colors hover:bg-primary/10"
+          >
+            Replace
+          </label>
+          <button
+            type="button"
+            onClick={clear}
+            aria-label={`Remove ${file.name}`}
+            className="tap-target shrink-0 rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+          >
+            <X className="size-4" aria-hidden="true" />
+          </button>
+        </div>
+      ) : (
+        <label
+          htmlFor={inputId}
+          onDragOver={(e) => {
+            e.preventDefault()
+            setDragging(true)
+          }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={(e) => {
+            e.preventDefault()
+            setDragging(false)
+            const dropped = e.dataTransfer.files?.[0]
+            if (dropped) onFile(dropped)
+          }}
+          className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-5 py-8 text-center transition-colors peer-focus-visible:border-primary peer-focus-visible:ring-2 peer-focus-visible:ring-primary/20 ${
+            dragging
+              ? "border-primary bg-primary/[0.06]"
+              : error
+                ? "border-rose-300 bg-rose-50/40"
+                : "border-border bg-background hover:border-primary/40 hover:bg-primary/[0.03]"
+          }`}
+        >
+          <span className="flex size-11 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <UploadCloud className="size-5" aria-hidden="true" />
+          </span>
+          <span className="text-sm font-semibold text-foreground">
+            <span className="text-primary">Choose a file</span>
+            <span className="hidden sm:inline"> or drag it here</span>
+          </span>
+          <span id={hintId} className="text-xs text-muted-foreground">
+            PDF or DOCX · max 2 MB
+          </span>
+        </label>
+      )}
+
       {error && (
         <p id={errorId} className="text-xs font-medium text-rose-600">
           {error}
@@ -588,10 +754,15 @@ function TextField({
   )
 }
 
+function formatBytes(bytes: number): string {
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`
+}
+
 /** Shown when a listing came from the seed dataset and has no live requisition. */
 export function ApplyUnavailable({ job }: { job: Job }) {
   return (
-    <div className="surface p-8 text-center">
+    <div className="py-6 text-center sm:py-10">
       <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-secondary text-muted-foreground">
         <Paperclip className="size-6" aria-hidden="true" />
       </div>

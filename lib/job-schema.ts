@@ -84,6 +84,15 @@ export function parsePostalAddress(location: string): ParsedPostalAddress {
   };
 }
 
+/** The posting text is plain recruiter input; it goes into an HTML description. */
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
 function parseExperienceMonths(experience?: string): number | undefined {
   if (!experience) return undefined;
   const match = experience.match(/(\d+)/);
@@ -106,16 +115,16 @@ export function buildJobPostingSchema(job: Job) {
   const cleanOverview = (job.overview || job.description || '').replace(/\*\*/g, '').trim();
   if (cleanOverview) {
     cleanOverview.split(/\n\s*\n/).filter(Boolean).forEach((para) => {
-      htmlParts.push(`<p>${para.replace(/\n/g, '<br/>')}</p>`);
+      htmlParts.push(`<p>${escapeHtml(para).replace(/\n/g, '<br/>')}</p>`);
     });
   }
   if (job.responsibilities && job.responsibilities.length > 0) {
     htmlParts.push('<p><strong>Key Responsibilities:</strong></p>');
-    htmlParts.push(`<ul>${job.responsibilities.map((r) => `<li>${r.replace(/\*\*/g, '')}</li>`).join('')}</ul>`);
+    htmlParts.push(`<ul>${job.responsibilities.map((r) => `<li>${escapeHtml(r.replace(/\*\*/g, ''))}</li>`).join('')}</ul>`);
   }
   if (job.requirements && job.requirements.length > 0) {
     htmlParts.push('<p><strong>Required Skills & Qualifications:</strong></p>');
-    htmlParts.push(`<ul>${job.requirements.map((r) => `<li>${r.replace(/\*\*/g, '')}</li>`).join('')}</ul>`);
+    htmlParts.push(`<ul>${job.requirements.map((r) => `<li>${escapeHtml(r.replace(/\*\*/g, ''))}</li>`).join('')}</ul>`);
   }
   const description = htmlParts.join('\n');
 

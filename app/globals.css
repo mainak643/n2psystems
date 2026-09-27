@@ -108,7 +108,8 @@
      Replaces five different gutter recipes scattered per page. */
   --container-max: 80rem;
   --gutter: 1.25rem;
-  --navbar-h: 62px;
+  /* rem, not px, so the header grows with the root scale on large displays. */
+  --navbar-h: 3.875rem;
 
   --chart-1: #1E63B5;
   --chart-2: #7AC943;
@@ -131,7 +132,7 @@
 @media (min-width: 640px) {
   :root {
     --gutter: 1.5rem;
-    --navbar-h: 72px;
+    --navbar-h: 4.5rem;
   }
 }
 @media (min-width: 1024px) {
@@ -315,7 +316,38 @@
    ═══════════════════════════════════════════════════════ */
 html {
   scroll-behavior: smooth;
-  scroll-padding-top: calc(var(--navbar-h) + 16px);
+  scroll-padding-top: calc(var(--navbar-h) + 1rem);
+
+  /*
+    LARGE-DISPLAY SCALE
+    Everything on the site is sized in rem, so scaling the root scales the
+    whole layout in proportion — type, spacing, cards, the header. Without it a
+    1440p monitor, a 34" ultrawide or a TV rendered the laptop layout at
+    laptop size: a narrow strip of small text in a sea of empty space.
+
+    The root grows with whichever of width or height is the tighter fit
+    (1920×1080 is the 16px baseline for both), so a 3440×1440 curved ultrawide
+    scales by its height instead of stretching to its width, and a short
+    browser window never gets oversized text. It never drops below the
+    visitor's own default (100%), which keeps every phone, tablet and laptop
+    exactly as before, and it stops at 150% so a 4K TV stays readable rather
+    than cartoonish.
+  */
+  font-size: clamp(100%, min(0.8333vw, 1.4815vh), 150%);
+}
+
+/*
+  Sticky footer. On a tall screen a short page (the apply form, a legal
+  page) ended mid-viewport and left a blank band under the footer.
+*/
+body {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+#main-content {
+  flex: 1 0 auto;
 }
 
 /* Subtle dot grid texture */
@@ -658,6 +690,21 @@ html {
   Temporarily hide the floating widget only when the mobile navigation drawer
   is open so it does not overlap navigation menus.
 */
+
+/*
+  Job posting's mobile apply bar (components/jobs/mobile-apply-bar.tsx):
+  while it is showing, reserve room under the footer so it never covers the
+  last links, and lift the floating assistant above it instead of on top.
+*/
+@media (max-width: 1023px) {
+  body:has(#job-apply-bar[data-visible='true']) {
+    padding-bottom: 4.75rem;
+  }
+  body:has(#job-apply-bar[data-visible='true']) #ai-agent-widget {
+    transform: translateY(-4.75rem);
+    transition: transform 0.3s ease;
+  }
+}
 
 body:has(#mobile-nav-menu) #ai-agent-widget {
   display: none !important;
