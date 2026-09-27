@@ -29,7 +29,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const jobs = await fetchPublishedJobs()
     jobRoutes = jobs.map((job) => ({
       url: `${SITE_URL}/jobs/${encodeURIComponent(job.id)}`,
-      lastModified: job.datePostedISO ? new Date(job.datePostedISO) : new Date(),
+      // When the posting last changed, so an edited role is re-crawled.
+      lastModified: new Date(job.dateModifiedISO || job.datePostedISO || Date.now()),
       changeFrequency: 'daily' as const,
       priority: 0.9,
     }))

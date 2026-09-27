@@ -8,6 +8,10 @@ import { buildBreadcrumbSchema } from "@/lib/seo-schema"
 import { Button } from "@/components/ui/button"
 import { PageHero } from "@/components/ui/page-hero"
 import { Section } from "@/components/ui/section"
+import { JsonLd } from "@/components/seo/json-ld"
+import { FaqSection } from "@/components/seo/faq-section"
+import { SITE_URL } from "@/lib/site"
+import type { FaqItem } from "@/lib/seo-schema"
 
 /**
  * See the note in app/jobs/[id]/page.tsx — ISR instead of `force-dynamic`. The
@@ -35,6 +39,37 @@ export const metadata: Metadata = {
   },
 }
 
+/*
+  Candidate FAQ. Every answer restates something the site already says or
+  does (the apply form's fields and limits, the confirmation message, the
+  alert channels) — nothing here promises what the process doesn't deliver.
+*/
+const CANDIDATE_FAQ: FaqItem[] = [
+  {
+    question: "How do I apply for a job at N2P Systems?",
+    answer:
+      "Open any role on this page and select Apply for this Role. The application asks for your name, email, phone, location and LinkedIn profile, your resume as a PDF or DOCX file (up to 2 MB), and any pre-screening questions the hiring team has set for that role.",
+  },
+  {
+    question: "What happens after I submit an application?",
+    answer:
+      "Your application goes directly to the N2P recruitment lead for that requisition, who reviews it against the role. If it is a fit, we contact you by email to talk through the role and next steps with the hiring team.",
+  },
+  {
+    question: "Can I apply if I don't see a role that matches my skills?",
+    answer: `Yes. Submit a general profile at ${SITE_URL}/resume and our recruiters will match you against current and upcoming openings.`,
+  },
+  {
+    question: "Where are N2P Systems jobs located?",
+    answer:
+      "N2P Systems recruits for technology roles across Canada, the United States and India. Each posting states whether it is remote, hybrid or on-site, and you can filter the board by country, city and work mode.",
+  },
+  {
+    question: "How can I get notified about new job openings?",
+    answer: `Follow the N2P Systems WhatsApp channel for role alerts, or subscribe to the jobs RSS feed at ${SITE_URL}/jobs/rss.`,
+  },
+]
+
 export default async function JobsPage() {
   const publishedJobs = await fetchPublishedJobs()
   const breadcrumbs = buildBreadcrumbSchema([
@@ -45,19 +80,9 @@ export default async function JobsPage() {
   return (
     <main>
       {/* ItemList structured data — surfaces the set of open roles to crawlers. */}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(buildJobListSchema(publishedJobs)),
-        }}
-      />
+      <JsonLd data={buildJobListSchema(publishedJobs)} />
       {/* BreadcrumbList structured data */}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(breadcrumbs),
-        }}
-      />
+      <JsonLd data={breadcrumbs} />
 
       <PageHero
         width="narrow"
@@ -143,6 +168,8 @@ export default async function JobsPage() {
           </div>
         </div>
       </Section>
+
+      <FaqSection id="candidate-faq" eyebrow="For candidates" title="Applying with N2P" items={CANDIDATE_FAQ} tone="frost" />
     </main>
   )
 }

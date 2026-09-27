@@ -15,6 +15,7 @@ import {
 import { PageHero } from "@/components/ui/page-hero"
 import { Section } from "@/components/ui/section"
 import { buildBreadcrumbSchema } from "@/lib/seo-schema"
+import { JsonLd } from "@/components/seo/json-ld"
 
 export const metadata: Metadata = {
   title: "Hiring Solutions | N2P Systems",
@@ -115,12 +116,7 @@ export default function HiringSolutionsPage() {
 
   return (
     <main>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(breadcrumbs),
-        }}
-      />
+      <JsonLd data={breadcrumbs} />
       <PageHero
         eyebrow="For Employers"
         title="Technology Hiring Solutions Built for Scale"

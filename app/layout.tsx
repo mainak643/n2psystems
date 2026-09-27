@@ -9,8 +9,8 @@ import { SITE_URL } from '@/lib/site'
 import {
   buildOrganizationSchema,
   buildWebSiteSchema,
-  buildFaqSchema,
 } from '@/lib/seo-schema'
+import { JsonLd } from '@/components/seo/json-ld'
 import './globals.css'
 
 const inter = Inter({
@@ -94,7 +94,6 @@ const fullSchemaGraph = {
   '@graph': [
     buildOrganizationSchema(),
     buildWebSiteSchema(),
-    buildFaqSchema(),
   ],
 }
 
@@ -110,11 +109,8 @@ export default function RootLayout({
         <link rel="alternate" type="application/rss+xml" href="/jobs/rss" title="N2P Systems Jobs RSS Feed" />
         <link rel="alternate" type="application/xml" href="/jobs/feed.xml" title="N2P Systems Jobs XML Feed" />
       </head>
-      <body className="font-sans antialiased overflow-x-hidden min-h-screen bg-background">
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(fullSchemaGraph) }}
-        />
+      <body className="font-sans antialiased overflow-x-hidden bg-background">
+        <JsonLd data={fullSchemaGraph} />
         <a href="#main-content" className="skip-link">
           Skip to main content
         </a>

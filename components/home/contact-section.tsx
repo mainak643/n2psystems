@@ -85,7 +85,7 @@ function ContactForm() {
     >
       {/* Honeypot field — hidden from real users, filled by automated spam bots */}
       <div
-        className="absolute -left-[9999px] -top-[9999px] h-0 w-0 overflow-hidden opacity-0 pointer-events-none"
+        className="absolute -left-[624.9375rem] -top-[624.9375rem] h-0 w-0 overflow-hidden opacity-0 pointer-events-none"
         aria-hidden="true"
         tabIndex={-1}
       >
@@ -183,7 +183,7 @@ function ContactForm() {
       <button
         type="submit"
         disabled={status === "loading"}
-        className="flex min-h-[50px] w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#1E63B5] to-[#164e93] px-6 text-sm font-semibold text-white shadow-[0_6px_20px_-6px_rgba(30,99,181,0.55)] transition-all duration-200 hover:shadow-[0_10px_28px_-6px_rgba(30,99,181,0.7)] hover:brightness-110 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:shadow-[0_6px_20px_-6px_rgba(30,99,181,0.55)] disabled:hover:brightness-100"
+        className="flex min-h-[3.125rem] w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#1E63B5] to-[#164e93] px-6 text-sm font-semibold text-white shadow-[0_6px_20px_-6px_rgba(30,99,181,0.55)] transition-all duration-200 hover:shadow-[0_10px_28px_-6px_rgba(30,99,181,0.7)] hover:brightness-110 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:shadow-[0_6px_20px_-6px_rgba(30,99,181,0.55)] disabled:hover:brightness-100"
       >
         {status === "loading" ? (
           <>

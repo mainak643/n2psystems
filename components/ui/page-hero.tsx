@@ -61,14 +61,18 @@ export function PageHero({
       {children}
       <Container width={width} className="relative z-10">
         <div className={cn(centered ? 'mx-auto max-w-3xl text-center' : 'max-w-3xl')}>
+          {/* Own block, so an eyebrow that follows it (also inline-flex) starts
+              on the next line instead of sitting beside the link. */}
           {backLink && (
-            <Link
-              href={backLink.href}
-              className="mb-6 inline-flex items-center gap-2 text-caption font-medium text-on-dark-muted transition-colors hover:text-on-dark"
-            >
-              <ArrowLeft className="size-4" aria-hidden="true" />
-              {backLink.label}
-            </Link>
+            <div className={cn('mb-6 flex', centered && 'justify-center')}>
+              <Link
+                href={backLink.href}
+                className="group inline-flex items-center gap-2 text-caption font-medium text-on-dark-muted transition-colors hover:text-on-dark"
+              >
+                <ArrowLeft className="size-4 transition-transform group-hover:-translate-x-0.5" aria-hidden="true" />
+                {backLink.label}
+              </Link>
+            </div>
           )}
 
           {badge && <div className={cn('mb-5 flex empty:hidden', centered && 'justify-center')}>{badge}</div>}

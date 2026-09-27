@@ -476,6 +476,7 @@ export function mapRequirementToJob(req: any): Job {
     requirementUuid: req.id || undefined,
     screeningQuestions,
     datePostedISO: req.created_at || undefined,
+    dateModifiedISO: req.updated_at || req.created_at || undefined,
     validThroughISO: req.closing_date || undefined,
     salaryMin: toNumber(req.salary_min),
     salaryMax: toNumber(req.salary_max),
@@ -504,6 +505,16 @@ function cacheJob(key: string, data: Job | null): void {
   jobCache.set(key, { data, timestamp: Date.now() });
 }
 const CACHE_TTL_MS = 60 * 1000; // 60 seconds memory cache
+
+/**
+ * Drops both in-memory caches. Called when a requisition is known to have
+ * changed (the auto-index webhook), so the pages it revalidates render the
+ * new state instead of re-reading up to a minute of stale cache.
+ */
+export function invalidateJobCaches(): void {
+  memoryCachedJobs = null;
+  jobCache.clear();
+}
 
 /**
  * A server render has to finish, but it does not have to finish in a second.
