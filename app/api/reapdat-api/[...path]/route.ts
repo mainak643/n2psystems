@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@supabase/supabase-js';
+import { supabase, supabaseAnonKey, supabaseUrl } from '@/lib/supabase';
 
 /**
  * REAPDAT Questionnaires API — production proxy for the RecruitOps ATS.
@@ -31,6 +32,13 @@ const UPSTREAM_TIMEOUT_MS = 15_000;
 
 /** A recording is tens of megabytes and a PDF is rendered per request. */
 const MEDIA_TIMEOUT_MS = 60_000;
+
+/**
+ * Outbound messaging writes. A send that times out here may still have gone
+ * out upstream, and the recruiter's natural response to an error is to press
+ * Send again — so it gets the room to finish rather than a fast failure.
+ */
+const SEND_TIMEOUT_MS = 30_000;
 
 const DEFAULT_ALLOWED_ORIGINS = [
   'https://ops.n2psystems.com',
@@ -107,16 +115,48 @@ function corsHeaders(req: NextRequest): Record<string, string> {
  * no new secret to distribute, and `auth.getUser` validates it against the
  * project rather than trusting its claims.
  */
-async function isAuthenticatedCaller(req: NextRequest): Promise<boolean> {
+async function authenticatedCaller(
+  req: NextRequest
+): Promise<{ id: string; token: string } | null> {
   const header = req.headers.get('authorization') || '';
-  if (!/^bearer\s/i.test(header)) return false;
+  if (!/^bearer\s/i.test(header)) return null;
   const token = header.slice(header.indexOf(' ') + 1).trim();
-  if (!token) return false;
+  if (!token) return null;
   try {
     const { data, error } = await supabase.auth.getUser(token);
-    return !error && Boolean(data?.user);
+    return !error && data?.user ? { id: data.user.id, token } : null;
   } catch {
     // A transport failure reaching the auth server is not proof of identity.
+    return null;
+  }
+}
+
+/** The roles that triage applicants — the same list screen-application admits. */
+const STAFF_ROLES = ['Admin', 'Manager', 'Recruiter'];
+
+/**
+ * Whether the caller may send messages on the operator's account.
+ *
+ * Being signed in is enough to read a questionnaire result; it is not enough
+ * to send mail. `/communication/send-one` bills the account, records consent
+ * for the recipient on its own, and delivers from the business's sending
+ * reputation — so a signed-in account with no staff role (a client login, or a
+ * fresh sign-up, which 00013 parks on a role with no access) could otherwise
+ * mail anyone as N2P.
+ *
+ * The role is read with the caller's own token rather than a service key:
+ * `authenticated` may read `profiles`, and 00013 removed a user's ability to
+ * write their own role, so the value cannot be self-promoted.
+ */
+async function isStaffCaller(caller: { id: string; token: string }): Promise<boolean> {
+  try {
+    const asCaller = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: `Bearer ${caller.token}` } },
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+    const { data } = await asCaller.from('profiles').select('role').eq('id', caller.id).maybeSingle();
+    return STAFF_ROLES.includes(String(data?.role ?? ''));
+  } catch {
     return false;
   }
 }
@@ -149,6 +189,16 @@ const ROUTES: Array<{ method: string; pattern: RegExp }> = [
   { method: 'POST', pattern: new RegExp('^/questionnaires/parse$') },
   { method: 'POST', pattern: new RegExp(`^/questionnaires/links/${TOKEN}/revoke$`) },
   { method: 'DELETE', pattern: new RegExp(`^/questionnaires/links/${TOKEN}/recording$`) },
+
+  // Outbound candidate messaging, and only the part the ATS uses: whether a
+  // channel can send, the templates it sends from, one message to one person,
+  // and the log of what went. Broadcasts, audiences and suppression stay shut.
+  // Staff only — see isStaffCaller.
+  { method: 'GET', pattern: new RegExp('^/communication/readiness$') },
+  { method: 'GET', pattern: new RegExp('^/communication/templates$') },
+  { method: 'POST', pattern: new RegExp('^/communication/templates$') },
+  { method: 'POST', pattern: new RegExp('^/communication/send-one$') },
+  { method: 'GET', pattern: new RegExp('^/communication/messages$') },
 ];
 
 function isAllowedRoute(method: string, path: string): boolean {
@@ -235,7 +285,8 @@ async function relay(
     return health(cors);
   }
 
-  if (!(await isAuthenticatedCaller(req))) {
+  const caller = await authenticatedCaller(req);
+  if (!caller) {
     return deny(401, 'Authentication required.', cors);
   }
 
@@ -258,7 +309,17 @@ async function relay(
     return deny(404, 'No such endpoint.', cors);
   }
 
+  const isMessaging = path.startsWith('/communication/');
+  if (isMessaging && !(await isStaffCaller(caller))) {
+    return deny(403, 'Only recruiting staff can send messages to candidates.', cors);
+  }
+
   const isMedia = /\/(recording|report\.pdf)$/.test(path);
+  const timeoutMs = isMedia
+    ? MEDIA_TIMEOUT_MS
+    : isMessaging && method === 'POST'
+    ? SEND_TIMEOUT_MS
+    : UPSTREAM_TIMEOUT_MS;
   const search = req.nextUrl.search || '';
 
   try {
@@ -273,7 +334,7 @@ async function relay(
         ...(req.headers.get('range') ? { Range: req.headers.get('range') as string } : {}),
       },
       body: method === 'POST' ? await req.text() : undefined,
-      signal: AbortSignal.timeout(isMedia ? MEDIA_TIMEOUT_MS : UPSTREAM_TIMEOUT_MS),
+      signal: AbortSignal.timeout(timeoutMs),
     });
 
     const headers = new Headers(cors);
@@ -300,7 +361,11 @@ async function relay(
     return deny(
       isTimeout ? 504 : 502,
       isTimeout
-        ? 'The screening service did not respond in time.'
+        ? isMessaging
+          ? 'REAPDAT did not answer in time.'
+          : 'The screening service did not respond in time.'
+        : isMessaging
+        ? 'Could not reach REAPDAT.'
         : 'Could not reach the screening service.',
       cors
     );
