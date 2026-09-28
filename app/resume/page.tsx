@@ -26,21 +26,6 @@ export const metadata: Metadata = {
   },
 }
 
-const NEXT_STEPS = [
-  {
-    title: "Recruiter review",
-    body: "A recruiter for your specialisation reads your resume and adds you to our talent pool.",
-  },
-  {
-    title: "Matched to roles",
-    body: "When a client role fits your experience, we reach out by email or phone before sharing your profile.",
-  },
-  {
-    title: "Interviews",
-    body: "We submit you directly to the hiring manager and prepare you for each round.",
-  },
-]
-
 export default function SubmitResumePage() {
   const breadcrumbs = buildBreadcrumbSchema([
     { name: "Home", url: "/" },
@@ -69,25 +54,6 @@ export default function SubmitResumePage() {
           </div>
 
           <aside aria-label="About the talent pool" className="flex flex-col gap-6 lg:sticky lg:top-[calc(var(--navbar-h)+1.5rem)]">
-            <div className="surface p-6">
-              <h2 className="text-subtitle text-foreground">What happens next</h2>
-              <ol className="mt-4 flex flex-col gap-4">
-                {NEXT_STEPS.map((step, i) => (
-                  <li key={step.title} className="flex gap-3">
-                    <span
-                      className="flex size-6 shrink-0 items-center justify-center rounded-full border border-border text-xs font-semibold tabular-nums text-muted-foreground"
-                      aria-hidden="true"
-                    >
-                      {i + 1}
-                    </span>
-                    <div>
-                      <p className="text-sm font-semibold text-foreground">{step.title}</p>
-                      <p className="mt-0.5 text-caption text-muted-foreground">{step.body}</p>
-                    </div>
-                  </li>
-                ))}
-              </ol>
-            </div>
 
             <div className="surface p-6">
               <p className="text-sm font-semibold text-foreground">Looking at a specific role?</p>

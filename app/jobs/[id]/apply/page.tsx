@@ -38,21 +38,6 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   }
 }
 
-const NEXT_STEPS = [
-  {
-    title: "Recruiter review",
-    body: "The recruitment lead for this role reads your resume and answers against the brief.",
-  },
-  {
-    title: "Intro call",
-    body: "If it's a match, we reach out by email or phone to talk through the role and your goals.",
-  },
-  {
-    title: "Client interviews",
-    body: "We submit you directly to the hiring manager and prepare you for each round.",
-  },
-]
-
 export default async function ApplyPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const job = await getJob(id)
@@ -133,26 +118,6 @@ export default async function ApplyPage({ params }: { params: Promise<{ id: stri
                 Read the full job description
                 <ArrowUpRight className="size-3.5" aria-hidden="true" />
               </Link>
-            </div>
-
-            <div className="surface p-6">
-              <h2 className="text-subtitle text-foreground">What happens next</h2>
-              <ol className="mt-4 flex flex-col gap-4">
-                {NEXT_STEPS.map((step, i) => (
-                  <li key={step.title} className="flex gap-3">
-                    <span
-                      className="flex size-6 shrink-0 items-center justify-center rounded-full border border-border text-xs font-semibold tabular-nums text-muted-foreground"
-                      aria-hidden="true"
-                    >
-                      {i + 1}
-                    </span>
-                    <div>
-                      <p className="text-sm font-semibold text-foreground">{step.title}</p>
-                      <p className="mt-0.5 text-caption text-muted-foreground">{step.body}</p>
-                    </div>
-                  </li>
-                ))}
-              </ol>
             </div>
           </aside>
         </div>
