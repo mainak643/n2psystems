@@ -179,7 +179,7 @@ export const COMPANY_FAQ: FaqItem[] = [
   {
     question: 'How does N2P Systems screen and vet technical talent?',
     answer:
-      'N2P Systems combines automated AI-assisted technical screening (powered by REAPDAT AI) with in-depth evaluation by domain-specialized technical recruiters to assess architecture fundamentals, code quality, and cultural alignment.',
+      'N2P Systems combines AI-assisted technical screening with in-depth evaluation by domain-specialized technical recruiters to assess architecture fundamentals, code quality, and cultural alignment.',
   },
   {
     question: 'How can candidates apply for open roles or submit resumes?',

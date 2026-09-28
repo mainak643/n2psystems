@@ -38,7 +38,7 @@ N2P Systems is a premier international technology recruitment and talent advisor
 - Candidates may view open requisitions at https://n2psystems.com/jobs
 - Each role is assigned a distinct reference code (e.g., REQ-XXXXX) and full specifications.
 - Candidates can apply directly on the job detail page or submit their CV for general placement consideration at https://n2psystems.com/resume.
-- Candidates engaging with automated screening participate via conversational AI screening links powered by REAPDAT AI.
+- Candidates may be invited to a short conversational AI screening as part of the process.
 
 ## Client / Employer Workflow
 - Hiring managers and talent acquisition leaders can schedule consultations at https://n2psystems.com/clients.
