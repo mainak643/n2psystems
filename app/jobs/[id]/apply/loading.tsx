@@ -8,7 +8,7 @@ export default function ApplyLoading() {
     <main>
       <PageHero
         align="start"
-        pad="compact"
+        pad="tight"
         eyebrow="Application"
         title={<Skeleton className="h-10 w-72 max-w-full bg-white/10" />}
         backLink={{ href: "/jobs", label: "Back to role details" }}

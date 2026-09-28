@@ -18,7 +18,8 @@ export type PageHeroProps = {
   /** CTA row — pass <Button variant="brand" size="xl" asChild>. */
   actions?: React.ReactNode
   align?: 'center' | 'start'
-  pad?: 'default' | 'compact'
+  /** `tight`: for task pages (an application form) where the form, not the header, is the point. */
+  pad?: 'default' | 'compact' | 'tight'
   width?: 'default' | 'narrow'
   className?: string
   /** Extra decorative layers rendered behind the content (e.g. resume's aurora gradients). */
@@ -47,10 +48,16 @@ export function PageHero({
   children,
 }: PageHeroProps) {
   const centered = align === 'center'
+  const tight = pad === 'tight'
 
   return (
     <section
-      className={cn('page-hero on-dark texture-dots relative overflow-hidden', pad === 'compact' && 'page-hero--compact', className)}
+      className={cn(
+        'page-hero on-dark texture-dots relative overflow-hidden',
+        pad === 'compact' && 'page-hero--compact',
+        tight && 'page-hero--tight',
+        className
+      )}
     >
       {/* ── Ambient Aurora Lighting (Cyan / Green / Navy) ── */}
       <div
@@ -64,7 +71,7 @@ export function PageHero({
           {/* Own block, so an eyebrow that follows it (also inline-flex) starts
               on the next line instead of sitting beside the link. */}
           {backLink && (
-            <div className={cn('mb-6 flex', centered && 'justify-center')}>
+            <div className={cn(tight ? 'mb-4 flex' : 'mb-6 flex', centered && 'justify-center')}>
               <Link
                 href={backLink.href}
                 className="group inline-flex items-center gap-2 text-caption font-medium text-on-dark-muted transition-colors hover:text-on-dark"
@@ -84,7 +91,13 @@ export function PageHero({
             </p>
           )}
 
-          <h1 id={titleId} className="text-heading text-balance text-on-dark font-bold tracking-tight">
+          <h1
+            id={titleId}
+            className={cn(
+              'text-balance text-on-dark font-bold tracking-tight',
+              tight ? 'text-[clamp(1.625rem,1.3rem+1.4vw,2.5rem)] leading-[1.12]' : 'text-heading'
+            )}
+          >
             {title}
           </h1>
 
@@ -95,7 +108,7 @@ export function PageHero({
           )}
 
           {/* Glowing gradient accent bar */}
-          <div className={cn("mt-6 h-1 w-12 rounded-full bg-gradient-to-r from-tech-green to-cyan-support", centered ? "mx-auto" : "")} />
+          <div className={cn("h-1 w-12 rounded-full bg-gradient-to-r from-tech-green to-cyan-support", tight ? "mt-4" : "mt-6", centered ? "mx-auto" : "")} />
 
           {meta && <div className="mt-4">{meta}</div>}
 

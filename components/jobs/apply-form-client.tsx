@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react"
 import Link from "next/link"
-import { AlertCircle, ArrowRight, CheckCircle2, FileText, Loader2, Paperclip, ShieldCheck, UploadCloud, X } from "lucide-react"
+import { AlertCircle, ArrowRight, Check, CheckCircle2, FileText, Loader2, Paperclip, ShieldCheck, UploadCloud, X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import type { Job } from "@/lib/jobs-data"
@@ -126,10 +126,28 @@ export function ApplyFormClient({ job }: { job: Job }) {
     already existed from the previous render.
   */
   const [errorSeq, setErrorSeq] = useState(0)
+  /*
+    Errors show as the applicant leaves a field, but only for a field they
+    have typed in — tabbing past an empty field is not a mistake yet. After a
+    submit attempt every field is fair game, and the summary appears.
+  */
+  const [submitted, setSubmitted] = useState(false)
 
   useEffect(() => {
     if (errorSeq > 0) errorSummaryRef.current?.focus()
   }, [errorSeq])
+
+  // Someone applying to a second role should not retype who they are.
+  useEffect(() => {
+    const saved = loadSavedContact()
+    if (saved) {
+      setValues((prev) => {
+        const next = { ...prev }
+        for (const [k, v] of Object.entries(saved)) if (v && !next[k as Field]) next[k as Field] = v
+        return next
+      })
+    }
+  }, [])
 
   // Move focus to the confirmation so screen reader users are told the
   // application actually went through, instead of being left on a button
@@ -141,6 +159,12 @@ export function ApplyFormClient({ job }: { job: Job }) {
   const set = (field: Field) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setValues((prev) => ({ ...prev, [field]: e.target.value }))
     setErrors((prev) => (prev[field] ? { ...prev, [field]: undefined } : prev))
+  }
+
+  const blur = (field: Field) => () => {
+    if (!values[field].trim() && !submitted) return
+    const message = validate(values, file)[field]
+    setErrors((prev) => ({ ...prev, [field]: message }))
   }
 
   const handleScreeningChange = (index: number, val: string) => {
@@ -159,6 +183,7 @@ export function ApplyFormClient({ job }: { job: Job }) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setSubmitError(null)
+    setSubmitted(true)
 
     const found = validate(values, file)
     const sErrors: Record<number, string> = {}
@@ -223,6 +248,7 @@ export function ApplyFormClient({ job }: { job: Job }) {
         throw new Error(body.error || "We could not record your application. Please try again.")
       }
 
+      saveContact(values)
       setSubmitState("done")
     } catch (err) {
       clearTimeout(phaseTimer)
@@ -272,9 +298,14 @@ export function ApplyFormClient({ job }: { job: Job }) {
   const invalidScreeningCount = Object.keys(screeningErrors).length
   const hasScreening = Boolean(job.screeningQuestions && job.screeningQuestions.length > 0)
 
+  const liveErrors = validate(values, file)
+  const detailsDone = CONTACT_FIELDS.every((f) => !liveErrors[f])
+  const resumeDone = Boolean(file) && !liveErrors.resume
+  const screeningDone = (job.screeningQuestions ?? []).every((_, idx) => Boolean(screeningAnswers[idx]?.trim()))
+
   return (
     <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-8">
-      {(invalidFields.length > 0 || invalidScreeningCount > 0 || submitError) && (
+      {((submitted && (invalidFields.length > 0 || invalidScreeningCount > 0)) || submitError) && (
         <div
           ref={errorSummaryRef}
           tabIndex={-1}
@@ -317,6 +348,14 @@ export function ApplyFormClient({ job }: { job: Job }) {
         </div>
       )}
 
+      <FormProgress
+        steps={[
+          { id: 1, label: "Details", done: detailsDone },
+          { id: 2, label: "Resume", done: resumeDone },
+          ...(hasScreening ? [{ id: 3, label: "Questions", done: screeningDone }] : []),
+        ]}
+      />
+
       {/* ── 1. Contact details ── */}
       <FormSection step={1} title="Your details" description="How the recruitment lead for this role can reach you.">
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
@@ -327,6 +366,7 @@ export function ApplyFormClient({ job }: { job: Job }) {
             required
             value={values.fullName}
             onChange={set("fullName")}
+            onBlur={blur("fullName")}
             error={errors.fullName}
             autoComplete="name"
             placeholder="e.g. Sarah Jenkins"
@@ -343,6 +383,7 @@ export function ApplyFormClient({ job }: { job: Job }) {
             spellCheck={false}
             value={values.email}
             onChange={set("email")}
+            onBlur={blur("email")}
             error={errors.email}
             autoComplete="email"
             placeholder="sarah.jenkins@example.com"
@@ -356,6 +397,7 @@ export function ApplyFormClient({ job }: { job: Job }) {
             inputMode="tel"
             value={values.phone}
             onChange={set("phone")}
+            onBlur={blur("phone")}
             error={errors.phone}
             autoComplete="tel"
             placeholder="+1 (555) 234-5678"
@@ -368,6 +410,7 @@ export function ApplyFormClient({ job }: { job: Job }) {
             required
             value={values.location}
             onChange={set("location")}
+            onBlur={blur("location")}
             error={errors.location}
             placeholder="City, Country"
             autoComplete="address-level2"
@@ -386,6 +429,7 @@ export function ApplyFormClient({ job }: { job: Job }) {
               spellCheck={false}
               value={values.linkedinUrl}
               onChange={set("linkedinUrl")}
+              onBlur={blur("linkedinUrl")}
               error={errors.linkedinUrl}
               placeholder="linkedin.com/in/yourprofile"
             />
@@ -452,8 +496,8 @@ export function ApplyFormClient({ job }: { job: Job }) {
                               checked
                                 ? "border-primary bg-primary/10 text-primary"
                                 : hasError
-                                  ? "border-rose-300 bg-background text-muted-foreground"
-                                  : "border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                                  ? "border-rose-300 bg-card text-muted-foreground"
+                                  : `${FIELD_BORDER} bg-card text-muted-foreground hover:border-primary/40 hover:text-foreground`
                             }`}
                           >
                             <input
@@ -502,7 +546,7 @@ export function ApplyFormClient({ job }: { job: Job }) {
                     value={screeningAnswers[idx] || ""}
                     onChange={(e) => handleScreeningChange(idx, e.target.value)}
                     placeholder={isNumeric ? "Number of years" : "Your answer"}
-                    className={`${INPUT_CLASS} ${isNumeric ? "sm:max-w-48" : ""} ${hasError ? "border-rose-300" : "border-border"}`}
+                    className={`${INPUT_CLASS} ${isNumeric ? "sm:max-w-48" : ""} ${hasError ? "border-rose-300" : FIELD_BORDER}`}
                   />
                   {hasError && (
                     <p id={qErrorId} className="text-xs font-medium text-rose-600">
@@ -556,7 +600,110 @@ export function ApplyFormClient({ job }: { job: Job }) {
   viewport on focus — on the highest-intent form on the site.
 */
 export const INPUT_CLASS =
-  "h-11 w-full rounded-xl border bg-background px-3.5 text-base text-foreground outline-none transition-colors placeholder:text-muted-foreground/70 hover:border-primary/30 focus:border-primary focus:bg-card focus:ring-2 focus:ring-primary/20 sm:text-[0.9375rem]"
+  "h-11 w-full rounded-lg border bg-card px-3.5 text-base text-foreground shadow-[0_1px_2px_rgba(11,31,51,0.04)] outline-none transition-[border-color,box-shadow] placeholder:text-muted-foreground/60 hover:border-slate-400/70 focus:border-primary focus:ring-4 focus:ring-primary/10 sm:text-[0.9375rem]"
+
+/** Resting border for a field on a white card: visible without shouting. */
+export const FIELD_BORDER = "border-slate-300/80"
+
+const CONTACT_FIELDS = ["fullName", "email", "phone", "location", "linkedinUrl"] as const
+const CONTACT_STORAGE_KEY = "n2p:candidate-contact"
+
+/**
+ * Contact details from the applicant's last successful application, kept in
+ * their own browser only, so a second application — or the general profile
+ * form — starts pre-filled. Storage can be unavailable (private mode, blocked
+ * site data); that simply means no prefill.
+ */
+export function loadSavedContact(): Partial<Record<(typeof CONTACT_FIELDS)[number], string>> | null {
+  try {
+    const raw = window.localStorage.getItem(CONTACT_STORAGE_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as Record<string, unknown>
+    const out: Partial<Record<(typeof CONTACT_FIELDS)[number], string>> = {}
+    for (const f of CONTACT_FIELDS) if (typeof parsed[f] === "string") out[f] = (parsed[f] as string).slice(0, 300)
+    return out
+  } catch {
+    return null
+  }
+}
+
+export function saveContact(values: Partial<Record<string, string>>) {
+  try {
+    const out: Record<string, string> = {}
+    for (const f of CONTACT_FIELDS) if (values[f]?.trim()) out[f] = values[f]!.trim()
+    window.localStorage.setItem(CONTACT_STORAGE_KEY, JSON.stringify(out))
+  } catch {
+    // Storage unavailable; the next form just starts empty.
+  }
+}
+
+/**
+ * Sticky step indicator: where the applicant is, what is left, and a way to
+ * jump there. Completion comes from the same validation the submit uses, so a
+ * tick means the section will actually pass.
+ */
+export function FormProgress({ steps }: { steps: { id: number; label: string; done: boolean }[] }) {
+  const doneCount = steps.filter((s) => s.done).length
+  const current = steps.find((s) => !s.done)?.id
+  return (
+    <nav
+      aria-label="Application progress"
+      className="sticky top-[calc(var(--navbar-h)+0.75rem)] z-20 -mx-2 rounded-xl border border-border bg-card/90 px-3 py-2.5 shadow-e2 backdrop-blur-md sm:-mx-3 sm:px-4"
+    >
+      <div className="flex items-center gap-2 sm:gap-3">
+        <ol className="flex min-w-0 flex-1 items-center gap-1.5 sm:gap-2">
+          {steps.map((step, i) => (
+            <li key={step.id} className="flex min-w-0 items-center gap-1.5 sm:gap-2">
+              {i > 0 && (
+                <span
+                  aria-hidden="true"
+                  className={`h-px w-3 shrink-0 sm:w-8 ${steps[i - 1].done ? "bg-tech-green/60" : "bg-border"}`}
+                />
+              )}
+              <button
+                type="button"
+                onClick={() =>
+                  document.getElementById(`apply-section-${step.id}`)?.scrollIntoView({ behavior: "smooth", block: "start" })
+                }
+                aria-current={step.id === current ? "step" : undefined}
+                className="group flex min-w-0 items-center gap-1.5 rounded-md py-0.5 text-left"
+              >
+                <span
+                  className={`flex size-5 shrink-0 items-center justify-center rounded-full text-[0.6875rem] font-bold tabular-nums transition-colors ${
+                    step.done
+                      ? "bg-tech-green text-white"
+                      : step.id === current
+                        ? "bg-primary text-primary-foreground"
+                        : "border border-border text-muted-foreground"
+                  }`}
+                >
+                  {step.done ? <Check className="size-3 stroke-[3]" aria-hidden="true" /> : step.id}
+                </span>
+                <span
+                  className={`truncate text-xs font-semibold group-hover:text-primary sm:text-sm ${
+                    step.done || step.id === current ? "text-foreground" : "text-muted-foreground"
+                  }`}
+                >
+                  {step.label}
+                  <span className="sr-only">{step.done ? " (complete)" : ""}</span>
+                </span>
+              </button>
+            </li>
+          ))}
+        </ol>
+        <span className="hidden shrink-0 text-xs font-medium tabular-nums text-muted-foreground sm:inline">
+          {doneCount}/{steps.length} complete
+        </span>
+      </div>
+      <div className="mt-2 h-1 overflow-hidden rounded-full bg-secondary" aria-hidden="true">
+        <div
+          className="h-full rounded-full bg-gradient-to-r from-primary to-tech-green transition-[width] duration-500 ease-out"
+          style={{ width: `${(doneCount / steps.length) * 100}%` }}
+        />
+      </div>
+    </nav>
+  )
+}
 
 export function FormSection({
   step,
@@ -570,7 +717,11 @@ export function FormSection({
   children: React.ReactNode
 }) {
   return (
-    <section className="flex flex-col gap-5" aria-labelledby={`apply-step-${step}`}>
+    <section
+      id={`apply-section-${step}`}
+      className="flex scroll-mt-[calc(var(--navbar-h)+6rem)] flex-col gap-5 border-t border-border pt-8 first-of-type:border-t-0 first-of-type:pt-0"
+      aria-labelledby={`apply-step-${step}`}
+    >
       <div className="flex items-start gap-3">
         <span
           className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold tabular-nums text-primary"
@@ -617,7 +768,7 @@ export function TextField({
         required={required}
         aria-invalid={Boolean(error)}
         aria-describedby={error ? errorId : hint ? hintId : undefined}
-        className={`${INPUT_CLASS} ${error ? "border-rose-300" : "border-border"}`}
+        className={`${INPUT_CLASS} ${error ? "border-rose-300 focus:border-rose-400 focus:ring-rose-100" : FIELD_BORDER}`}
         {...inputProps}
       />
       {error ? (

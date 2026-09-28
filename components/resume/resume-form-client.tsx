@@ -25,8 +25,12 @@ import {
 
 import { Button } from "@/components/ui/button"
 import {
+  FIELD_BORDER,
+  FormProgress,
   FormSection,
   INPUT_CLASS,
+  loadSavedContact,
+  saveContact,
   MAX_BYTES,
   ResumeDropzone,
   TextField,
@@ -196,6 +200,18 @@ function ResumeFormInner() {
     if (state === "done") successRef.current?.focus()
   }, [state])
 
+  // Pre-fill contact details from a previous application in this browser.
+  useEffect(() => {
+    const saved = loadSavedContact()
+    if (saved) {
+      setValues((prev) => {
+        const next = { ...prev }
+        for (const [k, v] of Object.entries(saved)) if (v && !next[k as Field]) next[k as Field] = v
+        return next
+      })
+    }
+  }, [])
+
   const fieldId = (f: string) => `${formId}-${f}`
   const errorId = (f: string) => `${formId}-${f}-error`
 
@@ -246,6 +262,7 @@ function ResumeFormInner() {
         const body = (await response.json().catch(() => ({}))) as { error?: string }
         throw new Error(body.error || "We could not save your profile. Please try again.")
       }
+      saveContact(values)
       setState("done")
     } catch (err) {
       setState("idle")
@@ -278,6 +295,7 @@ function ResumeFormInner() {
   }
 
   const invalid = Object.entries(errors).filter(([, m]) => Boolean(m))
+  const live = validate(values, category, file, consent)
 
   return (
     <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-8">
@@ -319,6 +337,15 @@ function ResumeFormInner() {
         </div>
       )}
 
+      <FormProgress
+        steps={[
+          { id: 1, label: "Specialisation", done: !live.category },
+          { id: 2, label: "Details", done: !live.fullName && !live.email && !live.phone && !live.location && !live.linkedinUrl },
+          { id: 3, label: "Experience", done: !live.experienceYears },
+          { id: 4, label: "Resume", done: !live.resume },
+        ]}
+      />
+
       {/* ── 1. Specialisation ── */}
       <FormSection step={1} title="Your specialisation" description="Pick the area closest to your core experience.">
         <fieldset aria-describedby={errors.category ? errorId("category") : undefined}>
@@ -335,7 +362,7 @@ function ResumeFormInner() {
                       ? "border-primary bg-primary/[0.05]"
                       : errors.category
                         ? "border-rose-300"
-                        : "border-border hover:border-primary/40"
+                        : `${FIELD_BORDER} hover:border-primary/40`
                   )}
                 >
                   <input
@@ -396,7 +423,7 @@ function ResumeFormInner() {
             <label htmlFor={fieldId("workMode")} className="text-sm font-semibold text-foreground">
               Preferred work mode
             </label>
-            <select id={fieldId("workMode")} value={workMode} onChange={(e) => setWorkMode(e.target.value)} className={`${INPUT_CLASS} border-border`}>
+            <select id={fieldId("workMode")} value={workMode} onChange={(e) => setWorkMode(e.target.value)} className={`${INPUT_CLASS} ${FIELD_BORDER}`}>
               <option value="">No preference</option>
               {WORK_MODES.map((m) => (
                 <option key={m} value={m}>
@@ -438,7 +465,7 @@ function ResumeFormInner() {
             rows={4}
             maxLength={3500}
             placeholder="Roles you're targeting, preferred locations, salary expectations…"
-            className="w-full rounded-xl border border-border bg-background px-3.5 py-3 text-base text-foreground outline-none transition-colors placeholder:text-muted-foreground/70 hover:border-primary/30 focus:border-primary focus:bg-card focus:ring-2 focus:ring-primary/20 sm:text-[0.9375rem]"
+            className={`${INPUT_CLASS} ${FIELD_BORDER} h-auto py-3`}
           />
         </div>
       </FormSection>

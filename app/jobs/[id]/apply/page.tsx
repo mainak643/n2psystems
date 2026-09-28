@@ -56,7 +56,7 @@ export default async function ApplyPage({ params }: { params: Promise<{ id: stri
     <main>
       <PageHero
         align="start"
-        pad="compact"
+        pad="tight"
         eyebrow="Application"
         title={job.title}
         backLink={{ href: jobHref, label: "Back to role details" }}

@@ -534,6 +534,11 @@ body {
   .page-hero--compact {
     padding-bottom: clamp(2rem, 1.5rem + 1.8vw, 3rem);
   }
+  /* Task pages (an application form): the form should start above the fold. */
+  .page-hero--tight {
+    padding-top: calc(var(--navbar-h) + clamp(1.5rem, 1rem + 2vw, 2.75rem));
+    padding-bottom: clamp(1.75rem, 1.25rem + 1.5vw, 2.5rem);
+  }
   .page-hero__glow {
     position: absolute;
     inset: 0;
