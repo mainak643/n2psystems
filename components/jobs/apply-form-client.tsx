@@ -37,9 +37,13 @@ export function extensionOf(file: File): string {
 }
 
 /**
- * Screening questions come from `job.screeningQuestions` as plain strings —
- * there's no stored "answer type" to render against, so this reads the
- * question text itself. Two shapes cover what recruiters actually write:
+ * The input for a screening question.
+ *
+ * The recruiter's own choice wins: the ATS stores an answer type per question
+ * (Yes/No, Number, Free text), carried here as `job.screeningQuestionTypes`.
+ * Only when a question has none (older requisitions stored plain strings) is
+ * the kind read from the question text itself. Two shapes cover what
+ * recruiters actually write:
  *
  *  - A "years" threshold ("Do you have 5+ years...", "How many years...")
  *    gets a number input. Even when phrased as "do you have X+", what a
@@ -53,6 +57,12 @@ export function extensionOf(file: File): string {
  * input — open-ended questions still need one.
  */
 type QuestionKind = "boolean" | "numeric" | "text"
+
+const KIND_FOR_TYPE = { yes_no: "boolean", numeric: "numeric", text: "text" } as const
+
+function screeningQuestionKind(question: string, type: keyof typeof KIND_FOR_TYPE | null | undefined): QuestionKind {
+  return type ? KIND_FOR_TYPE[type] : classifyScreeningQuestion(question)
+}
 
 function classifyScreeningQuestion(question: string): QuestionKind {
   const q = question.trim().toLowerCase()
@@ -421,7 +431,7 @@ export function ApplyFormClient({ job }: { job: Job }) {
               const qFieldId = fieldId(`screening_${idx}`)
               const qErrorId = errorId(`screening_${idx}`)
               const hasError = Boolean(screeningErrors[idx])
-              const kind = classifyScreeningQuestion(question)
+              const kind = screeningQuestionKind(question, job.screeningQuestionTypes?.[idx])
 
               // Yes/No questions ("Are you authorized to...") get a real
               // two-option control instead of a free-text field, so the
@@ -480,6 +490,34 @@ export function ApplyFormClient({ job }: { job: Job }) {
                 )
               }
 
+              // Free text: a real multi-line box, since the recruiter asked for
+              // an answer in the candidate's own words.
+              if (kind === "text") {
+                return (
+                  <div key={idx} className="flex flex-col gap-2">
+                    <label htmlFor={qFieldId} className="text-sm font-medium leading-snug text-foreground">
+                      {question} <span className="text-rose-600" aria-hidden="true">*</span>
+                    </label>
+                    <textarea
+                      id={qFieldId}
+                      rows={3}
+                      required
+                      aria-invalid={hasError}
+                      aria-describedby={hasError ? qErrorId : undefined}
+                      value={screeningAnswers[idx] || ""}
+                      onChange={(e) => handleScreeningChange(idx, e.target.value)}
+                      placeholder="Your answer"
+                      className={`${INPUT_CLASS} h-auto min-h-24 resize-y py-2.5 ${hasError ? "border-rose-300" : "border-border"}`}
+                    />
+                    {hasError && (
+                      <p id={qErrorId} className="text-xs font-medium text-rose-600">
+                        {screeningErrors[idx]}
+                      </p>
+                    )}
+                  </div>
+                )
+              }
+
               // "5+ years", "How many years..." — what a recruiter actually
               // screens on is the number, so this gets a numeric input
               // rather than forcing a yes/no on a threshold question.
@@ -501,7 +539,7 @@ export function ApplyFormClient({ job }: { job: Job }) {
                     aria-describedby={hasError ? qErrorId : undefined}
                     value={screeningAnswers[idx] || ""}
                     onChange={(e) => handleScreeningChange(idx, e.target.value)}
-                    placeholder={isNumeric ? "Number of years" : "Your answer"}
+                    placeholder={isNumeric ? "Enter a number" : "Your answer"}
                     className={`${INPUT_CLASS} ${isNumeric ? "sm:max-w-48" : ""} ${hasError ? "border-rose-300" : "border-border"}`}
                   />
                   {hasError && (
