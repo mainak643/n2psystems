@@ -1,144 +1,84 @@
 "use client"
 
-import { useEffect, useRef, useState, Suspense, type ComponentType } from "react"
+import { Suspense, useEffect, useId, useRef, useState, type ComponentType } from "react"
+import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import {
+  AlertCircle,
+  ArrowRight,
   BarChart3,
   Bot,
   Boxes,
   BriefcaseBusiness,
   Check,
+  CheckCircle2,
   CircleDotDashed,
   Cloud,
   Code2,
   Database,
-  ExternalLink,
   GitBranch,
+  Loader2,
   ShieldCheck,
   Sparkles,
   TestTubeDiagonal,
 } from "lucide-react"
 
+import { Button } from "@/components/ui/button"
 import {
-  CATEGORY_FORM_MAP,
-  type CategoryFormKey,
-} from "@/components/resume/categoryForms"
+  FormSection,
+  INPUT_CLASS,
+  MAX_BYTES,
+  ResumeDropzone,
+  TextField,
+  extensionOf,
+} from "@/components/jobs/apply-form-client"
 import { cn } from "@/lib/utils"
 
+type CategoryKey =
+  | "softwareDevelopment"
+  | "cloudDevOps"
+  | "cyberSecurity"
+  | "dataEngineeringAnalytics"
+  | "testingQA"
+  | "technicalLeadership"
+  | "architectureRoles"
+  | "emergingAIAutomation"
+  | "integrationMiddleware"
+  | "automationRPA"
+  | "enterpriseApplications"
+  | "databaseTechnologies"
+
 const CATEGORIES: {
-  key: CategoryFormKey
+  key: CategoryKey
   name: string
   description: string
   icon: ComponentType<{ className?: string }>
   accent: string
 }[] = [
-    {
-      key: "softwareDevelopment",
-      name: "Software Development",
-      description: "Frontend, Backend, Full Stack, Java, .NET, Python, React",
-      icon: Code2,
-      accent: "text-tech-green bg-tech-green/10",
-    },
-    {
-      key: "cloudDevOps",
-      name: "Cloud & DevOps",
-      description: "AWS, Azure, Kubernetes, Terraform, SRE",
-      icon: Cloud,
-      accent: "text-signature-blue bg-signature-blue/10",
-    },
-    {
-      key: "cyberSecurity",
-      name: "Cyber Security",
-      description: "SOC, IAM, Pen Testing, Security Engineering",
-      icon: ShieldCheck,
-      accent: "text-violet-600 bg-violet-50",
-    },
-    {
-      key: "dataEngineeringAnalytics",
-      name: "Data Engineering & Analytics",
-      description: "ETL, BI, Snowflake, Databricks, Power BI",
-      icon: BarChart3,
-      accent: "text-orange-600 bg-orange-50",
-    },
-    {
-      key: "testingQA",
-      name: "Testing & Quality Assurance",
-      description: "Manual Testing, Automation Testing, SDET",
-      icon: TestTubeDiagonal,
-      accent: "text-sky-600 bg-sky-50",
-    },
-    {
-      key: "technicalLeadership",
-      name: "Technical Leadership",
-      description: "Engineering Management, Delivery Leadership, CTO, VP Engineering",
-      icon: BriefcaseBusiness,
-      accent: "text-signature-blue bg-signature-blue/10",
-    },
-    {
-      key: "architectureRoles",
-      name: "Architecture Roles",
-      description: "Solution, Enterprise, Cloud, Data, Security Architecture",
-      icon: Boxes,
-      accent: "text-violet-600 bg-violet-50",
-    },
-    {
-      key: "emergingAIAutomation",
-      name: "Emerging AI & Automation",
-      description: "GenAI, ML Engineering, Intelligent Automation, AI Platforms",
-      icon: Bot,
-      accent: "text-fuchsia-600 bg-fuchsia-50",
-    },
-    {
-      key: "integrationMiddleware",
-      name: "Integration & Middleware",
-      description: "MuleSoft, API Management, Kafka, ESB, iPaaS",
-      icon: GitBranch,
-      accent: "text-amber-600 bg-amber-50",
-    },
-    {
-      key: "automationRPA",
-      name: "Automation & RPA",
-      description: "UiPath, Blue Prism, Power Automate, Process Automation",
-      icon: CircleDotDashed,
-      accent: "text-tech-green bg-tech-green/10",
-    },
-    {
-      key: "enterpriseApplications",
-      name: "Enterprise Applications",
-      description: "SAP, Oracle, Salesforce, Dynamics, ServiceNow",
-      icon: BriefcaseBusiness,
-      accent: "text-sky-600 bg-sky-50",
-    },
-    {
-      key: "databaseTechnologies",
-      name: "Database Technologies",
-      description: "DBA, SQL Server, Oracle, PostgreSQL, MongoDB",
-      icon: Database,
-      accent: "text-blue-600 bg-blue-50",
-    },
-  ]
+  { key: "softwareDevelopment", name: "Software Development", description: "Frontend, Backend, Full Stack, Java, .NET, Python, React", icon: Code2, accent: "text-tech-green bg-tech-green/10" },
+  { key: "cloudDevOps", name: "Cloud & DevOps", description: "AWS, Azure, Kubernetes, Terraform, SRE", icon: Cloud, accent: "text-signature-blue bg-signature-blue/10" },
+  { key: "cyberSecurity", name: "Cyber Security", description: "SOC, IAM, Pen Testing, Security Engineering", icon: ShieldCheck, accent: "text-violet-600 bg-violet-50" },
+  { key: "dataEngineeringAnalytics", name: "Data Engineering & Analytics", description: "ETL, BI, Snowflake, Databricks, Power BI", icon: BarChart3, accent: "text-orange-600 bg-orange-50" },
+  { key: "testingQA", name: "Testing & Quality Assurance", description: "Manual Testing, Automation Testing, SDET", icon: TestTubeDiagonal, accent: "text-sky-600 bg-sky-50" },
+  { key: "technicalLeadership", name: "Technical Leadership", description: "Engineering Management, Delivery Leadership, CTO, VP Engineering", icon: BriefcaseBusiness, accent: "text-signature-blue bg-signature-blue/10" },
+  { key: "architectureRoles", name: "Architecture Roles", description: "Solution, Enterprise, Cloud, Data, Security Architecture", icon: Boxes, accent: "text-violet-600 bg-violet-50" },
+  { key: "emergingAIAutomation", name: "Emerging AI & Automation", description: "GenAI, ML Engineering, Intelligent Automation, AI Platforms", icon: Bot, accent: "text-fuchsia-600 bg-fuchsia-50" },
+  { key: "integrationMiddleware", name: "Integration & Middleware", description: "MuleSoft, API Management, Kafka, ESB, iPaaS", icon: GitBranch, accent: "text-amber-600 bg-amber-50" },
+  { key: "automationRPA", name: "Automation & RPA", description: "UiPath, Blue Prism, Power Automate, Process Automation", icon: CircleDotDashed, accent: "text-tech-green bg-tech-green/10" },
+  { key: "enterpriseApplications", name: "Enterprise Applications", description: "SAP, Oracle, Salesforce, Dynamics, ServiceNow", icon: BriefcaseBusiness, accent: "text-sky-600 bg-sky-50" },
+  { key: "databaseTechnologies", name: "Database Technologies", description: "DBA, SQL Server, Oracle, PostgreSQL, MongoDB", icon: Database, accent: "text-blue-600 bg-blue-50" },
+]
 
 /**
  * Maps a free-text department (`?category=`) or job title (`?role=`) onto a
- * category form.
+ * category, for candidates arriving from a job posting.
  *
- * This replaces two `String.includes()` chains. Unbounded substring tests
- * matched *inside* words, so real traffic landed on the wrong form and the
- * candidate's resume went into the wrong pipeline with nothing on screen to
- * suggest it: department "IT" matched `cybersecurity` (secur-**it**-y), title
- * "HTML Developer" matched `ml` (ht-**ml**), "Mobile Developer" matched `bi`
- * (mo-**bi**-le), "Email Marketing" matched `ai` (em-**ai**-l). Four
- * categories — database, integration, RPA, enterprise apps — were unreachable
- * from the title chain entirely.
- *
- * Every pattern is word-boundary anchored, and order matters: the first match
- * wins, so the specific categories come before the broad ones and
- * `softwareDevelopment` sits last as the catch-all. Tokens are drawn from each
- * category's own description above, so the two stay in step.
+ * Every pattern is word-boundary anchored — unbounded substring tests used to
+ * match inside words ("IT" in secur-it-y, "ml" in ht-ml, "ai" in em-ai-l) and
+ * pre-select the wrong specialisation. Order matters: first match wins, so the
+ * specific categories come first and software development is the catch-all.
  */
-const CATEGORY_PATTERNS: { key: CategoryFormKey; pattern: RegExp }[] = [
-  // "Solution, Enterprise, Cloud, Data, Security Architecture" — the
-  // architecture form owns every architect title, whatever the specialism.
+const CATEGORY_PATTERNS: { key: CategoryKey; pattern: RegExp }[] = [
   { key: "architectureRoles", pattern: /\b(architect|architecture)\b/i },
   { key: "cyberSecurity", pattern: /\b(cyber|security|infosec|soc|iam|grc|appsec|pen test(ing)?|penetration)\b/i },
   { key: "testingQA", pattern: /\b(qa|quality assurance|sdet|tester|testing|test engineer)\b/i },
@@ -152,228 +92,411 @@ const CATEGORY_PATTERNS: { key: CategoryFormKey; pattern: RegExp }[] = [
   { key: "technicalLeadership", pattern: /\b(director|vp|cto|head of|lead|manager|management|product owner|scrum master|delivery)\b/i },
   {
     key: "softwareDevelopment",
-    pattern:
-      /\b(software|developer|engineer|full[ -]?stack|front[ -]?end|back[ -]?end|java|\.net|dotnet|python|react|angular|node|web|computer science)\b/i,
+    pattern: /\b(software|developer|engineer|full[ -]?stack|front[ -]?end|back[ -]?end|java|\.net|dotnet|python|react|angular|node|web|computer science)\b/i,
   },
 ]
 
-function matchCategory(text: string | null | undefined): CategoryFormKey | undefined {
+function matchCategory(text: string | null | undefined): CategoryKey | undefined {
   const value = text?.trim()
   if (!value) return undefined
   return CATEGORY_PATTERNS.find(({ pattern }) => pattern.test(value))?.key
 }
 
+const WORK_MODES = ["Remote", "Hybrid", "Onsite", "Flexible"] as const
+
+type Field =
+  | "fullName"
+  | "email"
+  | "phone"
+  | "location"
+  | "linkedinUrl"
+  | "currentTitle"
+  | "currentCompany"
+  | "experienceYears"
+  | "noticePeriod"
+  | "skills"
+  | "workAuthorization"
+  | "summary"
+
+const EMPTY: Record<Field, string> = {
+  fullName: "",
+  email: "",
+  phone: "",
+  location: "",
+  linkedinUrl: "",
+  currentTitle: "",
+  currentCompany: "",
+  experienceYears: "",
+  noticePeriod: "",
+  skills: "",
+  workAuthorization: "",
+  summary: "",
+}
+
+type ErrorKey = Field | "category" | "resume" | "consent"
+
+function validate(values: Record<Field, string>, category: CategoryKey | null, file: File | null, consent: boolean) {
+  const errors: Partial<Record<ErrorKey, string>> = {}
+  if (!category) errors.category = "Please choose your specialisation."
+  if (values.fullName.trim().length < 2) errors.fullName = "Please enter your full name."
+  if (!/^\S+@\S+\.\S+$/.test(values.email.trim())) errors.email = "Please enter a valid email address."
+  const phone = values.phone.replace(/[\s().-]/g, "")
+  if (!values.phone.trim()) errors.phone = "Please enter your phone number."
+  else if (!/^\+?[0-9]{7,20}$/.test(phone)) errors.phone = "Please enter a valid phone number."
+  if (values.location.trim().length < 2) errors.location = "Please enter your current location."
+  const linkedin = values.linkedinUrl.trim().toLowerCase()
+  if (linkedin && !linkedin.includes("linkedin.com/")) {
+    errors.linkedinUrl = "That doesn't look like a LinkedIn URL. Leave it blank if you don't have one."
+  }
+  if (values.experienceYears.trim()) {
+    const years = Number(values.experienceYears)
+    if (!Number.isFinite(years) || years < 0 || years > 60) errors.experienceYears = "Enter a number of years between 0 and 60."
+  } else {
+    errors.experienceYears = "Please enter your years of experience."
+  }
+  if (!file) errors.resume = "Please attach your resume."
+  else if (file.size > MAX_BYTES) errors.resume = "That file is over 2 MB. Please attach a smaller PDF or DOCX."
+  else if (!["pdf", "docx"].includes(extensionOf(file))) errors.resume = "Please upload your resume as a PDF or DOCX file."
+  if (!consent) errors.consent = "Please agree to the privacy policy to continue."
+  return errors
+}
+
 function ResumeFormInner() {
-  const [selectedKey, setSelectedKey] = useState<CategoryFormKey | null>(null)
-  const formSectionRef = useRef<HTMLDivElement | null>(null)
+  const formId = useId()
   const searchParams = useSearchParams()
   const roleParam = searchParams.get("role")
   const reqParam = searchParams.get("req")
   const categoryParam = searchParams.get("category")
 
+  const [category, setCategory] = useState<CategoryKey | null>(null)
+  const [values, setValues] = useState<Record<Field, string>>(EMPTY)
+  const [workMode, setWorkMode] = useState<string>("")
+  const [file, setFile] = useState<File | null>(null)
+  const [consent, setConsent] = useState(false)
+  const [errors, setErrors] = useState<Partial<Record<ErrorKey, string>>>({})
+  const [submitError, setSubmitError] = useState<string | null>(null)
+  const [state, setState] = useState<"idle" | "submitting" | "done">("idle")
+  const [errorSeq, setErrorSeq] = useState(0)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const errorSummaryRef = useRef<HTMLDivElement | null>(null)
+  const successRef = useRef<HTMLDivElement | null>(null)
+
+  // Arriving from a job posting: pre-select the closest specialisation.
   useEffect(() => {
-    // The `category` param carries the requisition's free-text department,
-    // which recruiters fill in themselves — live values include "Computer
-    // Science" and "IT & Infrastructure", neither of which matches a category
-    // name here. This used to be an `else if`, so an unmatched department meant
-    // the candidate arrived from "Apply for this Role" with nothing selected
-    // and no fallback. Both signals are tried now, category first.
     const matched = matchCategory(categoryParam) ?? matchCategory(roleParam)
-    if (matched) {
-      setSelectedKey(matched)
+    if (matched) setCategory(matched)
+    else if (roleParam) setCategory("softwareDevelopment")
+  }, [categoryParam, roleParam])
+
+  useEffect(() => {
+    if (errorSeq > 0) errorSummaryRef.current?.focus()
+  }, [errorSeq])
+
+  useEffect(() => {
+    if (state === "done") successRef.current?.focus()
+  }, [state])
+
+  const fieldId = (f: string) => `${formId}-${f}`
+  const errorId = (f: string) => `${formId}-${f}-error`
+
+  const set = (f: Field) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setValues((prev) => ({ ...prev, [f]: e.target.value }))
+    setErrors((prev) => (prev[f] ? { ...prev, [f]: undefined } : prev))
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setSubmitError(null)
+
+    const found = validate(values, category, file, consent)
+    if (Object.keys(found).length > 0) {
+      setErrors(found)
+      setErrorSeq((n) => n + 1)
       return
     }
 
-    // Neither signal was recognised. Only fall back to the broadest category
-    // when the candidate actually arrived from a role — that is the case the
-    // note above describes, where landing with nothing selected was the bug.
-    // A bare /resume visit keeps the grid open so they choose for themselves.
-    if (roleParam) setSelectedKey("softwareDevelopment")
-  }, [categoryParam, roleParam])
+    setState("submitting")
+    try {
+      const selected = CATEGORIES.find((c) => c.key === category)!
+      // A candidate who came from a specific posting: keep that context with
+      // the profile so the recruiter reviewing it knows what brought them in.
+      const origin = roleParam ? `Interested in: ${roleParam}${reqParam ? ` (${reqParam})` : ""}` : ""
+      const summary = [origin, values.summary.trim()].filter(Boolean).join("\n\n")
 
-  const selectedCategory = CATEGORIES.find((category) => category.key === selectedKey)
-  const formUrl = selectedKey ? CATEGORY_FORM_MAP[selectedKey] : ""
+      const payload = new FormData()
+      payload.set("category", selected.name)
+      payload.set("fullName", values.fullName.trim())
+      payload.set("email", values.email.trim().toLowerCase())
+      payload.set("phone", values.phone.trim())
+      payload.set("location", values.location.trim())
+      payload.set("linkedinUrl", values.linkedinUrl.trim())
+      payload.set("currentTitle", values.currentTitle.trim())
+      payload.set("currentCompany", values.currentCompany.trim())
+      payload.set("experienceYears", values.experienceYears.trim())
+      payload.set("preferredWorkMode", workMode)
+      payload.set("noticePeriod", values.noticePeriod.trim())
+      payload.set("skills", values.skills)
+      payload.set("workAuthorization", values.workAuthorization.trim())
+      payload.set("summary", summary.slice(0, 4000))
+      payload.set("consent", consent ? "yes" : "")
+      payload.set("resume", file!, file!.name)
 
-  const handleSelect = (key: CategoryFormKey) => {
-    setSelectedKey(key)
-
-    window.setTimeout(() => {
-      formSectionRef.current?.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      })
-    }, 80)
+      const response = await fetch("/api/talent-pool", { method: "POST", body: payload })
+      if (!response.ok) {
+        const body = (await response.json().catch(() => ({}))) as { error?: string }
+        throw new Error(body.error || "We could not save your profile. Please try again.")
+      }
+      setState("done")
+    } catch (err) {
+      setState("idle")
+      setSubmitError(err instanceof Error ? err.message : "Something went wrong. Please try again.")
+      setErrorSeq((n) => n + 1)
+    }
   }
 
-  return (
-    <div className="space-y-10">
-      {/* Role Banner if linked from specific requisition */}
-      {roleParam && (
-        <div className="rounded-2xl border border-signature-blue/20 bg-white p-5 shadow-sm">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div>
-              <div className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-signature-blue mb-1">
-                <Sparkles className="size-3.5" />
-                Target Role Application
-              </div>
-              <h3 className="text-lg font-bold text-slate-900">
-                {roleParam}
-              </h3>
-              {reqParam && (
-                <p className="text-xs text-slate-500 font-mono mt-0.5">
-                  Requisition Ref: {reqParam}
-                </p>
-              )}
-            </div>
-            <span className="rounded-full bg-tech-green/10 text-tech-green border border-tech-green/20 px-3 py-1 text-xs font-semibold self-start sm:self-auto">
-              Direct Referral
-            </span>
-          </div>
+  if (state === "done") {
+    return (
+      <div ref={successRef} tabIndex={-1} role="status" aria-live="polite" className="py-6 text-center outline-none sm:py-10">
+        <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-full bg-tech-green/10 text-tech-green">
+          <CheckCircle2 className="size-7" aria-hidden="true" />
         </div>
-      )}
+        <h2 className="text-title text-foreground">Profile received</h2>
+        <p className="mx-auto mt-2 max-w-md text-body text-muted-foreground">
+          Thank you, {values.fullName.trim().split(" ")[0]}. Your profile is with our recruitment team. When a role
+          matches your experience, we will contact you by email.
+        </p>
+        <div className="mt-6 flex flex-wrap justify-center gap-3">
+          <Button asChild variant="brand">
+            <Link href="/jobs">
+              Browse open roles
+              <ArrowRight className="size-4" aria-hidden="true" />
+            </Link>
+          </Button>
+        </div>
+      </div>
+    )
+  }
 
-      <section>
-        <div className="mb-7">
-          <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-950">
-            1. Choose Your Role Category
-          </h2>
-          <p className="mt-1 text-sm text-slate-500">
-            Select the specialization that aligns with your technical capabilities.
+  const invalid = Object.entries(errors).filter(([, m]) => Boolean(m))
+
+  return (
+    <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-8">
+      {roleParam && (
+        <div className="flex items-start gap-3 rounded-xl border border-primary/20 bg-primary/[0.04] p-4">
+          <Sparkles className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
+          <p className="text-sm text-foreground">
+            You&apos;re sharing your profile with interest in <span className="font-semibold">{roleParam}</span>
+            {reqParam ? <span className="font-mono text-xs text-muted-foreground"> · {reqParam}</span> : null}. We&apos;ll
+            pass that on to the recruiter.
           </p>
         </div>
-
-        {/* 2-col grid on mobile, 4-col on lg */}
-        <div className="grid grid-cols-2 gap-2.5 sm:gap-4 lg:grid-cols-4">
-          {CATEGORIES.map(({ key, name, description, icon: Icon, accent }) => {
-            const selected = selectedKey === key
-
-            return (
-              <button
-                key={key}
-                type="button"
-                aria-pressed={selected}
-                onClick={() => handleSelect(key)}
-                className={cn(
-                  "group relative min-h-[140px] sm:min-h-28 h-full overflow-hidden rounded-xl border bg-white p-3 sm:p-4 text-left shadow-sm outline-none",
-                  "transition-all duration-300 ease-out hover:-translate-y-1 hover:border-signature-blue/30 hover:shadow-[0_18px_42px_rgba(15,23,42,0.10)]",
-                  "focus-visible:ring-2 focus-visible:ring-signature-blue/25",
-                  selected
-                    ? "border-tech-green bg-tech-green/[0.035] shadow-[0_18px_42px_rgba(122,201,67,0.16)]"
-                    : "border-slate-200/90"
-                )}
-              >
-                <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-signature-blue via-sky-400 to-tech-green opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-                {selected && (
-                  <div className="absolute right-2 top-2 sm:right-3 sm:top-3 flex size-6 sm:size-7 items-center justify-center rounded-full bg-tech-green text-white shadow-[0_8px_18px_rgba(122,201,67,0.28)]">
-                    <Check className="size-3.5 sm:size-4 stroke-[3]" />
-                  </div>
-                )}
-
-                <div className="flex flex-col gap-2.5 sm:flex-row sm:items-start sm:gap-3.5">
-                  <div
-                    className={cn(
-                      "flex size-9 sm:size-10 shrink-0 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-105",
-                      accent
-                    )}
-                  >
-                    <Icon className="size-4 sm:size-5" />
-                  </div>
-                  <div className="min-w-0 pr-6 sm:pr-0">
-                    <h3 className="text-[13.5px] sm:text-[15px] font-bold leading-snug text-slate-950">
-                      {name}
-                    </h3>
-                    <p className="mt-1 text-[11.5px] sm:text-[12px] leading-relaxed text-slate-500 line-clamp-2 sm:line-clamp-none">
-                      {description}
-                    </p>
-                  </div>
-                </div>
-              </button>
-            )
-          })}
-        </div>
-
-        <div className="mt-5 sm:mt-7 flex items-center justify-center gap-2 text-center text-xs sm:text-sm text-slate-500">
-          <ShieldCheck className="size-4 text-slate-500" />
-          Your information is secure and will only be used for recruitment
-          purposes.
-        </div>
-      </section>
-
-      {selectedCategory && (
-        <section
-          ref={formSectionRef}
-          className="scroll-mt-24 animate-in fade-in slide-in-from-bottom-3 duration-500"
-        >
-          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-950">
-                2. Complete Your Application
-              </h2>
-              <p className="mt-2 text-sm leading-6 text-slate-500">
-                Continue with the application form for your selected category.
-              </p>
-            </div>
-            <div className="inline-flex w-fit items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm shadow-sm">
-              <span className="font-medium text-slate-600">
-                Selected Category:
-              </span>
-              <span className="rounded-full border border-tech-green/20 bg-tech-green/10 px-3 py-1 text-xs font-semibold text-tech-green">
-                {selectedCategory.name}
-              </span>
-            </div>
-          </div>
-
-          <div key={selectedKey} className="animate-in fade-in slide-in-from-bottom-2 duration-500">
-            <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
-              <div className="relative overflow-hidden bg-[#071426] px-5 py-5 text-white sm:px-8 sm:py-7">
-                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_12%_0%,rgba(34,167,240,0.22),transparent_34%),radial-gradient(circle_at_88%_0%,rgba(122,201,67,0.18),transparent_30%)]" />
-                <div className="relative flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
-                  <div className="flex items-start gap-4">
-                    <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-white/10 text-tech-green">
-                      <Check className="size-6 stroke-[3]" />
-                    </div>
-                    <div>
-                      <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-tech-green">
-                        Application Ready
-                      </div>
-                      <h3 className="mt-2 text-lg sm:text-2xl font-bold tracking-tight">
-                        {selectedCategory.name}
-                      </h3>
-                      {roleParam && (
-                        <p className="text-xs text-slate-300 mt-1">
-                          Applying for: {roleParam}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  <a
-                    href={formUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex h-11 w-full sm:w-auto shrink-0 items-center justify-center gap-2 rounded-full bg-tech-green px-5 text-sm font-bold text-[#071426] shadow-[0_10px_26px_rgba(122,201,67,0.26)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-tech-green/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tech-green/40 active:scale-[0.98]"
-                  >
-                    Open Application Form
-                    <ExternalLink className="size-4" />
-                  </a>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-5 flex items-center justify-center gap-2 text-center text-sm text-slate-500">
-            <ShieldCheck className="size-4" />
-            We respect your privacy. Your data is safe with us.
-          </div>
-        </section>
       )}
-    </div>
+
+      {(invalid.length > 0 || submitError) && (
+        <div
+          ref={errorSummaryRef}
+          tabIndex={-1}
+          role="alert"
+          className="flex items-start gap-3 rounded-xl border border-rose-200 bg-rose-50 p-4 outline-none"
+        >
+          <AlertCircle className="mt-0.5 size-5 shrink-0 text-rose-600" aria-hidden="true" />
+          <div className="text-sm text-rose-800">
+            <p className="font-semibold">{submitError ? "We could not submit your profile" : "Please fix the following"}</p>
+            {submitError ? (
+              <p className="mt-1 leading-relaxed">{submitError}</p>
+            ) : (
+              <ul className="mt-1.5 flex flex-col gap-1">
+                {invalid.map(([f, message]) => (
+                  <li key={f}>
+                    <a href={`#${fieldId(f)}`} className="underline underline-offset-2 hover:text-rose-950">
+                      {message}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── 1. Specialisation ── */}
+      <FormSection step={1} title="Your specialisation" description="Pick the area closest to your core experience.">
+        <fieldset aria-describedby={errors.category ? errorId("category") : undefined}>
+          <legend className="sr-only">Specialisation</legend>
+          <div id={fieldId("category")} className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
+            {CATEGORIES.map(({ key, name, description, icon: Icon, accent }) => {
+              const checked = category === key
+              return (
+                <label
+                  key={key}
+                  className={cn(
+                    "relative flex cursor-pointer items-start gap-3 rounded-xl border bg-background p-3.5 transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-primary/30",
+                    checked
+                      ? "border-primary bg-primary/[0.05]"
+                      : errors.category
+                        ? "border-rose-300"
+                        : "border-border hover:border-primary/40"
+                  )}
+                >
+                  <input
+                    type="radio"
+                    name={fieldId("category-radio")}
+                    value={key}
+                    checked={checked}
+                    onChange={() => {
+                      setCategory(key)
+                      setErrors((prev) => ({ ...prev, category: undefined }))
+                    }}
+                    className="sr-only"
+                  />
+                  <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-lg", accent)}>
+                    <Icon className="size-4" />
+                  </span>
+                  <span className="min-w-0 pr-5">
+                    <span className="block text-sm font-semibold text-foreground">{name}</span>
+                    <span className="mt-0.5 block text-xs leading-relaxed text-muted-foreground">{description}</span>
+                  </span>
+                  {checked && (
+                    <span className="absolute right-3 top-3 flex size-5 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                      <Check className="size-3 stroke-[3]" aria-hidden="true" />
+                    </span>
+                  )}
+                </label>
+              )
+            })}
+          </div>
+          {errors.category && (
+            <p id={errorId("category")} className="mt-2 text-xs font-medium text-rose-600">
+              {errors.category}
+            </p>
+          )}
+        </fieldset>
+      </FormSection>
+
+      {/* ── 2. Contact ── */}
+      <FormSection step={2} title="Your details" description="How our recruiters can reach you.">
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+          <TextField id={fieldId("fullName")} errorId={errorId("fullName")} label="Full name" required value={values.fullName} onChange={set("fullName")} error={errors.fullName} autoComplete="name" placeholder="e.g. Sarah Jenkins" />
+          <TextField id={fieldId("email")} errorId={errorId("email")} label="Email address" required type="email" inputMode="email" autoCapitalize="none" autoCorrect="off" spellCheck={false} value={values.email} onChange={set("email")} error={errors.email} autoComplete="email" placeholder="sarah.jenkins@example.com" />
+          <TextField id={fieldId("phone")} errorId={errorId("phone")} label="Phone number" required type="tel" inputMode="tel" value={values.phone} onChange={set("phone")} error={errors.phone} autoComplete="tel" placeholder="+1 (555) 234-5678" hint="Include your country code." />
+          <TextField id={fieldId("location")} errorId={errorId("location")} label="Current location" required value={values.location} onChange={set("location")} error={errors.location} autoComplete="address-level2" placeholder="City, Country" />
+          <div className="sm:col-span-2">
+            <TextField id={fieldId("linkedinUrl")} errorId={errorId("linkedinUrl")} label="LinkedIn profile (optional)" type="url" inputMode="url" autoComplete="url" autoCapitalize="none" autoCorrect="off" spellCheck={false} value={values.linkedinUrl} onChange={set("linkedinUrl")} error={errors.linkedinUrl} placeholder="linkedin.com/in/yourprofile" />
+          </div>
+        </div>
+      </FormSection>
+
+      {/* ── 3. Experience ── */}
+      <FormSection step={3} title="Your experience" description="A few facts that help us match you quickly.">
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+          <TextField id={fieldId("currentTitle")} errorId={errorId("currentTitle")} label="Current or most recent title" value={values.currentTitle} onChange={set("currentTitle")} autoComplete="organization-title" placeholder="e.g. Senior Data Engineer" />
+          <TextField id={fieldId("currentCompany")} errorId={errorId("currentCompany")} label="Current or most recent company" value={values.currentCompany} onChange={set("currentCompany")} autoComplete="organization" placeholder="e.g. Acme Corp" />
+          <TextField id={fieldId("experienceYears")} errorId={errorId("experienceYears")} label="Years of experience" required type="number" inputMode="decimal" min={0} max={60} step={0.5} value={values.experienceYears} onChange={set("experienceYears")} error={errors.experienceYears} placeholder="e.g. 6" />
+          <div className="flex flex-col gap-2">
+            <label htmlFor={fieldId("workMode")} className="text-sm font-semibold text-foreground">
+              Preferred work mode
+            </label>
+            <select id={fieldId("workMode")} value={workMode} onChange={(e) => setWorkMode(e.target.value)} className={`${INPUT_CLASS} border-border`}>
+              <option value="">No preference</option>
+              {WORK_MODES.map((m) => (
+                <option key={m} value={m}>
+                  {m}
+                </option>
+              ))}
+            </select>
+          </div>
+          <TextField id={fieldId("noticePeriod")} errorId={errorId("noticePeriod")} label="Notice period" value={values.noticePeriod} onChange={set("noticePeriod")} placeholder="e.g. 30 days, immediate" />
+          <TextField id={fieldId("workAuthorization")} errorId={errorId("workAuthorization")} label="Work authorization" value={values.workAuthorization} onChange={set("workAuthorization")} placeholder="e.g. Canadian PR, US H-1B, Indian citizen" />
+          <div className="sm:col-span-2">
+            <TextField id={fieldId("skills")} errorId={errorId("skills")} label="Key skills" value={values.skills} onChange={set("skills")} placeholder="e.g. Python, AWS, Kubernetes, Terraform" hint="Separate skills with commas." />
+          </div>
+        </div>
+      </FormSection>
+
+      {/* ── 4. Resume ── */}
+      <FormSection step={4} title="Resume" description="PDF or DOCX, up to 2 MB.">
+        <ResumeDropzone
+          inputId={fieldId("resume")}
+          errorId={errorId("resume")}
+          hintId={`${formId}-resume-hint`}
+          inputRef={fileInputRef}
+          file={file}
+          error={errors.resume}
+          onFile={(next) => {
+            setFile(next)
+            setErrors((prev) => ({ ...prev, resume: undefined }))
+          }}
+        />
+        <div className="flex flex-col gap-2">
+          <label htmlFor={fieldId("summary")} className="text-sm font-semibold text-foreground">
+            Anything else we should know? <span className="font-normal text-muted-foreground">(optional)</span>
+          </label>
+          <textarea
+            id={fieldId("summary")}
+            value={values.summary}
+            onChange={set("summary")}
+            rows={4}
+            maxLength={3500}
+            placeholder="Roles you're targeting, preferred locations, salary expectations…"
+            className="w-full rounded-xl border border-border bg-background px-3.5 py-3 text-base text-foreground outline-none transition-colors placeholder:text-muted-foreground/70 hover:border-primary/30 focus:border-primary focus:bg-card focus:ring-2 focus:ring-primary/20 sm:text-[0.9375rem]"
+          />
+        </div>
+      </FormSection>
+
+      <div className="flex flex-col gap-5 border-t border-border pt-6">
+        <label htmlFor={fieldId("consent")} className="flex cursor-pointer items-start gap-3">
+          <input
+            id={fieldId("consent")}
+            type="checkbox"
+            checked={consent}
+            onChange={(e) => {
+              setConsent(e.target.checked)
+              setErrors((prev) => ({ ...prev, consent: undefined }))
+            }}
+            aria-invalid={Boolean(errors.consent)}
+            aria-describedby={errors.consent ? errorId("consent") : undefined}
+            className="mt-0.5 size-4 shrink-0 accent-[var(--primary)]"
+          />
+          <span className="text-sm leading-relaxed text-muted-foreground">
+            I agree that N2P Systems may store my profile and contact me about relevant roles, as described in the{" "}
+            <Link href="/privacy-policy" className="font-medium text-foreground underline underline-offset-2 hover:text-primary">
+              Privacy Policy
+            </Link>
+            .
+          </span>
+        </label>
+        {errors.consent && (
+          <p id={errorId("consent")} className="-mt-3 text-xs font-medium text-rose-600">
+            {errors.consent}
+          </p>
+        )}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <p className="flex items-center gap-2 text-xs text-muted-foreground">
+            <ShieldCheck className="size-4 shrink-0 text-tech-green" aria-hidden="true" />
+            Shared only with the N2P recruitment team.
+          </p>
+          <Button type="submit" variant="brand" size="lg" disabled={state === "submitting"} className="w-full shrink-0 sm:w-auto sm:min-w-48">
+            {state === "submitting" ? (
+              <>
+                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                Submitting…
+              </>
+            ) : (
+              <>
+                Submit profile
+                <ArrowRight className="size-4" aria-hidden="true" />
+              </>
+            )}
+          </Button>
+        </div>
+      </div>
+    </form>
   )
 }
 
 export function ResumeFormClient() {
   return (
-    <Suspense fallback={<div className="py-12 text-center text-slate-400">Loading form options...</div>}>
+    <Suspense fallback={<div className="py-12 text-center text-muted-foreground">Loading…</div>}>
       <ResumeFormInner />
     </Suspense>
   )

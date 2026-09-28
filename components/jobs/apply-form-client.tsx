@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import type { Job } from "@/lib/jobs-data"
 
 /** Mirrors /api/apply, which enforces it. Checked here so the message comes early. */
-const MAX_BYTES = 2 * 1024 * 1024
+export const MAX_BYTES = 2 * 1024 * 1024
 
 /** Budget for `job_applications.cover_note`. Screening answers get it first. */
 const COVER_NOTE_MAX_CHARS = 4000
@@ -32,7 +32,7 @@ const EMPTY: Record<Field, string> = {
  * leave empty often enough (drag-and-drop, some Linux desktops) that trusting
  * it would reject a legitimate CV. The server checks the actual bytes.
  */
-function extensionOf(file: File): string {
+export function extensionOf(file: File): string {
   return file.name.split(".").pop()?.toLowerCase() ?? ""
 }
 
@@ -555,10 +555,10 @@ export function ApplyFormClient({ job }: { job: Job }) {
   text-base on mobile, 15px from sm+. Below 16px, iOS Safari auto-zooms the
   viewport on focus — on the highest-intent form on the site.
 */
-const INPUT_CLASS =
+export const INPUT_CLASS =
   "h-11 w-full rounded-xl border bg-background px-3.5 text-base text-foreground outline-none transition-colors placeholder:text-muted-foreground/70 hover:border-primary/30 focus:border-primary focus:bg-card focus:ring-2 focus:ring-primary/20 sm:text-[0.9375rem]"
 
-function FormSection({
+export function FormSection({
   step,
   title,
   description,
@@ -590,7 +590,7 @@ function FormSection({
   )
 }
 
-function TextField({
+export function TextField({
   id,
   errorId,
   label,
@@ -640,7 +640,7 @@ function TextField({
  * The real <input type="file"> stays in the DOM (visually hidden, still
  * focusable and labelled) so keyboard and screen-reader use is unchanged.
  */
-function ResumeDropzone({
+export function ResumeDropzone({
   inputId,
   errorId,
   hintId,
