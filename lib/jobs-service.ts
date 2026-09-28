@@ -1,5 +1,5 @@
 import { supabase, isSupabaseConfigured } from './supabase';
-import type { Job } from './jobs-data';
+import type { Job, ScreeningAnswerType } from './jobs-data';
 
 function formatRelativeTime(dateString?: string): string {
   if (!dateString) return 'Recently';
@@ -424,16 +424,30 @@ export function mapRequirementToJob(req: any): Job {
         : ['Technical Consulting', 'Software Engineering'];
 
   const minYears = toNumber(req.min_experience_years);
+  /*
+    Each question keeps the answer type the recruiter picked in the ATS
+    (`responseType`: yes_no / numeric / text). It used to be flattened to its
+    text here, so the apply form had to guess the input from the wording and a
+    question set to "Free text" could still render as Yes/No or a number box.
+  */
   const rawQuestions = req.public_screening_questions || req.screening_questions;
-  const screeningQuestions: string[] = Array.isArray(rawQuestions)
+  const parsedQuestions: { text: string; type: ScreeningAnswerType | null }[] = Array.isArray(rawQuestions)
     ? rawQuestions
         .map((q: any) => {
-          if (typeof q === 'string') return q.trim();
-          if (typeof q === 'object' && q !== null && q.question) return String(q.question).trim();
-          return '';
+          if (typeof q === 'string') return { text: q.trim(), type: null };
+          if (typeof q === 'object' && q !== null && q.question) {
+            const t = q.responseType;
+            return {
+              text: String(q.question).trim(),
+              type: t === 'yes_no' || t === 'numeric' || t === 'text' ? (t as ScreeningAnswerType) : null,
+            };
+          }
+          return { text: '', type: null };
         })
-        .filter((text: string) => text.length > 0)
+        .filter((q: { text: string }) => q.text.length > 0)
     : [];
+  const screeningQuestions = parsedQuestions.map((q) => q.text);
+  const screeningQuestionTypes = parsedQuestions.map((q) => q.type);
 
   // Guarded once, up front: the fallback copy below used to interpolate the
   // raw `req.title`, so a requisition with a null title — the case the guard
@@ -475,6 +489,7 @@ export function mapRequirementToJob(req: any): Job {
           : GENERIC_REQUIREMENTS,
     requirementUuid: req.id || undefined,
     screeningQuestions,
+    screeningQuestionTypes,
     datePostedISO: req.created_at || undefined,
     dateModifiedISO: req.updated_at || req.created_at || undefined,
     validThroughISO: req.closing_date || undefined,

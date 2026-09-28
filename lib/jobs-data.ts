@@ -42,6 +42,15 @@ export interface Job {
    */
   requirementUuid?: string
   screeningQuestions?: string[]
+  /**
+   * The answer type the recruiter chose in the ATS for each question, by the
+   * same index as `screeningQuestions`. `null` where the ATS stored none (older
+   * requisitions saved questions as plain strings).
+   */
+  screeningQuestionTypes?: (ScreeningAnswerType | null)[]
 }
+
+/** The ATS's `responseType`: Yes/No, a number, or free text. */
+export type ScreeningAnswerType = "yes_no" | "numeric" | "text"
 
 export const jobs: Job[] = [];
