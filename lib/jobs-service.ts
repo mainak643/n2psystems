@@ -467,7 +467,15 @@ export function mapRequirementToJob(req: any): Job {
     id: req.reference_code || req.id,
     title,
     company: 'N2P Systems',
-    location: req.location?.trim() || 'Toronto, Canada',
+    location:
+      req.location?.trim() ||
+      (req.work_mode?.toLowerCase().includes('remote')
+        ? req.salary_currency === 'USD'
+          ? 'Remote, US'
+          : req.salary_currency === 'INR'
+            ? 'Remote, India'
+            : 'Remote'
+        : 'Toronto, Canada'),
     type: normalizeEmploymentType(req.employment_type),
     mode: normalizeWorkMode(req.work_mode),
     experience: req.experience_level?.trim() || (minYears !== undefined ? `${minYears}+ years` : '3+ years'),
