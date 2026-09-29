@@ -124,6 +124,25 @@ export default async function JobsPage() {
 
       {/* ── Main opportunities board ── */}
       <Section tone="frost">
+        {/*
+          The board itself paginates client-side (10 at a time behind a "Load
+          More" button), so a crawler that doesn't run JS only ever saw the
+          first page and never reached the older requisitions. This is the same
+          set as plain <a> links in the initial HTML — hidden from sighted
+          users, announced to screen readers as a skippable index.
+        */}
+        <nav aria-label="All active job openings index" className="sr-only">
+          <h2>All active job openings</h2>
+          <ul>
+            {publishedJobs.map((j) => (
+              <li key={j.id}>
+                <Link href={`/jobs/${encodeURIComponent(j.id)}`}>
+                  {j.title} — {j.location || "Remote"}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
         <JobSearchClient initialJobs={publishedJobs} />
       </Section>
 

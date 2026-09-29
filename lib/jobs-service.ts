@@ -129,16 +129,23 @@ export function formatSalary(min?: number | null, max?: number | null, currency?
     }
   };
 
+  // Contract roles are quoted as an hourly rate, so "$55 - $60 USD" on a card
+  // reads as an annual salary. Judged on the highest figure in the range — the
+  // same test lib/job-schema.ts uses for unitText, so the card and the
+  // JobPosting markup can never disagree about what the number means.
+  const top = hi ?? lo;
+  const rate = top !== undefined && top <= 500 ? ' / hr' : '';
+
   if (code === 'INR') {
     // For India: use the Rupees symbol (₹) directly without appending currency code
-    if (lo !== undefined && hi !== undefined) return `${formatNum(lo)} - ${formatNum(hi)}`;
-    if (lo !== undefined) return `From ${formatNum(lo)}`;
-    return `Up to ${formatNum(hi as number)}`;
+    if (lo !== undefined && hi !== undefined) return `${formatNum(lo)} - ${formatNum(hi)}${rate}`;
+    if (lo !== undefined) return `From ${formatNum(lo)}${rate}`;
+    return `Up to ${formatNum(hi as number)}${rate}`;
   }
 
-  if (lo !== undefined && hi !== undefined) return `${formatNum(lo)} - ${formatNum(hi)} ${code}`;
-  if (lo !== undefined) return `From ${formatNum(lo)} ${code}`;
-  return `Up to ${formatNum(hi as number)} ${code}`;
+  if (lo !== undefined && hi !== undefined) return `${formatNum(lo)} - ${formatNum(hi)} ${code}${rate}`;
+  if (lo !== undefined) return `From ${formatNum(lo)} ${code}${rate}`;
+  return `Up to ${formatNum(hi as number)} ${code}${rate}`;
 }
 
 function normalizeEmploymentType(type?: string): "Full-time" | "Contract" | "Part-time" {

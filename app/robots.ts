@@ -35,9 +35,12 @@ export default function robots(): MetadataRoute.Robots {
         allow: ['/', '/jobs', '/opengraph-image'],
       },
     ],
+    // /jobs/feed.xml is deliberately absent: it is an Indeed/LinkedIn
+    // <source><job> aggregator feed, not a sitemap, and declaring it here made
+    // Search Console fail to parse it on every fetch. It stays crawlable via
+    // the allow rules above.
     sitemap: [
       `${SITE_URL}/sitemap.xml`,
-      `${SITE_URL}/jobs/feed.xml`,
       `${SITE_URL}/jobs/rss`,
     ],
     host: SITE_URL,

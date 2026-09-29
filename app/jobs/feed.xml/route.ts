@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { fetchPublishedJobs } from '@/lib/jobs-service';
 import { SITE_URL } from '@/lib/site';
-import { parsePostalAddress } from '@/lib/job-schema';
+import { parsePostalAddress, resolveCountry } from '@/lib/job-schema';
 
 export const revalidate = 60;
 
@@ -14,12 +14,14 @@ function escapeXml(unsafe: string): string {
     .replace(/'/g, '&apos;');
 }
 
-function parseLocation(location: string) {
+function parseLocation(location: string, currency?: string) {
   const parsed = parsePostalAddress(location);
   return {
     city: parsed.addressLocality,
     state: parsed.addressRegion || '',
-    country: parsed.addressCountry || 'US',
+    // Aggregators reject a job whose country contradicts its pay currency, so
+    // fall back to the currency rather than stamping every unplaced role 'US'.
+    country: parsed.addressCountry || resolveCountry(location, currency),
   };
 }
 
@@ -74,7 +76,7 @@ export async function GET(req: NextRequest) {
   }
 
   if (countryParam) {
-    jobs = jobs.filter((j) => parseLocation(j.location).country === countryParam);
+    jobs = jobs.filter((j) => parseLocation(j.location, j.salaryCurrency).country === countryParam);
   }
   if (domainParam) {
     jobs = jobs.filter((j) => (j.domain || '').toLowerCase().includes(domainParam));
@@ -104,10 +106,16 @@ export async function GET(req: NextRequest) {
 
   const xmlItems = jobs
     .map((job) => {
-      const { city, state, country } = parseLocation(job.location);
+      const { city, state, country } = parseLocation(job.location, job.salaryCurrency);
       const url = `${SITE_URL}/jobs/${encodeURIComponent(job.id)}`;
-      const postedDate = job.datePostedISO ? new Date(job.datePostedISO).toISOString().split('T')[0] : '';
-      const validThrough = job.validThroughISO || new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      const parsedPosted = job.datePostedISO ? new Date(job.datePostedISO).getTime() : NaN;
+      const postedTimestamp = Number.isNaN(parsedPosted) ? Date.now() : parsedPosted;
+      const postedDate = job.datePostedISO ? new Date(postedTimestamp).toISOString().split('T')[0] : '';
+      // Anchored to the posting date, not to now — a rolling expiry made every
+      // re-fetch of this feed look like an updated job to the aggregators.
+      const validThrough =
+        job.validThroughISO ||
+        new Date(postedTimestamp + 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
       const workModeTag = isLinkedIn
         ? job.mode === 'Remote'
@@ -145,13 +153,15 @@ export async function GET(req: NextRequest) {
               .join('\n')}\n    </skills>`
           : `    <skills><![CDATA[${job.techStack.join(', ')}]]></skills>`;
 
+      const salaryMaxVal = job.salaryMax ?? job.salaryMin ?? 0;
+      const isHourly = salaryMaxVal <= 500 || (/contract/i.test(job.type || '') && salaryMaxVal < 1000);
       const salaryXml =
         job.salaryMin || job.salaryMax
           ? `    <salaries>
       <salary>
         ${job.salaryMax ? `<highEnd><amount><![CDATA[${job.salaryMax}]]></amount><currencyCode>${job.salaryCurrency || 'USD'}</currencyCode></highEnd>` : ''}
         ${job.salaryMin ? `<lowEnd><amount><![CDATA[${job.salaryMin}]]></amount><currencyCode>${job.salaryCurrency || 'USD'}</currencyCode></lowEnd>` : ''}
-        <period><![CDATA[YEARLY]]></period>
+        <period><![CDATA[${isHourly ? 'HOURLY' : 'YEARLY'}]]></period>
         <type><![CDATA[BASE_SALARY]]></type>
       </salary>
     </salaries>`
