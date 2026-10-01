@@ -197,6 +197,11 @@ const ROUTES: Array<{ method: string; pattern: RegExp }> = [
   { method: 'GET', pattern: new RegExp('^/communication/readiness$') },
   { method: 'GET', pattern: new RegExp('^/communication/templates$') },
   { method: 'POST', pattern: new RegExp('^/communication/templates$') },
+  // WhatsApp only: Meta approves the exact wording before it can send, and
+  // review is pulled rather than pushed, so the ATS submits a new wording and
+  // re-reads its status from the listing above. Scoped to one id segment, so
+  // it cannot be walked onto another template path.
+  { method: 'POST', pattern: new RegExp(`^/communication/templates/${TOKEN}/submit$`) },
   { method: 'POST', pattern: new RegExp('^/communication/send-one$') },
   { method: 'GET', pattern: new RegExp('^/communication/messages$') },
 ];
