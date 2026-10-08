@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import { fetchPublishedJobs } from '@/lib/jobs-service';
 import { SITE_URL } from '@/lib/site';
 
-export const revalidate = 60;
+/** Refreshed on demand by the auto-index webhook — see app/jobs/page.tsx. */
+export const revalidate = 86400;
 
 function escapeXml(unsafe: string): string {
   return unsafe

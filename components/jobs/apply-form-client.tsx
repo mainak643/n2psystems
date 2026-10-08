@@ -7,6 +7,12 @@ import { AlertCircle, ArrowRight, CheckCircle2, FileText, Loader2, Paperclip, Sh
 import { Button } from "@/components/ui/button"
 import type { Job } from "@/lib/jobs-data"
 
+/**
+ * The fields this form reads. Props to a Client Component are serialized into
+ * the page's ISR output, so the apply page passes only these, not the full Job.
+ */
+export type ApplyJob = Pick<Job, "id" | "title" | "domain" | "requirementUuid" | "screeningQuestions" | "screeningQuestionTypes">
+
 /** Mirrors /api/apply, which enforces it. Checked here so the message comes early. */
 export const MAX_BYTES = 2 * 1024 * 1024
 
@@ -113,7 +119,7 @@ function validate(values: Record<Field, string>, file: File | null) {
   return errors
 }
 
-export function ApplyFormClient({ job }: { job: Job }) {
+export function ApplyFormClient({ job }: { job: ApplyJob }) {
   const formId = useId()
   const [values, setValues] = useState<Record<Field, string>>(EMPTY)
   const [screeningAnswers, setScreeningAnswers] = useState<Record<number, string>>({})
@@ -798,7 +804,7 @@ function formatBytes(bytes: number): string {
 }
 
 /** Shown when a listing came from the seed dataset and has no live requisition. */
-export function ApplyUnavailable({ job }: { job: Job }) {
+export function ApplyUnavailable({ job }: { job: ApplyJob }) {
   return (
     <div className="py-6 text-center sm:py-10">
       <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-secondary text-muted-foreground">

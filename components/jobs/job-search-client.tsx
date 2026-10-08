@@ -16,8 +16,18 @@ import {
 import type { Job } from "@/lib/jobs-data"
 import { fetchPublishedJobs, getDynamicFilterOptions, inferCountry, extractCity } from "@/lib/jobs-service"
 
+/**
+ * The fields the board reads (cards, filters, keyword search). Props to a
+ * Client Component are serialized into /jobs' ISR output, so the page passes
+ * only these: the rest of Job was ~40% of that payload.
+ */
+export type BoardJob = Pick<
+  Job,
+  "id" | "title" | "company" | "location" | "type" | "mode" | "experience" | "salary" | "techStack" | "domain" | "postedDate" | "description"
+>
+
 interface JobSearchClientProps {
-  initialJobs?: Job[]
+  initialJobs?: BoardJob[]
 }
 
 // Rendering 25+ full job cards in one unbroken list was the whole board's
@@ -27,7 +37,7 @@ interface JobSearchClientProps {
 const PAGE_SIZE = 10
 
 export function JobSearchClient({ initialJobs }: JobSearchClientProps) {
-  const [jobsList, setJobsList] = useState<Job[]>(initialJobs ?? [])
+  const [jobsList, setJobsList] = useState<BoardJob[]>(initialJobs ?? [])
   const [searchQuery, setSearchQuery] = useState("")
   const [country, setCountry] = useState("All Countries")
   const [city, setCity] = useState("All Cities")
@@ -315,6 +325,7 @@ export function JobSearchClient({ initialJobs }: JobSearchClientProps) {
               // a slash or space would otherwise build a broken multi-segment
               // path instead of one `[id]` segment.
               href={`/jobs/${encodeURIComponent(job.id)}`}
+              prefetch={false}
               className="surface surface-interactive group block p-6"
             >
               <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">

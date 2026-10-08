@@ -54,7 +54,7 @@ export function MobileApplyBar({
           {meta && <p className="truncate text-xs text-muted-foreground">{meta}</p>}
         </div>
         <Button asChild variant="brand" size="lg" className="shrink-0">
-          <Link href={href} tabIndex={visible ? undefined : -1}>
+          <Link href={href} prefetch={false} tabIndex={visible ? undefined : -1}>
             Apply
             <ArrowRight className="size-4" aria-hidden="true" />
           </Link>

@@ -6,10 +6,10 @@ import { SITE_URL } from '@/lib/site'
  * Claude, Gemini) read to answer questions about N2P. It used to be a static
  * file in /public, so it described the company but never mentioned a single
  * open role: an assistant asked "is N2P hiring React engineers in Toronto?"
- * had nothing to cite. The live roles are appended here, on the same 60s ISR
+ * had nothing to cite. The live roles are appended here, on the same ISR
  * window as the job board.
  */
-export const revalidate = 60
+export const revalidate = 86400
 
 const ABOUT = `# N2P Systems — Global Technology Recruitment
 

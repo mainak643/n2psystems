@@ -3,12 +3,13 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 import { ArrowUpRight, Briefcase, Building2, Clock, Laptop, MapPin, Wallet } from "lucide-react"
 
-import { ApplyFormClient, ApplyUnavailable } from "@/components/jobs/apply-form-client"
+import { ApplyFormClient, ApplyUnavailable, type ApplyJob } from "@/components/jobs/apply-form-client"
 import { fetchJobById, fetchPublishedJobs } from "@/lib/jobs-service"
 import { PageHero } from "@/components/ui/page-hero"
 import { Section } from "@/components/ui/section"
 
-export const revalidate = 60
+/** Refreshed on demand by the auto-index webhook — see app/jobs/page.tsx. */
+export const revalidate = 86400
 
 export async function generateStaticParams() {
   try {
@@ -44,6 +45,14 @@ export default async function ApplyPage({ params }: { params: Promise<{ id: stri
   if (!job) notFound()
 
   const jobHref = `/jobs/${encodeURIComponent(job.id)}`
+  const applyJob: ApplyJob = {
+    id: job.id,
+    title: job.title,
+    domain: job.domain,
+    requirementUuid: job.requirementUuid,
+    screeningQuestions: job.screeningQuestions,
+    screeningQuestionTypes: job.screeningQuestionTypes,
+  }
   const facts = [
     { icon: MapPin, label: "Location", value: job.location },
     { icon: Laptop, label: "Work mode", value: job.mode },
@@ -87,7 +96,7 @@ export default async function ApplyPage({ params }: { params: Promise<{ id: stri
         */}
         <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-8 xl:grid-cols-[minmax(0,1fr)_22rem]">
           <div className="surface p-5 sm:p-8 lg:p-10">
-            {job.requirementUuid ? <ApplyFormClient job={job} /> : <ApplyUnavailable job={job} />}
+            {job.requirementUuid ? <ApplyFormClient job={applyJob} /> : <ApplyUnavailable job={applyJob} />}
           </div>
 
           <aside

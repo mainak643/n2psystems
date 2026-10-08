@@ -534,17 +534,13 @@ function cacheJob(key: string, data: Job | null): void {
   }
   jobCache.set(key, { data, timestamp: Date.now() });
 }
-const CACHE_TTL_MS = 60 * 1000; // 60 seconds memory cache
-
 /**
- * Drops both in-memory caches. Called when a requisition is known to have
- * changed (the auto-index webhook), so the pages it revalidates render the
- * new state instead of re-reading up to a minute of stale cache.
+ * Browser only, where it throttles the board's focus refresh. On the server a
+ * render is cached by ISR for up to a day, so it must not reuse rows another
+ * request cached before the requisition changed — which the auto-index webhook
+ * could only clear in its own function instance, not the one rendering pages.
  */
-export function invalidateJobCaches(): void {
-  memoryCachedJobs = null;
-  jobCache.clear();
-}
+const CACHE_TTL_MS = typeof window === 'undefined' ? 0 : 60 * 1000;
 
 /**
  * A server render has to finish, but it does not have to finish in a second.
@@ -554,7 +550,7 @@ export function invalidateJobCaches(): void {
  * `/jobs` prerendered an empty board and `/jobs/REQ-11968` returned 404 for a
  * live posting. Since the seed data was removed there is nothing left to mask
  * a timeout: a slow query now reads to a visitor, and to Google, as "this role
- * does not exist". Both pages are ISR-cached for 60s, so paying a slower first
+ * does not exist". Both pages are ISR-cached for a day, so paying a slower first
  * render is much cheaper than serving a wrong one.
  */
 const QUERY_TIMEOUT_MS = 8000;
@@ -613,6 +609,10 @@ export async function fetchPublishedJobs(force = false): Promise<Job[]> {
     } catch (err) {
       console.warn('[jobs] Error or timeout fetching live jobs from Supabase:', err);
     }
+    // On the server this render is about to be cached for a day. Failing it
+    // makes ISR keep serving the last good board (and retry on the next
+    // request) instead of caching an empty or outdated one.
+    if (typeof window === 'undefined') throw new Error('[jobs] Could not load the published roles');
   }
 
   if (memoryCachedJobs) {
@@ -674,16 +674,19 @@ export async function fetchJobById(id: string): Promise<Job | null> {
         // published requisition. That is the only result worth remembering as
         // a miss.
         cacheJob(decodedId.toLowerCase(), null);
+        return null;
       }
     } catch (err) {
       console.warn(`[jobs] Error or timeout fetching job ${decodedId} from Supabase:`, err);
     }
+    // Deliberately not a miss. A timeout or a rejected query says nothing about
+    // whether the role exists, and treating it as one turned a slow request into
+    // a sticky 404 on a live posting — which ISR would now keep for a day, long
+    // enough for a crawler to record the job as gone. Failing the render keeps
+    // the last good page served and retries on the next request.
+    throw new Error(`[jobs] Could not look up "${decodedId}"`);
   }
 
-  // Deliberately not cached. A timeout or a rejected query says nothing about
-  // whether the role exists, and caching it turned one slow request into a
-  // sticky 404 on a live posting for the whole TTL — long enough for a crawler
-  // to record the job as gone.
   return null;
 }
 
@@ -731,7 +734,7 @@ export function extractCity(location?: string): string | null {
   return city.length > 1 ? city : null;
 }
 
-export function getDynamicFilterOptions(jobs: Job[]) {
+export function getDynamicFilterOptions(jobs: Pick<Job, 'location' | 'domain' | 'experience'>[]) {
   const uniq = (values: (string | undefined | null)[]) =>
     Array.from(new Set(values.filter((v): v is string => Boolean(v && v.trim())))).sort((a, b) =>
       a.localeCompare(b)
