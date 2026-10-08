@@ -26,7 +26,8 @@ import { absoluteUrl } from "@/lib/site"
 import type { Job } from "@/lib/jobs-data"
 import { JsonLd } from "@/components/seo/json-ld"
 
-export const revalidate = 60
+/** Refreshed on demand by the auto-index webhook — see app/jobs/page.tsx. */
+export const revalidate = 86400
 
 /**
  * Pre-render all active published jobs into static HTML at build/deploy time.
@@ -168,7 +169,7 @@ export default async function JobDetailPage({
         title={job.title}
         actions={
           <Button asChild variant="brand" size="xl" id="hero-apply">
-            <Link href={applyUrl} prefetch={true}>
+            <Link href={applyUrl} prefetch={false}>
               Apply for this Role
               <ArrowRight className="size-4" aria-hidden="true" />
             </Link>
@@ -345,7 +346,7 @@ export default async function JobDetailPage({
                 Submit your resume and contact information. Our recruitment lead for this role will review your dossier and connect with you.
               </p>
               <Button asChild variant="brand" size="lg" className="w-full">
-                <Link href={applyUrl} prefetch={true}>Apply for this Role</Link>
+                <Link href={applyUrl} prefetch={false}>Apply for this Role</Link>
               </Button>
               <div className="mt-6 border-t border-border pt-5">
                 <p className="text-caption font-medium text-foreground">Know someone who fits?</p>
@@ -363,7 +364,7 @@ export default async function JobDetailPage({
             <h2 id="related-roles" className="text-title text-foreground">
               More open roles
             </h2>
-            <Link href="/jobs" className="inline-flex items-center gap-1 text-caption font-semibold text-primary hover:underline">
+            <Link href="/jobs" prefetch={false} className="inline-flex items-center gap-1 text-caption font-semibold text-primary hover:underline">
               View all positions
               <ArrowRight className="size-3.5" aria-hidden="true" />
             </Link>
@@ -373,6 +374,7 @@ export default async function JobDetailPage({
               <li key={related.id}>
                 <Link
                   href={`/jobs/${encodeURIComponent(related.id)}`}
+                  prefetch={false}
                   className="surface surface-interactive group flex h-full flex-col p-5"
                 >
                   <span className="text-xs font-medium text-primary">{related.domain}</span>

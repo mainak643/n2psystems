@@ -3,7 +3,7 @@ import { fetchPublishedJobs } from '@/lib/jobs-service'
 import { SITE_URL } from '@/lib/site'
 
 /** Matches the boards' ISR window so newly published roles are discoverable. */
-export const revalidate = 60
+export const revalidate = 86400
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticRoutes: MetadataRoute.Sitemap = [

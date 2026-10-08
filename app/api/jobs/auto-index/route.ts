@@ -2,7 +2,7 @@ import { timingSafeEqual } from 'node:crypto';
 import { revalidatePath } from 'next/cache';
 import { NextRequest, NextResponse } from 'next/server';
 
-import { fetchPublishedJobs, invalidateJobCaches } from '@/lib/jobs-service';
+import { fetchPublishedJobs } from '@/lib/jobs-service';
 import { getServiceAccountCredentials, publishUrlNotification, type IndexingActionType } from '@/lib/google-indexing';
 import { submitToIndexNow } from '@/lib/indexnow';
 import { SITE_URL } from '@/lib/site';
@@ -64,9 +64,13 @@ async function notifyGoogle(entries: { url: string; action: IndexingActionType }
   return { configured: true as const, results };
 }
 
-/** Refresh the ISR pages a posting appears on, so it shows now rather than in 60s. */
+/**
+ * Refresh the ISR pages a posting appears on, so it shows now rather than when
+ * their day-long window lapses. Per posting rather than
+ * revalidatePath('/jobs', 'layout'), which would re-render every role's page
+ * and apply page on each requisition edit.
+ */
 function refreshPages(refs: string[]) {
-  invalidateJobCaches();
   try {
     revalidatePath('/jobs');
     revalidatePath('/sitemap.xml');

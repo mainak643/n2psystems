@@ -1,7 +1,7 @@
 import { Metadata } from "next"
 import Link from "next/link"
 import { ArrowRight, ClipboardCheck, Sparkles, MessageCircle, ShieldCheck } from "lucide-react"
-import { JobSearchClient } from "@/components/jobs/job-search-client"
+import { JobSearchClient, type BoardJob } from "@/components/jobs/job-search-client"
 import { fetchPublishedJobs } from "@/lib/jobs-service"
 import { buildJobListSchema } from "@/lib/job-schema"
 import { buildBreadcrumbSchema } from "@/lib/seo-schema"
@@ -14,12 +14,13 @@ import { SITE_URL } from "@/lib/site"
 import type { FaqItem } from "@/lib/seo-schema"
 
 /**
- * See the note in app/jobs/[id]/page.tsx — ISR instead of `force-dynamic`. The
- * client subscribes to Supabase realtime for this board, so an open tab still
- * updates the moment a recruiter publishes; this only bounds how stale the
- * first server-rendered paint can be.
+ * ISR, refreshed on demand: the auto-index webhook revalidates the board, the
+ * posting and its apply page when a requisition changes (its daily cron is the
+ * backstop), so this window only bounds staleness when both are missed. It was
+ * 60s, and every regeneration whose output differed was billed as ISR writes.
+ * The same window is used by every route the webhook refreshes.
  */
-export const revalidate = 60
+export const revalidate = 86400
 
 export const metadata: Metadata = {
   title: "Career Opportunities & Tech Roles | N2P Systems",
@@ -72,6 +73,11 @@ const CANDIDATE_FAQ: FaqItem[] = [
 
 export default async function JobsPage() {
   const publishedJobs = await fetchPublishedJobs()
+  const boardJobs: BoardJob[] = publishedJobs.map(
+    ({ id, title, company, location, type, mode, experience, salary, techStack, domain, postedDate, description }) => ({
+      id, title, company, location, type, mode, experience, salary, techStack, domain, postedDate, description,
+    })
+  )
   const breadcrumbs = buildBreadcrumbSchema([
     { name: "Home", url: "/" },
     { name: "Careers", url: "/jobs" },
@@ -129,21 +135,22 @@ export default async function JobsPage() {
           More" button), so a crawler that doesn't run JS only ever saw the
           first page and never reached the older requisitions. This is the same
           set as plain <a> links in the initial HTML — hidden from sighted
-          users, announced to screen readers as a skippable index.
+          users, announced to screen readers as a skippable index. Crawlers
+          only need the href, so these never prefetch.
         */}
         <nav aria-label="All active job openings index" className="sr-only">
           <h2>All active job openings</h2>
           <ul>
             {publishedJobs.map((j) => (
               <li key={j.id}>
-                <Link href={`/jobs/${encodeURIComponent(j.id)}`}>
+                <Link href={`/jobs/${encodeURIComponent(j.id)}`} prefetch={false}>
                   {j.title} — {j.location || "Remote"}
                 </Link>
               </li>
             ))}
           </ul>
         </nav>
-        <JobSearchClient initialJobs={publishedJobs} />
+        <JobSearchClient initialJobs={boardJobs} />
       </Section>
 
       {/* ── Hiring process overview ── */}

@@ -67,6 +67,7 @@ export function PageHero({
             <div className={cn('mb-6 flex', centered && 'justify-center')}>
               <Link
                 href={backLink.href}
+                prefetch={false}
                 className="group inline-flex items-center gap-2 text-caption font-medium text-on-dark-muted transition-colors hover:text-on-dark"
               >
                 <ArrowLeft className="size-4 transition-transform group-hover:-translate-x-0.5" aria-hidden="true" />
