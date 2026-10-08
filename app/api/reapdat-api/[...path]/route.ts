@@ -135,14 +135,12 @@ async function authenticatedCaller(
 const STAFF_ROLES = ['Admin', 'Manager', 'Recruiter'];
 
 /**
- * Whether the caller may send messages on the operator's account.
+ * Whether the caller may use the operator's REAPDAT account at all.
  *
- * Being signed in is enough to read a questionnaire result; it is not enough
- * to send mail. `/communication/send-one` bills the account, records consent
- * for the recipient on its own, and delivers from the business's sending
- * reputation — so a signed-in account with no staff role (a client login, or a
- * fresh sign-up, which 00013 parks on a role with no access) could otherwise
- * mail anyone as N2P.
+ * Being signed in is not enough. A signed-in account with no staff role (a
+ * client login, or a fresh sign-up, which 00013 parks on a role with no access)
+ * could otherwise read every candidate's recorded answers, delete recordings,
+ * mint billed bundles, and mail anyone as N2P.
  *
  * The role is read with the caller's own token rather than a service key:
  * `authenticated` may read `profiles`, and 00013 removed a user's ability to
@@ -193,10 +191,14 @@ const ROUTES: Array<{ method: string; pattern: RegExp }> = [
   // Outbound candidate messaging, and only the part the ATS uses: whether a
   // channel can send, the templates it sends from, one message to one person,
   // and the log of what went. Broadcasts, audiences and suppression stay shut.
-  // Staff only — see isStaffCaller.
   { method: 'GET', pattern: new RegExp('^/communication/readiness$') },
   { method: 'GET', pattern: new RegExp('^/communication/templates$') },
   { method: 'POST', pattern: new RegExp('^/communication/templates$') },
+  // WhatsApp only: Meta approves the exact wording before it can send, and
+  // review is pulled rather than pushed, so the ATS submits a new wording and
+  // re-reads its status from the listing above. Scoped to one id segment, so
+  // it cannot be walked onto another template path.
+  { method: 'POST', pattern: new RegExp(`^/communication/templates/${TOKEN}/submit$`) },
   { method: 'POST', pattern: new RegExp('^/communication/send-one$') },
   { method: 'GET', pattern: new RegExp('^/communication/messages$') },
 ];
@@ -309,10 +311,13 @@ async function relay(
     return deny(404, 'No such endpoint.', cors);
   }
 
-  const isMessaging = path.startsWith('/communication/');
-  if (isMessaging && !(await isStaffCaller(caller))) {
-    return deny(403, 'Only recruiting staff can send messages to candidates.', cors);
+  // Every route, not just messaging: the questionnaire routes return link
+  // tokens and candidates' recordings, delete recordings, and bill the account.
+  if (!(await isStaffCaller(caller))) {
+    return deny(403, 'Only recruiting staff can use the screening service.', cors);
   }
+
+  const isMessaging = path.startsWith('/communication/');
 
   const isMedia = /\/(recording|report\.pdf)$/.test(path);
   const timeoutMs = isMedia
